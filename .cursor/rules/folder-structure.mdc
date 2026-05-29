@@ -1,0 +1,51 @@
+---
+description: Folder structure and file placement rules for Learninough admin dashboard. Read FOLDER_STRUCTURE.md before any new development.
+alwaysApply: true
+---
+
+# Folder structure — mandatory
+
+Before creating or editing files, read `FOLDER_STRUCTURE.md` at the project root.
+
+## Where to put new code
+
+| What you're building | Where it goes |
+|----------------------|---------------|
+| Route entry (URL target) | `src/pages/<Area>Page.tsx` — thin wrapper only |
+| Screen UI, charts, tables, forms | `src/features/<area>/` |
+| Feature-only subcomponents | `src/features/<area>/components/` |
+| Feature query/mutation hooks | `src/features/<area>/hooks/` |
+| Shared button, card, table, input | `src/components/ui/` |
+| Sidebar, TopBar, app shell | `src/components/layout/` |
+| Route definitions | `src/routes/index.tsx` |
+| Sidebar nav items | `src/config/navigation.ts` |
+| Supabase/API functions | `src/api/` (no React imports) |
+| Shared types | `src/types/` |
+| Generic hooks | `src/hooks/` |
+
+## Page pattern (required)
+
+```tsx
+// pages/DashboardPage.tsx — max ~5 lines
+import { DashboardView } from '@/features/dashboard/DashboardView'
+export function DashboardPage() {
+  return <DashboardView />
+}
+```
+
+## Feature folder per route
+
+`dashboard` `/` · `users` `/users` · `courses` `/courses` · `financial` `/financial` · `chats` `/chats` · `reports` `/reports` · `account` `/account` · `help` `/help`
+
+New sidebar route = update `navigation.ts` + `routes/` + `pages/` + `features/<name>/`.
+
+## Do not
+
+- Put business logic, API calls, or large JSX in `src/pages/`
+- Put single-feature components in `src/components/ui/`
+- Call Supabase from components — use `api/` + TanStack Query hooks
+- Use `../../` imports — use `@/` alias
+
+## Styling
+
+Use design tokens: `bg-surface-page`, `bg-surface-sidebar`, `bg-primary-gradient`, `text-ink-heading`, `text-nav`. See `src/styles/variables.css` and `tailwind.config.ts`.

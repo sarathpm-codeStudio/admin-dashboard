@@ -1,7 +1,30 @@
 :root {
-  --color-background: #f8fafc;
+  /* Brand & primary — from Figma Online Learning App */
+  --color-brand: #1a237e;
+  --color-primary: #000b60;
+  --color-primary-end: #142283;
+  --color-primary-gradient: linear-gradient(135deg, #000b60 0%, #142283 100%);
+
+  /* Surfaces */
+  --color-bg-page: #f8f9fb;
+  --color-bg-sidebar: #f2f4f6;
+  --color-bg-topbar: rgba(255, 255, 255, 0.7);
   --color-surface: #ffffff;
-  --color-text: #0f172a;
+  --color-input: #f2f4f6;
+
+  /* Text */
+  --color-text: #191c1e;
+  --color-text-heading: #000b60;
+  --color-text-brand: #1a237e;
+  --color-text-nav: #64748b;
   --color-text-muted: #64748b;
+  --color-text-label: #454652;
+  --color-text-admin: #312e81;
+  --color-text-placeholder: #6b7280;
+
+  /* Borders & accents */
   --color-border: #e2e8f0;
+  --color-border-subtle: rgba(198, 197, 212, 0.1);
+  --color-avatar-border: #eef2ff;
+  --color-notification: #ba1a1a;
 }
