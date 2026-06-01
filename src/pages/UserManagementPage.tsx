@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/ui/PlaceholderPage'
+import { UserManagementView } from '@/features/users/UserManagementView'
 
 export function UserManagementPage() {
-  return <PlaceholderPage title="User Management" />
+  return <UserManagementView />
 }
