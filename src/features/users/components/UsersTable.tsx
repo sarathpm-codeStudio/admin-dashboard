@@ -1,5 +1,6 @@
 import { MoreVertical } from 'lucide-react'
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
 import { StatusBadge, type StatusBadgeVariant } from '@/components/ui/StatusBadge'
@@ -48,9 +49,20 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
               {user.initials}
             </div>
             <div className="min-w-0">
-              <Paragraph variant="emphasis" className="truncate">
-                {user.name}
-              </Paragraph>
+              {user.role === 'Faculty' ? (
+                <Link
+                  to={`/users/faculty/${user.id}`}
+                  className="relative z-10 block truncate hover:text-primary"
+                >
+                  <Paragraph variant="emphasis" className="truncate hover:underline">
+                    {user.name}
+                  </Paragraph>
+                </Link>
+              ) : (
+                <Paragraph variant="emphasis" className="truncate">
+                  {user.name}
+                </Paragraph>
+              )}
               <Paragraph variant="caption" className="truncate">
                 {user.email}
               </Paragraph>

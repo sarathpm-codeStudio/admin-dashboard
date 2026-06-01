@@ -1,5 +1,6 @@
-import { StatCard } from '@/components/ui/StatCard'
+import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
 import { DashboardHeader } from '@/features/dashboard/components/DashboardHeader'
+import { dashboardStatItems } from '@/features/dashboard/data/dashboardStatItems'
 import { EnrollmentTrendsChart } from '@/features/dashboard/components/EnrollmentTrendsChart'
 import { FinancialPulseCard } from '@/features/dashboard/components/FinancialPulseCard'
 import { LiveActivityFeed } from '@/features/dashboard/components/LiveActivityFeed'
@@ -9,7 +10,6 @@ import { RevenueTrendsChart } from '@/features/dashboard/components/RevenueTrend
 import { SystemAlerts } from '@/features/dashboard/components/SystemAlerts'
 import { TopPerformers } from '@/features/dashboard/components/TopPerformers'
 import {
-  dashboardStats,
   liveActivities,
   pendingActions,
   platformHealth,
@@ -25,11 +25,7 @@ export function DashboardView() {
     <div className="space-y-6">
       <DashboardHeader />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {dashboardStats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
-        ))}
-      </div>
+      <SummaryStatsGrid items={dashboardStatItems} />
 
       <div className={dashboardColumnsClass}>
         <div className="flex flex-col gap-6">

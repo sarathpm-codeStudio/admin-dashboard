@@ -150,10 +150,10 @@ function joinedDateForIndex(index: number): string {
 
 function buildMockUsers(count: number): UserRecord[] {
   return Array.from({ length: count }, (_, index) => {
-    const seed = seedUsers[index % seedUsers.length]
+    const seed = seedUsers[index % seedUsers.length]!
     const suffix = index >= seedUsers.length ? ` ${Math.floor(index / seedUsers.length) + 1}` : ''
     const name = `${seed.name}${suffix}`
-    const emailLocal = seed.email.split('@')[0].replace(/\./g, '')
+    const emailLocal = (seed.email.split('@')[0] ?? 'user').replace(/\./g, '')
     return {
       id: String(index + 1),
       name,
@@ -163,7 +163,7 @@ function buildMockUsers(count: number): UserRecord[] {
       coursesCount: seed.coursesCount,
       joinedDate: joinedDateForIndex(index),
       initials: seed.initials,
-      avatarClassName: avatarPalette[index % avatarPalette.length],
+      avatarClassName: avatarPalette[index % avatarPalette.length]!,
     }
   })
 }
