@@ -7,5 +7,12 @@ type FacultyRecentActivityCardProps = {
 }
 
 export function FacultyRecentActivityCard({ items }: FacultyRecentActivityCardProps) {
-  return <ActivityList title="Recent Activity" titleIcon={Activity} items={items} />
+  return (
+    <ActivityList
+      title="Recent Activity"
+      titleIcon={Activity}
+      items={items}
+      scrollable
+    />
+  )
 }

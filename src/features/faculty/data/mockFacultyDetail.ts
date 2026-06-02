@@ -1,5 +1,9 @@
-import { FileUp, Pencil } from 'lucide-react'
+import { Calendar, ClipboardCheck, FileUp, MessageSquare } from 'lucide-react'
 import type { ActivityListItemData } from '@/components/ui/ActivityList'
+
+import activityOverlayImage from '@/asset/image/Overlay.png'
+import facultyProfileAvatar from '@/asset/image/john.png'
+import { ACTIVITY_EDIT_ICON_COLOR } from '@/features/faculty/data/activityIconColors'
 
 export type FacultyStatus = 'active' | 'pending' | 'suspended'
 
@@ -37,26 +41,44 @@ const johnSmithActivity: ActivityListItemData[] = [
   {
     id: '1',
     title: 'Uploaded new lecture',
-    description: 'Advanced Macroeconomics • Module 4',
+    description: 'Direct Taxation - Module 4: Corporate Tax Planning',
     time: '2 hours ago',
     icon: FileUp,
-    iconClassName: 'bg-primary-50 text-primary',
+    iconClassName: 'bg-violet-100 text-violet-600',
   },
   {
     id: '2',
-    title: 'Updated course syllabus',
-    description: 'Introduction to CMA • 2024 Batch',
-    time: 'Yesterday',
-    icon: Pencil,
-    iconClassName: 'bg-primary-50 text-primary',
+    title: 'Updated course content',
+    description: 'Advanced Costing Techniques - Resource Library',
+    time: 'Yesterday, 4:15 PM',
+    imageSrc: activityOverlayImage,
+    imageAlt: 'Updated course content',
+    imageSizeClassName: 'size-10',
+    imageMaskColor: ACTIVITY_EDIT_ICON_COLOR,
   },
   {
     id: '3',
-    title: 'Uploaded new lecture',
-    description: 'Financial Reporting • Module 2',
+    title: 'Published quiz assessment',
+    description: 'Financial Reporting - Module 2',
+    time: '2 days ago',
+    icon: ClipboardCheck,
+    iconClassName: 'bg-blue-50 text-blue-600',
+  },
+  {
+    id: '4',
+    title: 'Responded to student inquiry',
+    description: 'Introduction to CMA • 2024 Batch',
     time: '3 days ago',
-    icon: FileUp,
-    iconClassName: 'bg-primary-50 text-primary',
+    icon: MessageSquare,
+    iconClassName: 'bg-amber-50 text-amber-600',
+  },
+  {
+    id: '5',
+    title: 'Scheduled live session',
+    description: 'Advanced Macroeconomics - Module 5',
+    time: 'Last week',
+    icon: Calendar,
+    iconClassName: 'bg-emerald-50 text-emerald-600',
   },
 ]
 
@@ -67,6 +89,7 @@ export const mockFacultyJohnSmith: FacultyDetail = {
   email: 'john.smith@university.edu',
   phone: '+1 (555) 123-4567',
   status: 'active',
+  avatarUrl: facultyProfileAvatar,
   initials: 'JS',
   bio: 'John Smith is a Certified Management Accountant with over 12 years of experience in financial reporting, strategic planning, and corporate finance education. He has trained more than 2,000 students across undergraduate and professional certification programs. His teaching approach combines real-world case studies with exam-focused preparation, helping learners build both conceptual clarity and practical skills.',
   qualifications: ['CMA', 'CA', 'MBA'],

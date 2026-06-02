@@ -1,5 +1,6 @@
-import { Mail, MessageSquare, Phone } from 'lucide-react'
-import facultyAvatar from '@/asset/image/user.png'
+import { GraduationCap, Mail, MessageSquare, Phone } from 'lucide-react'
+import facultyAvatar from '@/asset/image/john.png'
+import verifiedBadgeImage from '@/asset/image/Background.png'
 import { Button } from '@/components/ui/Button'
 import { Card, cardPaddingClass } from '@/components/ui/Card'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -28,20 +29,20 @@ export function FacultyProfileHeader({ faculty }: FacultyProfileHeaderProps) {
     <Card className={cardPaddingClass}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="size-24 shrink-0 overflow-hidden rounded-card bg-primary-50 sm:size-28">
-            {faculty.avatarUrl ? (
+          <div className="relative size-[84px] shrink-0 sm:size-[92px]">
+            <div className="size-full overflow-hidden rounded-2xl">
               <img
-                src={faculty.avatarUrl}
-                alt=""
-                className="size-full object-cover"
-              />
-            ) : (
-              <img
-                src={facultyAvatar}
+                src={faculty.avatarUrl ?? facultyAvatar}
                 alt=""
                 className="size-full object-cover object-center"
               />
-            )}
+            </div>
+            <img
+              src={verifiedBadgeImage}
+              alt=""
+              className="absolute -bottom-1 -right-1 size-6 rounded-lg object-contain drop-shadow-md"
+              aria-label="Verified faculty"
+            />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -54,7 +55,11 @@ export function FacultyProfileHeader({ faculty }: FacultyProfileHeaderProps) {
                 className="uppercase tracking-wide"
               />
             </div>
-            <Paragraph variant="muted" className="mt-1">
+            <Paragraph
+              variant="muted"
+              className="mt-1 inline-flex items-center gap-1.5"
+            >
+              <GraduationCap className="size-4 shrink-0 text-nav" aria-hidden />
               {faculty.title}
             </Paragraph>
             <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-4">

@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
+import { HelpFab } from '@/components/layout/HelpFab'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
 import { FacultyAdminNoteCard } from '@/features/faculty/components/FacultyAdminNoteCard'
@@ -63,7 +64,7 @@ export function FacultyDetailView() {
       </AnimatedSection>
 
       <AnimatedSection index={2}>
-        <SummaryStatsGrid items={getFacultyStatItems(faculty)} />
+        <SummaryStatsGrid items={getFacultyStatItems(faculty)} size="compact" />
       </AnimatedSection>
 
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
@@ -80,6 +81,13 @@ export function FacultyDetailView() {
           <FacultyAdminNoteCard />
         </AnimatedSection>
       </div>
+
+      <AnimatedSection index={5} className="grid gap-6 lg:grid-cols-3">
+        <div className="hidden lg:block lg:col-span-2" aria-hidden />
+        <div className="flex justify-end pt-4">
+          <HelpFab />
+        </div>
+      </AnimatedSection>
     </div>
   )
 }

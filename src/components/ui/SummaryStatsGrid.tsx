@@ -17,15 +17,27 @@ const columnGridClass: Record<SummaryStatsGridColumns, string> = {
 type SummaryStatsGridProps = {
   items: SummaryStatItem[]
   columns?: SummaryStatsGridColumns
+  size?: 'default' | 'compact'
   className?: string
 }
 
-export function SummaryStatsGrid({ items, columns = 4, className }: SummaryStatsGridProps) {
+export function SummaryStatsGrid({
+  items,
+  columns = 4,
+  size = 'default',
+  className,
+}: SummaryStatsGridProps) {
   return (
     <div className={cn('grid gap-4', columnGridClass[columns], className)}>
       {items.map((item, index) => {
-        const { id, ...cardProps } = item
-        return <SummaryStatCard key={id ?? item.label ?? index} {...cardProps} />
+        const { id, size: itemSize, ...cardProps } = item
+        return (
+          <SummaryStatCard
+            key={id ?? item.label ?? index}
+            size={itemSize ?? size}
+            {...cardProps}
+          />
+        )
       })}
     </div>
   )

@@ -5,6 +5,6 @@ export const dashboardStatItems: SummaryStatItem[] = dashboardStats.map((stat) =
   id: stat.label,
   label: stat.label,
   value: stat.value,
-  icon: stat.icon,
-  iconClassName: stat.iconClassName,
+  cornerIcon: stat.icon,
+  cornerIconClassName: 'text-slate-400',
 }))

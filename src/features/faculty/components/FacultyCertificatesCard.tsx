@@ -1,4 +1,5 @@
-import { Download, Eye, Shield } from 'lucide-react'
+import { Download, Eye } from 'lucide-react'
+import { AiOutlineSafetyCertificate } from 'react-icons/ai'
 import type { FacultyCertificate } from '@/features/faculty/data/mockFacultyDetail'
 import { Paragraph } from '@/components/ui/Typography'
 import { cn } from '@/utils/cn'
@@ -11,7 +12,7 @@ export function FacultyCertificatesCard({ certificates }: FacultyCertificatesCar
   return (
     <div className="rounded-card bg-primary-gradient p-5 text-white shadow-sm">
       <div className="mb-4 flex items-center gap-2">
-        <Shield className="size-5 shrink-0" aria-hidden />
+        <AiOutlineSafetyCertificate className="size-5 shrink-0" aria-hidden />
         <Paragraph variant="emphasis" className="text-white">
           Certificates
         </Paragraph>

@@ -13,7 +13,12 @@ export function FacultyBioCard({ bio, className }: FacultyBioCardProps) {
   return (
     <Card className={cn(cardPaddingClass, 'flex h-full flex-col', className)}>
       <CardBody className="flex flex-1 flex-col">
-        <SectionHeader title="Professional Bio" icon={UserRound} titleSize="card" />
+        <SectionHeader
+          title="Professional Bio"
+          icon={UserRound}
+          titleSize="card"
+          className="items-center"
+        />
         <Paragraph variant="body" className="flex-1 leading-relaxed text-ink-label">
           {bio}
         </Paragraph>

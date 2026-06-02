@@ -7,6 +7,7 @@ type SectionHeaderProps = {
   title: string
   subtitle?: string
   titleSize?: 'section' | 'card'
+  titleClassName?: string
   icon?: LucideIcon
   action?: ReactNode
   className?: string
@@ -16,6 +17,7 @@ export function SectionHeader({
   title,
   subtitle,
   titleSize = 'section',
+  titleClassName,
   icon: Icon,
   action,
   className,
@@ -25,7 +27,9 @@ export function SectionHeader({
       <div className="flex min-w-0 items-start gap-2">
         {Icon && <Icon className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />}
         <div className="min-w-0">
-          <Header2 size={titleSize}>{title}</Header2>
+          <Header2 size={titleSize} className={titleClassName}>
+            {title}
+          </Header2>
           {subtitle && (
             <Paragraph variant="caption" className="mt-0.5">
               {subtitle}
