@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { FinancialManagementPage } from '@/pages/FinancialManagementPage'
 import { HelpCenterPage } from '@/pages/HelpCenterPage'
 import { ReportsAnalyticsPage } from '@/pages/ReportsAnalyticsPage'
+import { FacultyCoursesPage } from '@/pages/FacultyCoursesPage'
 import { FacultyDetailPage } from '@/pages/FacultyDetailPage'
 import { StudentDetailPage } from '@/pages/StudentDetailPage'
 import { UserManagementPage } from '@/pages/UserManagementPage'
@@ -17,6 +18,10 @@ export function AppRoutes() {
       <Route element={<DashboardLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="userdetails/faculty/:facultyId" element={<FacultyDetailPage />} />
+        <Route
+          path="userdetails/faculty/:facultyId/courses"
+          element={<FacultyCoursesPage />}
+        />
         <Route path="userdetails/student/:studentId" element={<StudentDetailPage />} />
         <Route path="users" element={<UserManagementPage />} />
         <Route path="courses" element={<CourseManagementPage />} />

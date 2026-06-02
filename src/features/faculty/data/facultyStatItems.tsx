@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import revenueIcon from '@/asset/image/Container.png'
 import type { SummaryStatItem } from '@/components/ui/SummaryStatsGrid'
 import type { FacultyDetail } from '@/features/faculty/data/mockFacultyDetail'
@@ -15,7 +16,14 @@ export function getFacultyStatItems(faculty: FacultyDetail): SummaryStatItem[] {
       id: 'courses-created',
       label: 'Courses created',
       value: String(stats.coursesCreated),
-      footer: <span className={footerTrendClass}>+{stats.coursesNew} New</span>,
+      footer: (
+        <Link
+          to={`/userdetails/faculty/${faculty.id}/courses`}
+          className={`${footerTrendClass} hover:underline`}
+        >
+          +{stats.coursesNew} New
+        </Link>
+      ),
     },
     {
       id: 'total-students',
