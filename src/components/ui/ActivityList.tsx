@@ -103,8 +103,7 @@ export function ActivityList({
             scrollable &&
               cn(
                 listMaxHeightClassName,
-                'overflow-y-auto overscroll-contain',
-                '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+                'scrollbar-none overflow-y-auto overscroll-contain',
               ),
           )}
         >

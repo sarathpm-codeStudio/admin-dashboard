@@ -57,6 +57,8 @@ type DataTableProps<T> = {
   animateRows?: boolean
   /** Change to replay row animation (e.g. page or filter revision) */
   rowAnimationKey?: string | number
+  /** Show total count / pagination footer (default true) */
+  showFooter?: boolean
 }
 
 const tableEase = [0.22, 1, 0.36, 1] as const
@@ -175,6 +177,7 @@ export function DataTable<T>({
   emptyMessage = 'No results found.',
   animateRows = false,
   rowAnimationKey,
+  showFooter = true,
 }: DataTableProps<T>) {
   const prefersReducedMotion = useReducedMotion()
   const motionEnabled = animateRows && !prefersReducedMotion
@@ -182,7 +185,7 @@ export function DataTable<T>({
 
   const tableContent = (
     <>
-      <div className="overflow-x-auto">
+      <div className="scrollbar-none overflow-x-auto">
         <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
           {columns.some((column) => column.width) && (
             <colgroup>
@@ -212,12 +215,14 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#e2e8f0]/60 px-5 py-3">
-        <Paragraph variant="muted">Total {totalCount.toLocaleString()}</Paragraph>
-        {totalPages > 1 && (
-          <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
-        )}
-      </div>
+      {showFooter && (
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#e2e8f0]/60 px-5 py-3">
+          <Paragraph variant="muted">Total {totalCount.toLocaleString()}</Paragraph>
+          {totalPages > 1 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
+          )}
+        </div>
+      )}
     </>
   )
 

@@ -7,12 +7,19 @@ export type BreadcrumbItem = {
   to?: string
 }
 
+type BreadcrumbSeparator = 'chevron' | 'slash'
+
 type BreadcrumbsProps = {
   items: BreadcrumbItem[]
+  separator?: BreadcrumbSeparator
   className?: string
 }
 
-export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  items,
+  separator = 'chevron',
+  className,
+}: BreadcrumbsProps) {
   return (
     <nav aria-label="Breadcrumb" className={cn('flex flex-wrap items-center gap-1 text-sm', className)}>
       {items.map((item, index) => {
@@ -20,9 +27,14 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
 
         return (
           <span key={`${item.label}-${index}`} className="flex items-center gap-1">
-            {index > 0 && (
-              <ChevronRight className="size-4 shrink-0 text-nav" aria-hidden />
-            )}
+            {index > 0 &&
+              (separator === 'slash' ? (
+                <span className="text-nav" aria-hidden>
+                  /
+                </span>
+              ) : (
+                <ChevronRight className="size-4 shrink-0 text-nav" aria-hidden />
+              ))}
             {item.to && !isLast ? (
               <Link
                 to={item.to}

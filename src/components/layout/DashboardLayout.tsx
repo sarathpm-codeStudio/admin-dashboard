@@ -8,7 +8,7 @@ export function DashboardLayout() {
       <Sidebar />
       <div className="flex h-screen flex-col pl-64">
         <TopBar />
-        <main className="min-h-0 flex-1 overflow-y-auto p-8">
+        <main className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-8">
           <Outlet />
         </main>
       </div>

@@ -51,10 +51,19 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
             <div className="min-w-0">
               {user.role === 'Faculty' ? (
                 <Link
-                  to={`/users/faculty/${user.id}`}
-                  className="relative z-10 block truncate hover:text-primary"
+                  to={`/userdetails/faculty/${user.id}`}
+                  className="relative z-10 block truncate no-underline hover:text-primary"
                 >
-                  <Paragraph variant="emphasis" className="truncate hover:underline">
+                  <Paragraph variant="emphasis" className="truncate">
+                    {user.name}
+                  </Paragraph>
+                </Link>
+              ) : user.role === 'Student' ? (
+                <Link
+                  to={`/userdetails/student/${user.id}`}
+                  className="relative z-10 block truncate no-underline hover:text-primary"
+                >
+                  <Paragraph variant="emphasis" className="truncate">
                     {user.name}
                   </Paragraph>
                 </Link>

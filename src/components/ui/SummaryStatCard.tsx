@@ -13,6 +13,10 @@ export type SummaryStatCardProps = {
   /** Bottom-right icon (Lucide) */
   cornerIcon?: LucideIcon
   cornerIconClassName?: string
+  /** Top-left image (e.g. stat card badge from design assets) */
+  headerImage?: string
+  headerImageAlt?: string
+  headerImageClassName?: string
   /** Bottom-right image (e.g. revenue wallet graphic) */
   cornerImage?: string
   cornerImageAlt?: string
@@ -23,7 +27,7 @@ export type SummaryStatCardProps = {
   className?: string
 }
 
-const labelStyles = 'text-[11px] font-medium uppercase tracking-wide text-slate-400'
+const labelStyles = 'text-[11px] font-medium uppercase tracking-wide text-nav'
 
 const sizeStyles = {
   default: {
@@ -33,6 +37,7 @@ const sizeStyles = {
     footerPt: 'pt-4',
     cornerIcon: 'size-6',
     cornerImage: 'size-7',
+    headerImage: 'size-10',
   },
   compact: {
     card: 'p-4',
@@ -41,6 +46,7 @@ const sizeStyles = {
     footerPt: 'pt-2',
     cornerIcon: 'size-5',
     cornerImage: 'size-6',
+    headerImage: 'size-10',
   },
 } as const
 
@@ -51,6 +57,9 @@ export function SummaryStatCard({
   footer,
   cornerIcon: CornerIcon,
   cornerIconClassName,
+  headerImage,
+  headerImageAlt = '',
+  headerImageClassName,
   cornerImage,
   cornerImageAlt = '',
   cornerImageClassName,
@@ -60,9 +69,22 @@ export function SummaryStatCard({
   className,
 }: SummaryStatCardProps) {
   const styles = sizeStyles[size]
+  const hasFooter = Boolean(footer || cornerImage || CornerIcon)
 
   return (
     <Card className={cn('flex flex-col shadow-sm', styles.card, className)}>
+      {headerImage && (
+        <img
+          src={headerImage}
+          alt={headerImageAlt}
+          className={cn(
+            styles.headerImage,
+            'mb-3 object-contain object-left',
+            headerImageClassName,
+          )}
+        />
+      )}
+
       <p className={cn(labelStyles, labelClassName)}>{label}</p>
 
       <div className={cn(styles.valueGap, 'flex items-center gap-1.5')}>
@@ -70,26 +92,28 @@ export function SummaryStatCard({
         {valueAdornment}
       </div>
 
-      <div className={cn('mt-auto flex items-end justify-end', styles.footerPt)}>
-        {footer}
-        {!footer && cornerImage && (
-          <img
-            src={cornerImage}
-            alt={cornerImageAlt}
-            className={cn(styles.cornerImage, 'object-contain', cornerImageClassName)}
-          />
-        )}
-        {!footer && !cornerImage && CornerIcon && (
-          <CornerIcon
-            className={cn(
-              styles.cornerIcon,
-              'stroke-[1.5] text-slate-400',
-              cornerIconClassName,
-            )}
-            aria-hidden
-          />
-        )}
-      </div>
+      {hasFooter && (
+        <div className={cn('mt-auto flex items-end justify-end', styles.footerPt)}>
+          {footer}
+          {!footer && cornerImage && (
+            <img
+              src={cornerImage}
+              alt={cornerImageAlt}
+              className={cn(styles.cornerImage, 'object-contain', cornerImageClassName)}
+            />
+          )}
+          {!footer && !cornerImage && CornerIcon && (
+            <CornerIcon
+              className={cn(
+                styles.cornerIcon,
+                'stroke-[1.5] text-slate-400',
+                cornerIconClassName,
+              )}
+              aria-hidden
+            />
+          )}
+        </div>
+      )}
     </Card>
   )
 }
