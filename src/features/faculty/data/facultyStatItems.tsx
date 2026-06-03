@@ -4,7 +4,8 @@ import revenueIcon from '@/asset/image/Container.png'
 import type { SummaryStatItem } from '@/components/ui/SummaryStatsGrid'
 import type { FacultyDetail } from '@/features/faculty/data/mockFacultyDetail'
 
-const footerTrendClass = 'text-xs font-semibold text-teal-600'
+const footerTrendClass =
+  'text-xs font-semibold text-teal-600 no-underline hover:no-underline focus:no-underline active:no-underline'
 const footerMetaClass =
   'text-[10px] font-medium uppercase tracking-wide text-slate-400'
 
@@ -19,7 +20,7 @@ export function getFacultyStatItems(faculty: FacultyDetail): SummaryStatItem[] {
       footer: (
         <Link
           to={`/userdetails/faculty/${faculty.id}/courses`}
-          className={`${footerTrendClass} hover:underline`}
+          className={footerTrendClass}
         >
           +{stats.coursesNew} New
         </Link>
@@ -29,7 +30,14 @@ export function getFacultyStatItems(faculty: FacultyDetail): SummaryStatItem[] {
       id: 'total-students',
       label: 'Total students',
       value: stats.totalStudents.toLocaleString(),
-      footer: <span className={footerTrendClass}>↑ {stats.studentsGrowthPercent}%</span>,
+      footer: (
+        <Link
+          to={`/userdetails/faculty/${faculty.id}/enrollment`}
+          className={footerTrendClass}
+        >
+          ↑ {stats.studentsGrowthPercent}%
+        </Link>
+      ),
     },
     {
       id: 'total-revenue',

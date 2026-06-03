@@ -172,4 +172,9 @@ function buildMockUsers(count: number): UserRecord[] {
 export const mockUsers = buildMockUsers(856)
 
 export const TOTAL_USERS_COUNT = 856
+/** 10 rows per page; scroll inside table to see rows 6–10 */
 export const USERS_PAGE_SIZE = 10
+
+/** At least 5 rows visible; header ~2.75rem + 5 × ~4.5rem row */
+export const USERS_TABLE_VISIBLE_ROWS = 5
+export const USERS_TABLE_SCROLL_MAX_HEIGHT = 'max-h-[26rem]'

@@ -26,6 +26,9 @@ const columnAlignClass: Record<DataTableColumnAlign, string> = {
 
 const cellPaddingClass = 'px-4 py-4'
 
+/** Table header row / cells — matches design token --color-input */
+const tableHeaderBgClass = 'bg-[#F2F4F6]'
+
 function columnCellClassName<T>(column: DataTableColumn<T>) {
   return cn(
     cellPaddingClass,
@@ -35,9 +38,11 @@ function columnCellClassName<T>(column: DataTableColumn<T>) {
   )
 }
 
-function columnHeaderClassName<T>(column: DataTableColumn<T>) {
+function columnHeaderClassName<T>(column: DataTableColumn<T>, sticky = false) {
   return cn(
     'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-nav',
+    tableHeaderBgClass,
+    sticky && stickyHeaderCellClass,
     column.align ? columnAlignClass[column.align] : columnAlignClass.left,
     column.headerClassName,
   )
@@ -59,7 +64,22 @@ type DataTableProps<T> = {
   rowAnimationKey?: string | number
   /** Show total count / pagination footer (default true) */
   showFooter?: boolean
+  /** Show "Total N" in footer (default true) */
+  showTotalCount?: boolean
+  /** Footer layout when pagination is shown */
+  footerLayout?: 'between' | 'end'
+  /** Optional class on header row */
+  headerRowClassName?: string
+  /** Optional class on the `<table>` element */
+  tableClassName?: string
+  /** Scroll table rows inside the card; sticky header; fixed pagination footer */
+  scrollableBody?: boolean
+  /** Max height of the scrollable table body (e.g. `max-h-[30rem]` for ~6 rows) */
+  scrollBodyMaxHeight?: string
 }
+
+const stickyHeaderCellClass =
+  'sticky top-0 z-30 bg-[#F2F4F6] shadow-[0_1px_0_0_rgba(226,232,240,0.6)]'
 
 const tableEase = [0.22, 1, 0.36, 1] as const
 
@@ -94,6 +114,9 @@ const tableCardVariants = {
 const rowClassName =
   'border-b border-[#e2e8f0]/40 last:border-b-0 transition-colors duration-200 hover:bg-surface-page/30'
 
+const bodyRowClassName = (scrollableBody: boolean) =>
+  cn(rowClassName, scrollableBody && 'relative z-0 bg-surface-card')
+
 type DataTableBodyProps<T> = {
   columns: DataTableColumn<T>[]
   data: T[]
@@ -102,6 +125,7 @@ type DataTableBodyProps<T> = {
   animate: boolean
   motionEnabled: boolean
   tbodyKey: string | number
+  scrollableBody: boolean
 }
 
 function DataTableBody<T>({
@@ -112,7 +136,10 @@ function DataTableBody<T>({
   animate,
   motionEnabled,
   tbodyKey,
+  scrollableBody,
 }: DataTableBodyProps<T>) {
+  const trClass = bodyRowClassName(scrollableBody)
+
   if (!animate || !motionEnabled) {
     return (
       <tbody>
@@ -124,7 +151,7 @@ function DataTableBody<T>({
           </tr>
         ) : (
           data.map((row) => (
-            <tr key={getRowKey(row)} className={rowClassName}>
+            <tr key={getRowKey(row)} className={trClass}>
               {columns.map((column) => (
                 <td key={column.id} className={columnCellClassName(column)}>
                   {column.cell(row)}
@@ -152,7 +179,7 @@ function DataTableBody<T>({
         </motion.tr>
       ) : (
         data.map((row) => (
-          <motion.tr key={getRowKey(row)} variants={tableRowVariants} className={rowClassName}>
+          <motion.tr key={getRowKey(row)} variants={tableRowVariants} className={trClass}>
             {columns.map((column) => (
               <td key={column.id} className={columnCellClassName(column)}>
                 {column.cell(row)}
@@ -178,15 +205,35 @@ export function DataTable<T>({
   animateRows = false,
   rowAnimationKey,
   showFooter = true,
+  showTotalCount = true,
+  footerLayout = 'between',
+  headerRowClassName,
+  tableClassName,
+  scrollableBody = false,
+  scrollBodyMaxHeight,
 }: DataTableProps<T>) {
   const prefersReducedMotion = useReducedMotion()
   const motionEnabled = animateRows && !prefersReducedMotion
   const tbodyKey = rowAnimationKey ?? page
 
+  const cardLayoutClass =
+    scrollableBody &&
+    cn('flex min-h-0 flex-col', !scrollBodyMaxHeight && 'flex-1')
+  const scrollAreaClass = cn(
+    'scrollbar-none overflow-x-auto',
+    scrollableBody && 'overflow-y-auto',
+    scrollableBody && (scrollBodyMaxHeight ?? 'min-h-0 flex-1'),
+  )
+
   const tableContent = (
     <>
-      <div className="scrollbar-none overflow-x-auto">
-        <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
+      <div className={scrollAreaClass}>
+        <table
+          className={cn(
+            'w-full min-w-[720px] border-collapse text-left',
+            tableClassName ?? 'table-fixed',
+          )}
+        >
           {columns.some((column) => column.width) && (
             <colgroup>
               {columns.map((column) => (
@@ -195,9 +242,19 @@ export function DataTable<T>({
             </colgroup>
           )}
           <thead>
-            <tr className="border-b border-[#e2e8f0]/60 bg-surface-page/50">
+            <tr
+              className={cn(
+                'border-b border-[#e2e8f0]/60',
+                tableHeaderBgClass,
+                headerRowClassName,
+              )}
+            >
               {columns.map((column) => (
-                <th key={column.id} scope="col" className={columnHeaderClassName(column)}>
+                <th
+                  key={column.id}
+                  scope="col"
+                  className={columnHeaderClassName(column, scrollableBody)}
+                >
                   {column.header}
                 </th>
               ))}
@@ -211,13 +268,22 @@ export function DataTable<T>({
             animate={animateRows}
             motionEnabled={motionEnabled}
             tbodyKey={tbodyKey}
+            scrollableBody={scrollableBody}
           />
         </table>
       </div>
 
       {showFooter && (
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#e2e8f0]/60 px-5 py-3">
-          <Paragraph variant="muted">Total {totalCount.toLocaleString()}</Paragraph>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-4 border-t border-[#e2e8f0]/60 px-5 py-3',
+            scrollableBody && 'shrink-0',
+            footerLayout === 'end' ? 'justify-end' : 'justify-between',
+          )}
+        >
+          {showTotalCount && footerLayout === 'between' && (
+            <Paragraph variant="muted">Total {totalCount.toLocaleString()}</Paragraph>
+          )}
           {totalPages > 1 && (
             <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
           )}
@@ -231,6 +297,7 @@ export function DataTable<T>({
       <motion.div
         className={cn(
           'overflow-hidden rounded-card border border-[#e2e8f0]/60 bg-surface-card shadow-sm',
+          cardLayoutClass,
           className,
         )}
         variants={tableCardVariants}
@@ -242,5 +309,7 @@ export function DataTable<T>({
     )
   }
 
-  return <Card className={cn('overflow-hidden', className)}>{tableContent}</Card>
+  return (
+    <Card className={cn('overflow-hidden', cardLayoutClass, className)}>{tableContent}</Card>
+  )
 }

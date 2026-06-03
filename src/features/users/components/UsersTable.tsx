@@ -5,7 +5,11 @@ import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
 import { StatusBadge, type StatusBadgeVariant } from '@/components/ui/StatusBadge'
 import { Paragraph } from '@/components/ui/Typography'
-import type { UserRecord, UserStatus } from '@/features/users/data/mockUsers'
+import {
+  USERS_TABLE_SCROLL_MAX_HEIGHT,
+  type UserRecord,
+  type UserStatus,
+} from '@/features/users/data/mockUsers'
 import { cn } from '@/utils/cn'
 
 const statusVariant: Record<UserStatus, StatusBadgeVariant> = {
@@ -52,7 +56,7 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
               {user.role === 'Faculty' ? (
                 <Link
                   to={`/userdetails/faculty/${user.id}`}
-                  className="relative z-10 block truncate no-underline hover:text-primary"
+                  className="block truncate no-underline hover:text-primary"
                 >
                   <Paragraph variant="emphasis" className="truncate">
                     {user.name}
@@ -61,7 +65,7 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
               ) : user.role === 'Student' ? (
                 <Link
                   to={`/userdetails/student/${user.id}`}
-                  className="relative z-10 block truncate no-underline hover:text-primary"
+                  className="block truncate no-underline hover:text-primary"
                 >
                   <Paragraph variant="emphasis" className="truncate">
                     {user.name}
@@ -156,6 +160,9 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
       totalPages={totalPages}
       onPageChange={onPageChange}
       animateRows
+      scrollableBody
+      scrollBodyMaxHeight={USERS_TABLE_SCROLL_MAX_HEIGHT}
+      className="shrink-0"
       rowAnimationKey={`${page}-${users.length}-${users[0]?.id ?? 'empty'}`}
     />
   )

@@ -19,10 +19,14 @@ type UserFiltersBarProps = {
 }
 
 /** White fields on grey bar — matches Figma user-management filters */
-const filterFieldClass =
-  'border-0 bg-white shadow-none hover:bg-white focus:bg-white focus:ring-2 focus:ring-primary-50'
+const filterTextClass = 'text-[#454652]'
 
-const filterSelectClass = cn(filterFieldClass, 'py-2.5 pl-4 pr-10 text-sm font-medium text-ink')
+const filterFieldClass = cn(
+  'border-0 bg-white shadow-none hover:bg-white focus:bg-white focus:ring-2 focus:ring-primary-50',
+  filterTextClass,
+)
+
+const filterSelectClass = cn(filterFieldClass, 'py-2.5 pl-4 pr-10 text-sm font-medium')
 
 export function UserFiltersBar({ values, onChange, className }: UserFiltersBarProps) {
   const update = (patch: Partial<UserFilterValues>) => {
@@ -32,7 +36,7 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
   return (
     <div
       className={cn(
-        'flex flex-nowrap items-center gap-3 rounded-card bg-surface-input p-4',
+        'flex flex-nowrap items-center gap-6 rounded-card bg-surface-input p-4',
         className,
       )}
     >
@@ -40,15 +44,15 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
         placeholder="Search by name, email or ID..."
         value={values.search}
         onChange={(e) => update({ search: e.target.value })}
-        wrapperClassName="min-w-[12rem] max-w-[45%] flex-[1_1_42%]"
-        className={cn(filterFieldClass, 'py-2.5 text-sm')}
+        wrapperClassName="min-w-[12rem] max-w-[40%] flex-[1_1_36%]"
+        className={cn(filterFieldClass, 'py-2.5 text-sm placeholder:text-[#454652]/60')}
       />
 
       <Select
         value={values.userType}
         onChange={(e) => update({ userType: e.target.value })}
         aria-label="Filter by user type"
-        wrapperClassName="w-[7.75rem] shrink-0"
+        wrapperClassName="w-[10rem] shrink-0"
         className={filterSelectClass}
       >
         <option value="all">All Users</option>
@@ -58,11 +62,13 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
       </Select>
 
       {/* All Courses — uncomment block below to show
+      <div className="min-w-4 shrink-0" aria-hidden />
+
       <Select
         value={values.course}
         onChange={(e) => update({ course: e.target.value })}
         aria-label="Filter by course"
-        wrapperClassName="w-[7.75rem] shrink-0"
+        wrapperClassName="w-[11rem] shrink-0"
         className={filterSelectClass}
       >
         <option value="all">All Courses</option>
@@ -76,7 +82,7 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
         value={values.status}
         onChange={(e) => update({ status: e.target.value })}
         aria-label="Filter by status"
-        wrapperClassName="w-[6.5rem] shrink-0"
+        wrapperClassName="w-[9rem] shrink-0"
         className={filterSelectClass}
       >
         <option value="all">Status</option>
@@ -89,7 +95,11 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
         from={values.joinedDateFrom}
         to={values.joinedDateTo}
         onChange={(joinedDateFrom, joinedDateTo) => update({ joinedDateFrom, joinedDateTo })}
-        fieldClassName={cn(filterFieldClass, 'py-2.5 pl-4 pr-4 text-sm font-medium text-ink')}
+        className="min-w-[12rem] shrink-0"
+        fieldClassName={cn(
+          filterFieldClass,
+          'w-full min-w-[12rem] py-2.5 pl-4 pr-4 text-sm font-medium',
+        )}
       />
     </div>
   )

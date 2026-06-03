@@ -22,7 +22,7 @@ const dashboardColumnsClass =
 
 export function DashboardView() {
   return (
-    <div className="space-y-6">
+    <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
       <DashboardHeader />
 
       <SummaryStatsGrid items={dashboardStatItems} />
