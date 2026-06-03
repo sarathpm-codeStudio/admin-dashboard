@@ -25,20 +25,36 @@ const columnAlignClass: Record<DataTableColumnAlign, string> = {
 }
 
 const cellPaddingClass = 'px-4 py-4'
+const minimalCellPaddingClass = 'px-5 py-5'
 
 /** Table header row / cells — matches design token --color-input */
 const tableHeaderBgClass = 'bg-[#F2F4F6]'
 
-function columnCellClassName<T>(column: DataTableColumn<T>) {
+export type DataTableAppearance = 'default' | 'minimal'
+
+function columnCellClassName<T>(column: DataTableColumn<T>, appearance: DataTableAppearance) {
   return cn(
-    cellPaddingClass,
+    appearance === 'minimal' ? minimalCellPaddingClass : cellPaddingClass,
     'align-middle text-sm',
     column.align ? columnAlignClass[column.align] : columnAlignClass.left,
     column.className,
   )
 }
 
-function columnHeaderClassName<T>(column: DataTableColumn<T>, sticky = false) {
+function columnHeaderClassName<T>(
+  column: DataTableColumn<T>,
+  appearance: DataTableAppearance,
+  sticky = false,
+) {
+  if (appearance === 'minimal') {
+    return cn(
+      'bg-transparent px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#94a3b8]',
+      sticky && 'sticky top-0 z-30 bg-surface-card',
+      column.align ? columnAlignClass[column.align] : columnAlignClass.left,
+      column.headerClassName,
+    )
+  }
+
   return cn(
     'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-nav',
     tableHeaderBgClass,
@@ -76,6 +92,18 @@ type DataTableProps<T> = {
   scrollableBody?: boolean
   /** Max height of the scrollable table body (e.g. `max-h-[30rem]` for ~6 rows) */
   scrollBodyMaxHeight?: string
+  /** Custom left footer text instead of "Total N" */
+  footerSummary?: string
+  /** Pagination style */
+  paginationVariant?: 'icon' | 'labeled'
+  /** Skip outer card wrapper — parent provides the card */
+  bare?: boolean
+  /** Airy transactions-style table: no gray header bar, no row dividers */
+  appearance?: DataTableAppearance
+  /** Show pagination even when there is only one page */
+  alwaysShowPagination?: boolean
+  /** Optional class on the footer row */
+  footerClassName?: string
 }
 
 const stickyHeaderCellClass =
@@ -111,11 +139,17 @@ const tableCardVariants = {
   },
 }
 
-const rowClassName =
+const defaultRowClassName =
   'border-b border-[#e2e8f0]/40 last:border-b-0 transition-colors duration-200 hover:bg-surface-page/30'
 
-const bodyRowClassName = (scrollableBody: boolean) =>
-  cn(rowClassName, scrollableBody && 'relative z-0 bg-surface-card')
+const minimalRowClassName =
+  'border-0 transition-colors duration-200 hover:bg-[#F8FAFC]/80'
+
+const bodyRowClassName = (scrollableBody: boolean, appearance: DataTableAppearance) =>
+  cn(
+    appearance === 'minimal' ? minimalRowClassName : defaultRowClassName,
+    scrollableBody && 'relative z-0 bg-surface-card',
+  )
 
 type DataTableBodyProps<T> = {
   columns: DataTableColumn<T>[]
@@ -126,6 +160,7 @@ type DataTableBodyProps<T> = {
   motionEnabled: boolean
   tbodyKey: string | number
   scrollableBody: boolean
+  appearance: DataTableAppearance
 }
 
 function DataTableBody<T>({
@@ -137,8 +172,9 @@ function DataTableBody<T>({
   motionEnabled,
   tbodyKey,
   scrollableBody,
+  appearance,
 }: DataTableBodyProps<T>) {
-  const trClass = bodyRowClassName(scrollableBody)
+  const trClass = bodyRowClassName(scrollableBody, appearance)
 
   if (!animate || !motionEnabled) {
     return (
@@ -153,7 +189,7 @@ function DataTableBody<T>({
           data.map((row) => (
             <tr key={getRowKey(row)} className={trClass}>
               {columns.map((column) => (
-                <td key={column.id} className={columnCellClassName(column)}>
+                <td key={column.id} className={columnCellClassName(column, appearance)}>
                   {column.cell(row)}
                 </td>
               ))}
@@ -181,7 +217,7 @@ function DataTableBody<T>({
         data.map((row) => (
           <motion.tr key={getRowKey(row)} variants={tableRowVariants} className={trClass}>
             {columns.map((column) => (
-              <td key={column.id} className={columnCellClassName(column)}>
+              <td key={column.id} className={columnCellClassName(column, appearance)}>
                 {column.cell(row)}
               </td>
             ))}
@@ -211,6 +247,12 @@ export function DataTable<T>({
   tableClassName,
   scrollableBody = false,
   scrollBodyMaxHeight,
+  footerSummary,
+  paginationVariant = 'icon',
+  bare = false,
+  appearance = 'default',
+  alwaysShowPagination = false,
+  footerClassName,
 }: DataTableProps<T>) {
   const prefersReducedMotion = useReducedMotion()
   const motionEnabled = animateRows && !prefersReducedMotion
@@ -225,35 +267,34 @@ export function DataTable<T>({
     scrollableBody && (scrollBodyMaxHeight ?? 'min-h-0 flex-1'),
   )
 
-  const tableContent = (
-    <>
-      <div className={scrollAreaClass}>
-        <table
+  const tableElement = (
+    <table
+      className={cn(
+        'w-full min-w-[720px] border-collapse text-left',
+        tableClassName ?? 'table-fixed',
+      )}
+    >
+      {columns.some((column) => column.width) && (
+        <colgroup>
+          {columns.map((column) => (
+            <col key={column.id} style={column.width ? { width: column.width } : undefined} />
+          ))}
+        </colgroup>
+      )}
+      <thead>
+        <tr
           className={cn(
-            'w-full min-w-[720px] border-collapse text-left',
-            tableClassName ?? 'table-fixed',
+            appearance === 'minimal'
+              ? undefined
+              : cn('border-b border-[#e2e8f0]/60', tableHeaderBgClass),
+            headerRowClassName,
           )}
         >
-          {columns.some((column) => column.width) && (
-            <colgroup>
-              {columns.map((column) => (
-                <col key={column.id} style={column.width ? { width: column.width } : undefined} />
-              ))}
-            </colgroup>
-          )}
-          <thead>
-            <tr
-              className={cn(
-                'border-b border-[#e2e8f0]/60',
-                tableHeaderBgClass,
-                headerRowClassName,
-              )}
-            >
               {columns.map((column) => (
                 <th
                   key={column.id}
                   scope="col"
-                  className={columnHeaderClassName(column, scrollableBody)}
+                  className={columnHeaderClassName(column, appearance, scrollableBody)}
                 >
                   {column.header}
                 </th>
@@ -269,28 +310,49 @@ export function DataTable<T>({
             motionEnabled={motionEnabled}
             tbodyKey={tbodyKey}
             scrollableBody={scrollableBody}
+            appearance={appearance}
           />
-        </table>
-      </div>
+    </table>
+  )
+
+  const tableContent = (
+    <>
+      {appearance === 'minimal' && (
+        <div className="-mx-6 border-t border-[#e2e8f0]/40" aria-hidden />
+      )}
+      <div className={scrollAreaClass}>{tableElement}</div>
 
       {showFooter && (
         <div
           className={cn(
-            'flex flex-wrap items-center gap-4 border-t border-[#e2e8f0]/60 px-5 py-3',
+            'flex flex-wrap items-center gap-4',
+            appearance === 'minimal' ? 'px-0 pt-5' : 'border-t border-[#e2e8f0]/60 px-5 py-3',
             scrollableBody && 'shrink-0',
             footerLayout === 'end' ? 'justify-end' : 'justify-between',
+            footerClassName,
           )}
         >
           {showTotalCount && footerLayout === 'between' && (
-            <Paragraph variant="muted">Total {totalCount.toLocaleString()}</Paragraph>
+            <Paragraph variant="muted" className="text-sm text-[#94a3b8]">
+              {footerSummary ?? `Total ${totalCount.toLocaleString()}`}
+            </Paragraph>
           )}
-          {totalPages > 1 && (
-            <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
+          {(alwaysShowPagination || totalPages > 1) && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+              variant={paginationVariant}
+            />
           )}
         </div>
       )}
     </>
   )
+
+  if (bare) {
+    return <div className={cn('overflow-hidden', cardLayoutClass, className)}>{tableContent}</div>
+  }
 
   if (motionEnabled) {
     return (

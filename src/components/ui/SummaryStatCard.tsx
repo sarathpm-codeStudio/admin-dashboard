@@ -1,9 +1,12 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { cn } from '@/utils/cn'
 
 export type SummaryStatCardProps = {
+  /** When set, the whole card navigates on click */
+  to?: string
   label: string
   value: string
   /** Shown inline after the value (e.g. rating star) */
@@ -17,6 +20,8 @@ export type SummaryStatCardProps = {
   headerImage?: string
   headerImageAlt?: string
   headerImageClassName?: string
+  /** Top-left icon or custom badge (replaces headerImage when set) */
+  headerAdornment?: ReactNode
   /** Bottom-right image (e.g. revenue wallet graphic) */
   cornerImage?: string
   cornerImageAlt?: string
@@ -25,9 +30,10 @@ export type SummaryStatCardProps = {
   valueClassName?: string
   size?: 'default' | 'compact'
   className?: string
+  footerClassName?: string
 }
 
-const labelStyles = 'text-[11px] font-medium uppercase tracking-wide text-nav'
+const labelStyles = 'text-[14px] font-medium text-nav'
 
 const sizeStyles = {
   default: {
@@ -50,7 +56,11 @@ const sizeStyles = {
   },
 } as const
 
+const interactiveCardClass =
+  'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-50 focus-visible:ring-offset-2'
+
 export function SummaryStatCard({
+  to,
   label,
   value,
   valueAdornment,
@@ -60,6 +70,7 @@ export function SummaryStatCard({
   headerImage,
   headerImageAlt = '',
   headerImageClassName,
+  headerAdornment,
   cornerImage,
   cornerImageAlt = '',
   cornerImageClassName,
@@ -67,13 +78,23 @@ export function SummaryStatCard({
   valueClassName,
   size = 'default',
   className,
+  footerClassName,
 }: SummaryStatCardProps) {
   const styles = sizeStyles[size]
+  const footerIsOverlay = Boolean(footerClassName?.includes('absolute'))
   const hasFooter = Boolean(footer || cornerImage || CornerIcon)
 
-  return (
-    <Card className={cn('flex flex-col shadow-sm', styles.card, className)}>
-      {headerImage && (
+  const card = (
+    <Card
+      className={cn(
+        'flex h-full flex-col shadow-sm',
+        styles.card,
+        to && interactiveCardClass,
+        className,
+      )}
+    >
+      {headerAdornment}
+      {!headerAdornment && headerImage && (
         <img
           src={headerImage}
           alt={headerImageAlt}
@@ -92,8 +113,12 @@ export function SummaryStatCard({
         {valueAdornment}
       </div>
 
-      {hasFooter && (
-        <div className={cn('mt-auto flex items-end justify-end', styles.footerPt)}>
+      {footer && footerIsOverlay && (
+        <div className={footerClassName}>{footer}</div>
+      )}
+
+      {hasFooter && !footerIsOverlay && (
+        <div className={cn('mt-auto flex items-end justify-end', styles.footerPt, footerClassName)}>
           {footer}
           {!footer && cornerImage && (
             <img
@@ -115,5 +140,13 @@ export function SummaryStatCard({
         </div>
       )}
     </Card>
+  )
+
+  if (!to) return card
+
+  return (
+    <Link to={to} className="block h-full no-underline text-inherit">
+      {card}
+    </Link>
   )
 }

@@ -13,6 +13,7 @@ import { HelpCenterPage } from '@/pages/HelpCenterPage'
 import { ReportsAnalyticsPage } from '@/pages/ReportsAnalyticsPage'
 import { FacultyCoursesPage } from '@/pages/FacultyCoursesPage'
 import { FacultyEnrollmentPage } from '@/pages/FacultyEnrollmentPage'
+import { FacultyRevenuePage } from '@/pages/FacultyRevenuePage'
 import { FacultyDetailPage } from '@/pages/FacultyDetailPage'
 import { StudentDetailPage } from '@/pages/StudentDetailPage'
 import { UserManagementPage } from '@/pages/UserManagementPage'
@@ -40,6 +41,10 @@ export function AppRoutes() {
           <Route path="users" element={<UserManagementPage />} />
           <Route path="courses" element={<CourseManagementPage />} />
           <Route path="financial" element={<FinancialManagementPage />} />
+          <Route
+            path="financial/faculty/:facultyId/revenue"
+            element={<FacultyRevenuePage />}
+          />
           <Route path="chats" element={<ChatsPage />} />
           <Route path="reports" element={<ReportsAnalyticsPage />} />
           <Route path="account" element={<AccountPage />} />
