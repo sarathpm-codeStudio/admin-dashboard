@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { LoginPage } from '@/pages/LoginPage'
 import { AccountPage } from '@/pages/AccountPage'
 import { ChatsPage } from '@/pages/ChatsPage'
 import { CourseManagementPage } from '@/pages/CourseManagementPage'
@@ -16,6 +17,7 @@ import { UserManagementPage } from '@/pages/UserManagementPage'
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
       <Route element={<DashboardLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="userdetails/faculty/:facultyId" element={<FacultyDetailPage />} />
