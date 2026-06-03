@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { getAuthErrorMessage, signInWithPassword } from '@/api/auth.api'
+import { isSupabaseConfigured } from '@/config/auth'
+import { useToast } from '@/hooks/useToast'
+import { useAuthStore } from '@/store/authStore'
+import { AdminAccessDeniedError } from '@/types/auth'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -18,6 +23,11 @@ type LoginFormValues = {
 
 export function LoginForm() {
   const navigate = useNavigate()
+  const toast = useToast()
+  const setUser = useAuthStore((state) => state.setUser)
+  const location = useLocation()
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from
+    ?.pathname
   const [values, setValues] = useState<LoginFormValues>({
     email: '',
     password: '',
@@ -39,15 +49,32 @@ export function LoginForm() {
       return
     }
 
+    if (!isSupabaseConfigured()) {
+      setError('Supabase is not configured. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
     try {
-      // TODO: wire auth API / Supabase signIn
-      await new Promise((resolve) => setTimeout(resolve, 400))
-      navigate('/', { replace: true })
-    } catch {
-      setError('Sign in failed. Please check your credentials and try again.')
+      const user = await signInWithPassword({
+        email: values.email,
+        password: values.password,
+        remember: values.remember,
+      })
+      setUser(user)
+      navigate(from ?? '/', { replace: true })
+    } catch (err) {
+      useAuthStore.getState().reset()
+      const message = getAuthErrorMessage(err)
+
+      if (err instanceof AdminAccessDeniedError) {
+        toast.error(message, { title: 'Access denied' })
+        setError(null)
+      } else {
+        setError(message)
+      }
     } finally {
       setSubmitting(false)
     }

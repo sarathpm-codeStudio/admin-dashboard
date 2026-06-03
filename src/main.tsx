@@ -4,6 +4,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from '@/App'
 import { queryClient } from '@/config/queryClient'
+import { ToastViewport } from '@/components/ui/Toast'
+import { AuthProvider } from '@/features/auth/AuthProvider'
 import '@/styles/globals.css'
 
 const rootElement = document.getElementById('root')
@@ -15,7 +17,10 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <AuthProvider>
+        <App />
+        <ToastViewport />
+      </AuthProvider>
       {import.meta.env.DEV ? (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
       ) : null}

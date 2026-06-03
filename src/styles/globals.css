@@ -19,4 +19,19 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  .toast-enter {
+    animation: toast-in 0.2s ease-out forwards;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
