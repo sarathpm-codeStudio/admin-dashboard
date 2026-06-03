@@ -1,48 +1,41 @@
 import { Star } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import revenueIcon from '@/asset/image/Container.png'
 import type { SummaryStatItem } from '@/components/ui/SummaryStatsGrid'
 import type { FacultyDetail } from '@/features/faculty/data/mockFacultyDetail'
 
 const footerTrendClass =
-  'text-xs font-semibold text-teal-600 no-underline hover:no-underline focus:no-underline active:no-underline'
+  'text-xs font-semibold text-teal-600'
 const footerMetaClass =
   'text-[10px] font-medium uppercase tracking-wide text-slate-400'
 
 export function getFacultyStatItems(faculty: FacultyDetail): SummaryStatItem[] {
   const { stats } = faculty
+  const facultyBase = `/userdetails/faculty/${faculty.id}`
 
   return [
     {
       id: 'courses-created',
       label: 'Courses created',
       value: String(stats.coursesCreated),
+      to: `${facultyBase}/courses`,
       footer: (
-        <Link
-          to={`/userdetails/faculty/${faculty.id}/courses`}
-          className={footerTrendClass}
-        >
-          +{stats.coursesNew} New
-        </Link>
+        <span className={footerTrendClass}>+{stats.coursesNew} New</span>
       ),
     },
     {
       id: 'total-students',
       label: 'Total students',
       value: stats.totalStudents.toLocaleString(),
+      to: `${facultyBase}/enrollment`,
       footer: (
-        <Link
-          to={`/userdetails/faculty/${faculty.id}/enrollment`}
-          className={footerTrendClass}
-        >
-          ↑ {stats.studentsGrowthPercent}%
-        </Link>
+        <span className={footerTrendClass}>↑ {stats.studentsGrowthPercent}%</span>
       ),
     },
     {
       id: 'total-revenue',
       label: 'Total revenue',
       value: stats.totalRevenue,
+      to: `/financial/faculty/${faculty.id}/revenue`,
       cornerImage: revenueIcon,
       cornerImageAlt: 'Revenue',
     },
@@ -50,6 +43,7 @@ export function getFacultyStatItems(faculty: FacultyDetail): SummaryStatItem[] {
       id: 'avg-rating',
       label: 'Avg rating',
       value: String(stats.avgRating),
+      to: '/reports',
       valueAdornment: (
         <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
       ),

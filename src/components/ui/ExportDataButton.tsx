@@ -4,9 +4,13 @@ import { cn } from '@/utils/cn'
 
 type ExportDataButtonProps = {
   className?: string
+  label?: string
 }
 
-export function ExportDataButton({ className }: ExportDataButtonProps) {
+export function ExportDataButton({
+  className,
+  label = 'Export Data',
+}: ExportDataButtonProps) {
   return (
     <Button
       type="button"
@@ -17,7 +21,7 @@ export function ExportDataButton({ className }: ExportDataButtonProps) {
       )}
     >
       <Download className="size-4" aria-hidden />
-      Export Data
+      {label}
     </Button>
   )
 }

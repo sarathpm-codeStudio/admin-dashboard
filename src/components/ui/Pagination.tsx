@@ -6,6 +6,8 @@ type PaginationProps = {
   totalPages: number
   onPageChange: (page: number) => void
   className?: string
+  /** Text labels for prev/next and bordered pills — faculty revenue table */
+  variant?: 'icon' | 'labeled'
 }
 
 function getPageItems(page: number, totalPages: number): (number | 'ellipsis')[] {
@@ -30,19 +32,40 @@ function getPageItems(page: number, totalPages: number): (number | 'ellipsis')[]
   return items
 }
 
-export function Pagination({ page, totalPages, onPageChange, className }: PaginationProps) {
+const labeledNavButtonClass =
+  'inline-flex items-center gap-1 rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm font-medium text-[#64748B] transition-colors hover:bg-[#F8FAFC] disabled:opacity-40'
+
+const labeledPageButtonClass =
+  'flex min-w-9 items-center justify-center rounded-lg border border-[#e2e8f0] bg-white px-2.5 py-1.5 text-sm font-medium text-[#64748B] transition-colors hover:bg-[#F8FAFC]'
+
+const labeledPageActiveClass =
+  'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50 hover:text-blue-700'
+
+export function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  className,
+  variant = 'icon',
+}: PaginationProps) {
   const items = getPageItems(page, totalPages)
+  const labeled = variant === 'labeled'
 
   return (
-    <nav className={cn('flex items-center gap-1', className)} aria-label="Pagination">
+    <nav className={cn('flex items-center gap-1.5', className)} aria-label="Pagination">
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="flex size-8 items-center justify-center rounded-nav text-nav transition-colors hover:bg-surface-input disabled:opacity-40"
+        className={
+          labeled
+            ? labeledNavButtonClass
+            : 'flex size-8 items-center justify-center rounded-nav text-nav transition-colors hover:bg-surface-input disabled:opacity-40'
+        }
         aria-label="Previous page"
       >
-        <ChevronLeft className="size-4" />
+        <ChevronLeft className="size-4" aria-hidden />
+        {labeled && <span>Previous</span>}
       </button>
 
       {items.map((item, index) =>
@@ -57,10 +80,14 @@ export function Pagination({ page, totalPages, onPageChange, className }: Pagina
             onClick={() => onPageChange(item)}
             aria-current={page === item ? 'page' : undefined}
             className={cn(
-              'flex min-w-8 items-center justify-center rounded-nav px-2 py-1 text-sm font-medium transition-colors',
+              labeled ? labeledPageButtonClass : 'flex min-w-8 items-center justify-center rounded-nav px-2 py-1 text-sm font-medium transition-colors',
               page === item
-                ? 'bg-primary text-white'
-                : 'text-nav hover:bg-surface-input hover:text-ink-heading',
+                ? labeled
+                  ? labeledPageActiveClass
+                  : 'bg-primary text-white'
+                : labeled
+                  ? undefined
+                  : 'text-nav hover:bg-surface-input hover:text-ink-heading',
             )}
           >
             {item}
@@ -72,10 +99,15 @@ export function Pagination({ page, totalPages, onPageChange, className }: Pagina
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="flex size-8 items-center justify-center rounded-nav text-nav transition-colors hover:bg-surface-input disabled:opacity-40"
+        className={
+          labeled
+            ? labeledNavButtonClass
+            : 'flex size-8 items-center justify-center rounded-nav text-nav transition-colors hover:bg-surface-input disabled:opacity-40'
+        }
         aria-label="Next page"
       >
-        <ChevronRight className="size-4" />
+        {labeled && <span>Next</span>}
+        <ChevronRight className="size-4" aria-hidden />
       </button>
     </nav>
   )

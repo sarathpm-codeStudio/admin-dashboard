@@ -5,6 +5,8 @@ import { cn } from '@/utils/cn'
 export type BreadcrumbItem = {
   label: string
   to?: string
+  /** Optional class for this crumb (e.g. active name color) */
+  className?: string
 }
 
 type BreadcrumbSeparator = 'chevron' | 'slash'
@@ -47,6 +49,7 @@ export function Breadcrumbs({
                 className={cn(
                   'font-medium',
                   isLast ? 'text-ink-heading' : 'text-nav',
+                  item.className,
                 )}
                 aria-current={isLast ? 'page' : undefined}
               >
