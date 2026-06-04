@@ -15,6 +15,7 @@ import { FacultyCoursesPage } from '@/pages/FacultyCoursesPage'
 import { FacultyEnrollmentPage } from '@/pages/FacultyEnrollmentPage'
 import { FacultyRevenuePage } from '@/pages/FacultyRevenuePage'
 import { FacultyDetailPage } from '@/pages/FacultyDetailPage'
+import { FacultyReviewsPage } from '@/pages/FacultyReviewsPage'
 import { StudentDetailPage } from '@/pages/StudentDetailPage'
 import { UserManagementPage } from '@/pages/UserManagementPage'
 
@@ -36,6 +37,10 @@ export function AppRoutes() {
           <Route
             path="userdetails/faculty/:facultyId/enrollment"
             element={<FacultyEnrollmentPage />}
+          />
+          <Route
+            path="userdetails/faculty/:facultyId/reviews"
+            element={<FacultyReviewsPage />}
           />
           <Route path="userdetails/student/:studentId" element={<StudentDetailPage />} />
           <Route path="users" element={<UserManagementPage />} />

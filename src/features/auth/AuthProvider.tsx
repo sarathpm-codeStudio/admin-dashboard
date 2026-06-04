@@ -21,8 +21,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return
       }
 
-      const user = await resolveAuthUser()
-      if (!cancelled) setUser(user)
+      try {
+        const user = await resolveAuthUser()
+        if (!cancelled) setUser(user)
+      } catch {
+        if (!cancelled) setUser(null)
+      }
     }
 
     async function bootstrap() {
@@ -32,14 +36,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return
       }
 
-      const { data } = await supabase.auth.getSession()
-      if (cancelled) return
-
-      await syncAuth(data.session !== null)
-      if (!cancelled) setInitializing(false)
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (cancelled) return
+        await syncAuth(data.session !== null)
+      } catch {
+        if (!cancelled) setUser(null)
+      } finally {
+        if (!cancelled) setInitializing(false)
+      }
     }
 
     void bootstrap()
+
+    if (!isSupabaseConfigured()) {
+      return () => {
+        cancelled = true
+      }
+    }
 
     const {
       data: { subscription },

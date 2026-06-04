@@ -19,7 +19,11 @@ export function ProtectedRoute() {
     return <AuthLoadingScreen />
   }
 
-  if (!isSupabaseConfigured() || !user) {
+  if (!isSupabaseConfigured()) {
+    return <Outlet />
+  }
+
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

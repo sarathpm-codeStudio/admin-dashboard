@@ -43,7 +43,7 @@ export function getFacultyStatItems(faculty: FacultyDetail): SummaryStatItem[] {
       id: 'avg-rating',
       label: 'Avg rating',
       value: String(stats.avgRating),
-      to: '/reports',
+      to: `${facultyBase}/reviews`,
       valueAdornment: (
         <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
       ),

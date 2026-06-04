@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { isSupabaseConfigured } from '@/config/auth'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 
 const REMEMBER_KEY = 'auth-remember'
 
@@ -24,8 +25,8 @@ function getAuthStorage(): Storage {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: getAuthStorage(),
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+    persistSession: isSupabaseConfigured(),
+    autoRefreshToken: isSupabaseConfigured(),
+    detectSessionInUrl: isSupabaseConfigured(),
   },
 })

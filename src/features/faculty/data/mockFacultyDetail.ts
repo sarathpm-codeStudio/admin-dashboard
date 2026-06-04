@@ -2,7 +2,7 @@ import { Calendar, ClipboardCheck, FileUp, MessageSquare } from 'lucide-react'
 import type { ActivityListItemData } from '@/components/ui/ActivityList'
 
 import activityOverlayImage from '@/asset/image/Overlay.png'
-import facultyProfileAvatar from '@/asset/image/john.png'
+import facultyProfileAvatar from '@/asset/image/John Smith Profile.png'
 import { ACTIVITY_EDIT_ICON_COLOR } from '@/features/faculty/data/activityIconColors'
 
 export type FacultyStatus = 'active' | 'pending' | 'suspended'

@@ -1,5 +1,5 @@
 import { GraduationCap, Mail, MessageSquare, Phone } from 'lucide-react'
-import facultyAvatar from '@/asset/image/john.png'
+import facultyAvatar from '@/asset/image/John Smith Profile.png'
 import verifiedBadgeImage from '@/asset/image/Background.png'
 import { Button } from '@/components/ui/Button'
 import { Card, cardPaddingClass } from '@/components/ui/Card'

@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import { fetchProfileForAuth } from '@/api/profile.api'
+import { isAuthNetworkError } from '@/config/auth'
 import { supabase } from '@/config/supabase'
 import {
   AdminAccessDeniedError,
@@ -45,6 +46,9 @@ export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof AdminAccessDeniedError) {
     return error.message
   }
+  if (isAuthNetworkError(error)) {
+    return 'Cannot reach the authentication server. Check your internet connection, VPN, or firewall, then try again.'
+  }
   if (error && typeof error === 'object' && 'message' in error) {
     const message = String((error as { message: string }).message)
     if (message.includes('Invalid login credentials')) {
@@ -85,19 +89,26 @@ export async function signOut(): Promise<void> {
 
 /** Validates session with Supabase and ensures the user is an admin. */
 export async function resolveAuthUser(): Promise<AuthUser | null> {
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data.user) {
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (sessionData.session) {
-      await supabase.auth.signOut()
-    }
-    return null
-  }
-
   try {
-    return await buildAdminAuthUser(data.user)
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user) {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (sessionData.session) {
+        await supabase.auth.signOut()
+      }
+      return null
+    }
+
+    try {
+      return await buildAdminAuthUser(data.user)
+    } catch (err) {
+      if (err instanceof AdminAccessDeniedError) {
+        return null
+      }
+      throw err
+    }
   } catch (err) {
-    if (err instanceof AdminAccessDeniedError) {
+    if (isAuthNetworkError(err)) {
       return null
     }
     throw err
