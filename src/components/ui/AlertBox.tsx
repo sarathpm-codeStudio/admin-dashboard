@@ -9,23 +9,49 @@ export type AlertBoxProps = {
   className?: string
 }
 
-const variantStyles: Record<AlertVariant, string> = {
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
-  danger: 'border-red-200 bg-red-50 text-red-800',
-  info: 'border-blue-200 bg-blue-50 text-blue-800',
+const variantStyles: Record<
+  AlertVariant,
+  { container: string; accent: string; title: string; detail: string }
+> = {
+  warning: {
+    container: 'bg-[#FFFBEB]',
+    accent: 'bg-[#F59E0B]',
+    title: 'text-[#78350F]',
+    detail: 'text-[#A16207]',
+  },
+  danger: {
+    container: 'bg-[#FEF2F2]',
+    accent: 'bg-[#DC2626]',
+    title: 'text-[#991B1B]',
+    detail: 'text-[#B91C1C]',
+  },
+  info: {
+    container: 'bg-[#F1F5F9]',
+    accent: 'bg-[#64748B]',
+    title: 'text-[#0F172A]',
+    detail: 'text-[#64748B]',
+  },
 }
 
 export function AlertBox({ title, detail, variant, className }: AlertBoxProps) {
+  const styles = variantStyles[variant]
+
   return (
     <div
       className={cn(
-        'rounded-nav border px-3 py-2.5',
-        variantStyles[variant],
+        'flex items-center gap-3 rounded-lg px-3.5 py-3',
+        styles.container,
         className,
       )}
     >
-      <p className="text-xs font-semibold leading-snug">{title}</p>
-      <p className="mt-0.5 text-[10px] leading-snug opacity-80">{detail}</p>
+      <span
+        className={cn('h-10 w-1 shrink-0 rounded-full', styles.accent)}
+        aria-hidden
+      />
+      <div className="min-w-0 flex flex-col gap-0.5">
+        <p className={cn('text-sm font-bold leading-snug', styles.title)}>{title}</p>
+        <p className={cn('text-xs font-normal leading-snug', styles.detail)}>{detail}</p>
+      </div>
     </div>
   )
 }

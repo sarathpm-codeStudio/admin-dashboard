@@ -1,6 +1,4 @@
-import { Card, CardBody, cardPaddingClass } from '@/components/ui/Card'
-import { SectionHeader } from '@/components/ui/SectionHeader'
-import { Paragraph } from '@/components/ui/Typography'
+import { Card } from '@/components/ui/Card'
 import { cn } from '@/utils/cn'
 import type { LiveActivity } from '@/features/dashboard/data/mockData'
 
@@ -8,35 +6,52 @@ type LiveActivityFeedProps = { activities: LiveActivity[]; className?: string }
 
 export function LiveActivityFeed({ activities, className }: LiveActivityFeedProps) {
   return (
-    <Card className={cn(cardPaddingClass, className)}>
-      <CardBody>
-        <SectionHeader title="Live Activity" />
-        <div className="space-y-3">
-          {activities.map((activity) => {
-            const Icon = activity.icon
-            return (
-              <div key={activity.id} className="flex items-center gap-2.5">
+    <Card
+      className={cn(
+        'w-full rounded-[12px] border border-[#e2e8f0]/60 p-6 shadow-sm',
+        className,
+      )}
+    >
+      <h2 className="mb-5 text-base font-bold text-[#111827]">Live Activity</h2>
+
+      <div className="flex flex-col">
+        {activities.map((activity, index) => {
+          const Icon = activity.icon
+          const isLast = index === activities.length - 1
+
+          return (
+            <div
+              key={activity.id}
+              className={cn('relative flex gap-3', !isLast && 'pb-6')}
+            >
+              {!isLast && (
                 <div
-                  className={cn(
-                    'flex size-8 shrink-0 items-center justify-center rounded-lg',
-                    activity.iconClassName,
-                  )}
-                >
-                  <Icon className="size-3.5" aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Paragraph variant="small" className="truncate">
-                    {activity.message}
-                  </Paragraph>
-                  <Paragraph variant="caption" className="text-[10px]">
-                    {activity.time}
-                  </Paragraph>
-                </div>
+                  className="absolute left-4 top-8 w-px -translate-x-1/2 bg-[#E2E8F0]"
+                  style={{ bottom: 0 }}
+                  aria-hidden
+                />
+              )}
+
+              <div
+                className={cn(
+                  'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full',
+                  activity.iconBgClassName,
+                )}
+              >
+                <Icon className="size-4 text-white" strokeWidth={2.25} aria-hidden />
               </div>
-            )
-          })}
-        </div>
-      </CardBody>
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="text-sm leading-snug text-[#111827]">
+                  <span className="font-bold">{activity.highlight}</span>
+                  {activity.rest}
+                </p>
+                <p className="mt-1 text-xs text-[#6B7280]">{activity.time}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </Card>
   )
 }

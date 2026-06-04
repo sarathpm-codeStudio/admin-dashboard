@@ -7,6 +7,12 @@ import { cn } from '@/utils/cn'
 export type SummaryStatCardProps = {
   /** When set, the whole card navigates on click */
   to?: string
+  /** Dashboard row: icon left, label + value right */
+  layout?: 'stacked' | 'inline'
+  /** Inline layout: Lucide icon in colored tile */
+  icon?: LucideIcon
+  iconTileClassName?: string
+  iconClassName?: string
   label: string
   value: string
   /** Shown inline after the value (e.g. rating star) */
@@ -59,8 +65,17 @@ const sizeStyles = {
 const interactiveCardClass =
   'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-50 focus-visible:ring-offset-2'
 
+const inlineLabelClass =
+  'text-xs font-semibold uppercase tracking-[0.04em] text-[#64748B]'
+const inlineValueClass =
+  'text-[1.75rem] font-bold leading-tight tracking-tight text-[#001a5e]'
+
 export function SummaryStatCard({
   to,
+  layout = 'stacked',
+  icon: InlineIcon,
+  iconTileClassName,
+  iconClassName,
   label,
   value,
   valueAdornment,
@@ -83,6 +98,52 @@ export function SummaryStatCard({
   const styles = sizeStyles[size]
   const footerIsOverlay = Boolean(footerClassName?.includes('absolute'))
   const hasFooter = Boolean(footer || cornerImage || CornerIcon)
+
+  if (layout === 'inline') {
+    const inlineCard = (
+      <Card
+        className={cn(
+          'flex h-full items-center gap-4 rounded-[12px] border border-[#e2e8f0]/60 p-6 shadow-sm',
+          to && interactiveCardClass,
+          className,
+        )}
+      >
+        {headerAdornment ??
+          (InlineIcon ? (
+            <div
+              className={cn(
+                'flex size-12 shrink-0 items-center justify-center rounded-lg',
+                iconTileClassName,
+              )}
+              aria-hidden
+            >
+              <InlineIcon
+                className={cn('size-6 stroke-[1.75]', iconClassName)}
+                aria-hidden
+              />
+            </div>
+          ) : null)}
+        <div className="min-w-0 flex flex-col gap-1">
+          <p className={cn(inlineLabelClass, labelClassName)}>{label}</p>
+          <div className="flex items-center gap-1.5">
+            <span className={cn(inlineValueClass, valueClassName)}>{value}</span>
+            {valueAdornment}
+          </div>
+        </div>
+        {footer ? (
+          <div className={cn('ml-auto shrink-0', footerClassName)}>{footer}</div>
+        ) : null}
+      </Card>
+    )
+
+    if (!to) return inlineCard
+
+    return (
+      <Link to={to} className="block h-full no-underline text-inherit">
+        {inlineCard}
+      </Link>
+    )
+  }
 
   const card = (
     <Card

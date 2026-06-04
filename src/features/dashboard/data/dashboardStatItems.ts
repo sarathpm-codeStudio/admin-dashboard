@@ -3,8 +3,10 @@ import { dashboardStats } from '@/features/dashboard/data/mockData'
 
 export const dashboardStatItems: SummaryStatItem[] = dashboardStats.map((stat) => ({
   id: stat.label,
+  layout: 'inline',
   label: stat.label,
   value: stat.value,
-  cornerIcon: stat.icon,
-  cornerIconClassName: 'text-slate-400',
+  icon: stat.icon,
+  iconTileClassName: stat.iconTileClassName,
+  iconClassName: stat.iconClassName,
 }))

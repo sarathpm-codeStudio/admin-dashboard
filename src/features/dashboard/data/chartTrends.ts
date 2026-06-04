@@ -22,12 +22,12 @@ export const enrollmentTrendsByPeriod: Record<TrendPeriod, EnrollmentTrendPoint[
     { label: 'Sun', students: 25000, faculty: 1200 },
   ],
   month: [
-    { label: 'Jan', students: 18000, faculty: 900 },
-    { label: 'Feb', students: 19500, faculty: 950 },
-    { label: 'Mar', students: 21000, faculty: 1000 },
-    { label: 'Apr', students: 22500, faculty: 1050 },
-    { label: 'May', students: 24000, faculty: 1150 },
-    { label: 'Jun', students: 25000, faculty: 1200 },
+    { label: 'Jan', students: 950, faculty: 500 },
+    { label: 'Feb', students: 1350, faculty: 720 },
+    { label: 'Mar', students: 2000, faculty: 950 },
+    { label: 'Apr', students: 1750, faculty: 800 },
+    { label: 'May', students: 2240, faculty: 412 },
+    { label: 'Jun', students: 2700, faculty: 1200 },
   ],
   year: [
     { label: '2020', students: 12000, faculty: 520 },
@@ -69,6 +69,31 @@ export const periodSubtitles: Record<TrendPeriod, string> = {
   week: 'Weekly performance overview',
   month: 'Monthly performance overview',
   year: 'Yearly performance overview',
+}
+
+export const enrollmentSubtitles: Record<TrendPeriod, string> = {
+  week: 'Institutional user growth breakdown (Last 7 Days)',
+  month: 'Institutional user growth breakdown (Last 6 Months)',
+  year: 'Institutional user growth breakdown (Last 5 Years)',
+}
+
+/** Full month labels for enrollment chart X-axis (month period) */
+export const enrollmentMonthTickLabels: Record<string, string> = {
+  Jan: 'JANUARY',
+  Feb: 'FEBRUARY',
+  Mar: 'MARCH',
+  Apr: 'APRIL',
+  May: 'MAY',
+  Jun: 'JUNE',
+}
+
+export const enrollmentTooltipMonths: Record<string, string> = {
+  Jan: 'JANUARY 2024',
+  Feb: 'FEBRUARY 2024',
+  Mar: 'MARCH 2024',
+  Apr: 'APRIL 2024',
+  May: 'MAY 2024',
+  Jun: 'JUNE 2024',
 }
 
 export const revenueGrowthByPeriod: Record<TrendPeriod, number> = {

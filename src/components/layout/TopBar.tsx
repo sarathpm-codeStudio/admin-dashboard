@@ -39,11 +39,6 @@ export function TopBar() {
   }
 
   const displayName = user?.fullName ?? user?.email ?? 'Admin'
-  const displaySubtitle = user?.accountId
-    ? user.accountId
-    : user?.fullName
-      ? user.email
-      : 'Administrator'
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-6 border-b border-[rgba(198,197,212,0.1)] bg-surface-topbar px-8 backdrop-blur-xl">

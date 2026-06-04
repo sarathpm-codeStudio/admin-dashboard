@@ -43,7 +43,7 @@ export const EARNINGS_GROWTH_CHART_MARGIN = {
 } as const
 
 const CHART_BAR = '#142283'
-const CHART_AXIS_COLOR = '#1E1B4B'
+const CHART_AXIS_COLOR = '#5F5E5E'
 const DEFAULT_PINNED_BADGE = '#6366F1'
 
 export function toRelativeBarHeights(
@@ -164,7 +164,7 @@ export function EarningsGrowthBarChart({
             tickLine={false}
             tick={{
               fill: CHART_AXIS_COLOR,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 500,
             }}
             dy={10}

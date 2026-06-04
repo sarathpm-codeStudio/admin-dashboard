@@ -15,6 +15,7 @@ import { cn } from '@/utils/cn'
 
 const MARCH_INDEX = 2
 const MARCH_TOOLTIP_VALUE = 64366
+const REVENUE_TRENDS_CHART_HEIGHT_CLASS = 'h-[220px] w-full sm:h-[240px]'
 
 type RevenueTrendsChartProps = { className?: string }
 
@@ -36,18 +37,24 @@ export function RevenueTrendsChart({ className }: RevenueTrendsChartProps) {
 
   return (
     <Card className={cn('w-full p-6', className)}>
-      <CardBody className="gap-6">
-        <SectionHeader
-          title="Revenue Trends"
-          subtitle={subtitle}
-          action={<ChartPeriodFilter value={period} onChange={setPeriod} />}
-        />
-        <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-          <TrendingUp className="size-3.5" aria-hidden />
-          {growthPercent}% increase {growthLabel}
-        </span>
+      <CardBody className="gap-5">
+        <div className="flex flex-col gap-0.5">
+          <SectionHeader
+            title="Revenue Trends"
+            titleClassName="text-[#191c1e]"
+            subtitle={subtitle}
+            action={<ChartPeriodFilter value={period} onChange={setPeriod} />}
+          />
+          <div className="flex justify-end">
+            <span className="flex items-center gap-1 text-xs font-medium text-[#3A3A3A]">
+              <TrendingUp className="size-3.5" aria-hidden />
+              {growthPercent}% increase {growthLabel}
+            </span>
+          </div>
+        </div>
         <EarningsGrowthBarChart
           data={chartData}
+          heightClassName={REVENUE_TRENDS_CHART_HEIGHT_CLASS}
           pinnedLabel={
             period === 'month'
               ? { index: MARCH_INDEX, value: MARCH_TOOLTIP_VALUE }
