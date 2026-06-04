@@ -9,7 +9,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Card } from '@/components/ui/Card'
+import { Card, CardBody } from '@/components/ui/Card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { ChartPeriodFilter } from '@/features/dashboard/components/ChartPeriodFilter'
 import {
   enrollmentMonthTickLabels,
@@ -19,13 +20,15 @@ import {
   type EnrollmentTrendPoint,
   type TrendPeriod,
 } from '@/features/dashboard/data/chartTrends'
+import {
+  DASHBOARD_TRENDS_CHART_HEIGHT_CLASS,
+  DASHBOARD_TRENDS_CHART_MARGIN,
+} from '@/features/dashboard/constants/chartHeights'
 import { useTrendPeriod } from '@/features/dashboard/hooks/useTrendPeriod'
 import { cn } from '@/utils/cn'
 
 const STUDENTS_STROKE = '#000b60'
 const FACULTY_STROKE = '#22D3EE'
-/** Plot area tuned so card bottom aligns with System Alerts + Financial Pulse stack */
-const ENROLLMENT_TRENDS_CHART_HEIGHT_CLASS = 'h-[380px] w-full'
 const MONTH_Y_MAX = 3000
 const MONTH_Y_TICKS = [0, 500, 1000, 1500, 2000, 2500]
 
@@ -44,11 +47,21 @@ function formatXAxisTick(label: string, period: TrendPeriod) {
   return label.toUpperCase()
 }
 
+type EnrollmentTooltipPayloadEntry = {
+  dataKey?: string | number
+  value?: unknown
+}
+
 type EnrollmentTooltipContentProps = {
   active?: boolean
-  payload?: ReadonlyArray<{ dataKey?: string | number; value?: number | string }>
+  payload?: ReadonlyArray<EnrollmentTooltipPayloadEntry>
   label?: string | number
   period: TrendPeriod
+}
+
+function tooltipValue(entry: EnrollmentTooltipPayloadEntry | undefined) {
+  const value = entry?.value
+  return typeof value === 'number' && !Number.isNaN(value) ? value : undefined
 }
 
 function EnrollmentTooltip({
@@ -59,8 +72,8 @@ function EnrollmentTooltip({
 }: EnrollmentTooltipContentProps) {
   if (!active || !payload?.length || label == null) return null
 
-  const students = payload.find((entry) => entry.dataKey === 'students')?.value
-  const faculty = payload.find((entry) => entry.dataKey === 'faculty')?.value
+  const students = tooltipValue(payload.find((entry) => entry.dataKey === 'students'))
+  const faculty = tooltipValue(payload.find((entry) => entry.dataKey === 'faculty'))
   const heading =
     period === 'month' && typeof label === 'string'
       ? (enrollmentTooltipMonths[label] ?? String(label).toUpperCase())
@@ -73,13 +86,13 @@ function EnrollmentTooltip({
         <div className="flex items-center justify-between gap-8 text-sm">
           <span className="text-[#64748B]">Students</span>
           <span className="font-bold text-[#000b60]">
-            {typeof students === 'number' ? students.toLocaleString() : '—'}
+            {students != null ? students.toLocaleString() : '—'}
           </span>
         </div>
         <div className="flex items-center justify-between gap-8 text-sm">
           <span className="text-[#64748B]">Faculty</span>
           <span className="font-bold text-[#000b60]">
-            {typeof faculty === 'number' ? faculty.toLocaleString() : '—'}
+            {faculty != null ? faculty.toLocaleString() : '—'}
           </span>
         </div>
       </div>
@@ -108,44 +121,40 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
   const yAxis = useMemo(() => getYAxisConfig(period, data), [period, data])
 
   return (
-    <Card
-      className={cn(
-        'w-full rounded-[12px] border border-[#e2e8f0]/60 p-6 shadow-sm',
-        className,
-      )}
-    >
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-base font-bold text-[#191c1e]">Enrollment Trends</h2>
-          <p className="mt-1 text-sm text-[#64748B]">{subtitle}</p>
-        </div>
-
-        <div className="flex flex-col items-end gap-3">
-          <ChartPeriodFilter value={period} onChange={setPeriod} />
-          <div className="flex items-center gap-4 text-xs font-medium text-[#64748B]">
-            <span className="flex items-center gap-1.5">
-              <span
-                className="size-2.5 rounded-full"
-                style={{ backgroundColor: STUDENTS_STROKE }}
-                aria-hidden
-              />
-              Students
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                className="size-2.5 rounded-full"
-                style={{ backgroundColor: FACULTY_STROKE }}
-                aria-hidden
-              />
-              Faculty
-            </span>
+    <Card className={cn('w-full p-6', className)}>
+      <CardBody className="gap-5">
+        <div className="flex flex-col gap-0.5">
+          <SectionHeader
+            title="Enrollment Trends"
+            titleClassName="text-[#191c1e]"
+            subtitle={subtitle}
+            action={<ChartPeriodFilter value={period} onChange={setPeriod} />}
+          />
+          <div className="flex justify-end">
+            <div className="flex items-center gap-4 text-xs font-medium text-[#64748B]">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: STUDENTS_STROKE }}
+                  aria-hidden
+                />
+                Students
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: FACULTY_STROKE }}
+                  aria-hidden
+                />
+                Faculty
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className={cn('shrink-0', ENROLLMENT_TRENDS_CHART_HEIGHT_CLASS)}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 12, right: 16, left: 4, bottom: 8 }}>
+        <div className={cn('shrink-0', DASHBOARD_TRENDS_CHART_HEIGHT_CLASS)}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data} margin={DASHBOARD_TRENDS_CHART_MARGIN}>
             <defs>
               <linearGradient id="enrollmentStudentsFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6366F1" stopOpacity={0.18} />
@@ -165,7 +174,7 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
               tickLine={false}
               tick={{ fill: '#5F5E5E', fontSize: 11, fontWeight: 500 }}
               tickFormatter={(value) => formatXAxisTick(String(value), period)}
-              dy={8}
+              dy={10}
               interval={0}
             />
 
@@ -236,9 +245,10 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
               activeDot={{ r: 6, fill: STUDENTS_STROKE, stroke: '#fff', strokeWidth: 2 }}
               isAnimationActive={false}
             />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </CardBody>
     </Card>
   )
 }

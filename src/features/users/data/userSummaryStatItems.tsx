@@ -1,8 +1,28 @@
+import type { ReactNode } from 'react'
 import type { SummaryStatItem } from '@/components/ui/SummaryStatsGrid'
 import { userSummaryStats } from '@/features/users/data/mockUsers'
 
-const footerTrendClass = 'text-xs font-semibold text-teal-600'
-const footerMetaClass = 'text-xs font-medium text-blue-600'
+const userStatCardClass =
+  'min-h-[7.5rem] rounded-xl border border-[#F3F4F6] bg-white p-6 shadow-sm'
+
+const labelGrayClass = 'text-[14px] font-medium text-[#6B7280]'
+const valueBlueClass = 'text-3xl font-bold leading-none tracking-tight text-[#1E3A8A]'
+const valueBlackClass = 'text-3xl font-bold leading-none tracking-tight text-[#000000]'
+const pendingLabelClass = 'text-[14px] font-medium lowercase text-[#BA1A1A]'
+const pendingValueClass = 'text-3xl font-bold leading-none tracking-tight text-[#BA1A1A]'
+const footerTealClass = 'text-xs font-medium text-[#00A6BF]'
+const userStatFooterClass = 'justify-start items-start'
+
+function TealStatusFooter({ children }: { children: ReactNode }) {
+  return (
+    <span className={footerTealClass}>
+      <span className="text-[#00A6BF]" aria-hidden>
+        •{' '}
+      </span>
+      {children}
+    </span>
+  )
+}
 
 export function getUserSummaryStatItems(): SummaryStatItem[] {
   const stats = userSummaryStats
@@ -12,44 +32,49 @@ export function getUserSummaryStatItems(): SummaryStatItem[] {
       id: 'total-users',
       label: 'Total users',
       value: stats.totalUsers.toLocaleString(),
+      className: userStatCardClass,
+      labelClassName: labelGrayClass,
+      valueClassName: valueBlueClass,
       footer: (
-        <span className={footerTrendClass}>+{stats.totalGrowthPercent}% on this month</span>
+        <span className={footerTealClass}>
+          +{stats.totalGrowthPercent}% on this month
+        </span>
       ),
+      footerClassName: userStatFooterClass,
     },
     {
       id: 'students',
       label: 'Students',
       value: stats.students.toLocaleString(),
+      className: userStatCardClass,
+      labelClassName: labelGrayClass,
+      valueClassName: valueBlackClass,
       footer: (
-        <span className={footerTrendClass}>
-          <span aria-hidden>● </span>
-          {stats.studentsActive.toLocaleString()} Active
-        </span>
+        <TealStatusFooter>{stats.studentsActive.toLocaleString()} Active</TealStatusFooter>
       ),
+      footerClassName: userStatFooterClass,
     },
     {
       id: 'faculty',
       label: 'Faculty',
       value: stats.faculty.toLocaleString(),
+      className: userStatCardClass,
+      labelClassName: labelGrayClass,
+      valueClassName: valueBlackClass,
       footer: (
-        <span className={footerTrendClass}>
-          <span aria-hidden>● </span>
-          {stats.facultyActive.toLocaleString()} Active
-        </span>
+        <TealStatusFooter>{stats.facultyActive.toLocaleString()} Active</TealStatusFooter>
       ),
+      footerClassName: userStatFooterClass,
     },
     {
       id: 'pending-approvals',
-      label: 'Pending approvals',
+      label: 'pending approvals',
       value: String(stats.pendingApprovals),
-      labelClassName: 'text-red-600',
-      valueClassName: 'text-red-600',
-      footer: (
-        <span className={footerMetaClass}>
-          <span aria-hidden>● </span>
-          Awaiting verification docs
-        </span>
-      ),
+      className: userStatCardClass,
+      labelClassName: pendingLabelClass,
+      valueClassName: pendingValueClass,
+      footer: <TealStatusFooter>Awaiting verification docs</TealStatusFooter>,
+      footerClassName: userStatFooterClass,
     },
   ]
 }

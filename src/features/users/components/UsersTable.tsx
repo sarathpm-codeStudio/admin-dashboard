@@ -90,7 +90,11 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
         align: 'center',
         cell: (user) => (
           <div className="flex justify-center">
-            <Paragraph>{user.role}</Paragraph>
+            <Paragraph
+              className={user.role === 'Faculty' ? 'font-medium text-[#000B60]' : undefined}
+            >
+              {user.role}
+            </Paragraph>
           </div>
         ),
       },
@@ -101,7 +105,11 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
         align: 'center',
         cell: (user) => (
           <div className="flex justify-center">
-            <StatusBadge label={statusLabel[user.status]} variant={statusVariant[user.status]} />
+            <StatusBadge
+              label={statusLabel[user.status]}
+              variant={statusVariant[user.status]}
+              appearance="text"
+            />
           </div>
         ),
       },

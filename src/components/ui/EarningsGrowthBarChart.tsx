@@ -20,18 +20,18 @@ export type EarningsGrowthPinnedLabel = {
   badgeColor?: string
 }
 
-/** Faculty revenue page Figma bar heights (30% → 90% peak) */
+/** Figma bar heights (30% → peak); Mar center + Feb/Apr neighbors bumped */
 export const EARNINGS_FIGMA_BAR_HEIGHTS: Record<string, number> = {
   Jan: 30,
-  Feb: 45,
-  Mar: 60,
-  Apr: 90,
+  Feb: 54,
+  Mar: 76,
+  Apr: 98,
   May: 75,
   Jun: 45,
 }
 
 export const EARNINGS_BAR_HEIGHT_MIN = 30
-export const EARNINGS_BAR_HEIGHT_MAX = 90
+export const EARNINGS_BAR_HEIGHT_MAX = 98
 
 export const EARNINGS_GROWTH_CHART_HEIGHT_CLASS = 'h-[280px] w-full sm:h-[300px]'
 

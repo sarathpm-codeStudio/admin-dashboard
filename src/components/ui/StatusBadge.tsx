@@ -10,7 +10,7 @@ export type StatusBadgeVariant =
   | 'bundle'
   | 'individual'
 
-const variantStyles: Record<StatusBadgeVariant, string> = {
+const variantFilledStyles: Record<StatusBadgeVariant, string> = {
   active: 'bg-emerald-50 text-emerald-700',
   pending: 'bg-amber-50 text-amber-700',
   suspended: 'bg-red-50 text-red-700',
@@ -22,18 +22,39 @@ const variantStyles: Record<StatusBadgeVariant, string> = {
     'rounded-md bg-[#F1F5F9] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#475569]',
 }
 
+const variantTextStyles: Record<StatusBadgeVariant, string> = {
+  active: 'text-emerald-700',
+  pending: 'text-amber-700',
+  suspended: 'text-red-700',
+  info: 'text-blue-700',
+  courseActive: 'text-[#00A6BF]',
+  draft: 'text-[#656464]',
+  bundle: 'text-[#4338CA]',
+  individual: 'text-[#475569]',
+}
+
 type StatusBadgeProps = {
   label: string
   variant?: StatusBadgeVariant
+  /** `filled` = pill with background; `text` = colored label only */
+  appearance?: 'filled' | 'text'
   className?: string
 }
 
-export function StatusBadge({ label, variant = 'active', className }: StatusBadgeProps) {
+export function StatusBadge({
+  label,
+  variant = 'active',
+  appearance = 'filled',
+  className,
+}: StatusBadgeProps) {
+  const isText = appearance === 'text'
+
   return (
     <span
       className={cn(
-        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
-        variantStyles[variant],
+        'inline-flex text-xs font-medium',
+        isText ? variantTextStyles[variant] : 'rounded-full px-2.5 py-0.5',
+        !isText && variantFilledStyles[variant],
         className,
       )}
     >

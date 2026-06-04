@@ -10,12 +10,12 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { ChartPeriodFilter } from '@/features/dashboard/components/ChartPeriodFilter'
 import type { TrendPeriod } from '@/features/dashboard/data/chartTrends'
 import { revenueGrowthByPeriod, revenueTrendsByPeriod } from '@/features/dashboard/data/chartTrends'
+import { DASHBOARD_TRENDS_CHART_HEIGHT_CLASS } from '@/features/dashboard/constants/chartHeights'
 import { useTrendPeriod } from '@/features/dashboard/hooks/useTrendPeriod'
 import { cn } from '@/utils/cn'
 
 const MARCH_INDEX = 2
 const MARCH_TOOLTIP_VALUE = 64366
-const REVENUE_TRENDS_CHART_HEIGHT_CLASS = 'h-[220px] w-full sm:h-[240px]'
 
 type RevenueTrendsChartProps = { className?: string }
 
@@ -54,7 +54,7 @@ export function RevenueTrendsChart({ className }: RevenueTrendsChartProps) {
         </div>
         <EarningsGrowthBarChart
           data={chartData}
-          heightClassName={REVENUE_TRENDS_CHART_HEIGHT_CLASS}
+          heightClassName={DASHBOARD_TRENDS_CHART_HEIGHT_CLASS}
           pinnedLabel={
             period === 'month'
               ? { index: MARCH_INDEX, value: MARCH_TOOLTIP_VALUE }
