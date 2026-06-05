@@ -49,6 +49,8 @@ export function UserManagementView() {
     [data?.data],
   )
 
+  console.log("tableUsers", tableUsers)
+
   const pagination = data?.pagination
   const totalCount = pagination?.total ?? 0
   const totalPages = Math.max(1, pagination?.total_pages ?? 1)

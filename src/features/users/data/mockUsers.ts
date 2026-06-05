@@ -23,6 +23,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Oct 12, 2023',
     initials: 'SM',
     avatarClassName: 'bg-violet-100 text-violet-700',
+    avatarUrl: null,
   },
   {
     name: 'Dr. James Wilson',
@@ -33,6 +34,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Sep 28, 2023',
     initials: 'JW',
     avatarClassName: 'bg-blue-100 text-blue-700',
+    avatarUrl: null,
   },
   {
     name: 'Emily Chen',
@@ -43,6 +45,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Nov 02, 2023',
     initials: 'EC',
     avatarClassName: 'bg-emerald-100 text-emerald-700',
+    avatarUrl: null,
   },
   {
     name: 'Michael Brown',
@@ -53,6 +56,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Aug 15, 2023',
     initials: 'MB',
     avatarClassName: 'bg-amber-100 text-amber-700',
+    avatarUrl: null,
   },
   {
     name: 'Dr. Priya Sharma',
@@ -63,6 +67,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Jul 20, 2023',
     initials: 'PS',
     avatarClassName: 'bg-pink-100 text-pink-700',
+    avatarUrl: null,
   },
   {
     name: 'Alex Thompson',
@@ -73,6 +78,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Oct 05, 2023',
     initials: 'AT',
     avatarClassName: 'bg-cyan-100 text-cyan-700',
+    avatarUrl: null,
   },
   {
     name: 'Lisa Anderson',
@@ -83,6 +89,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Jan 10, 2023',
     initials: 'LA',
     avatarClassName: 'bg-indigo-100 text-indigo-700',
+    avatarUrl: null,
   },
   {
     name: 'David Kim',
@@ -93,6 +100,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Nov 18, 2023',
     initials: 'DK',
     avatarClassName: 'bg-orange-100 text-orange-700',
+    avatarUrl: null,
   },
   {
     name: 'Dr. Arpan Roy',
@@ -103,6 +111,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Dec 01, 2023',
     initials: 'AR',
     avatarClassName: 'bg-teal-100 text-teal-700',
+    avatarUrl: null,
   },
   {
     name: 'Jessica Lee',
@@ -113,6 +122,7 @@ const seedUsers: Omit<UserRecord, 'id'>[] = [
     joinedDate: 'Sep 14, 2023',
     initials: 'JL',
     avatarClassName: 'bg-rose-100 text-rose-700',
+    avatarUrl: null,
   },
 ]
 
@@ -151,6 +161,7 @@ function buildMockUsers(count: number): UserRecord[] {
       joinedDate: joinedDateForIndex(index),
       initials: seed.initials,
       avatarClassName: avatarPalette[index % avatarPalette.length]!,
+      avatarUrl: seed.avatarUrl,
     }
   })
 }

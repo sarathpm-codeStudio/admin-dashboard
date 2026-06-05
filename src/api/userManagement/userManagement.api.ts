@@ -5,9 +5,11 @@ export type UserListRow = {
   name: string
   email: string
   role: string
-  status: string
+  accountVerified: string
+  isSuspended: boolean
   courseCount: number
   joinedDate: string
+  avatarUrl: string | null
 }
 
 export type UsersListPagination = {
@@ -148,7 +150,7 @@ export const userManagementFunctions = {
         limit?:  number;
         search?: string;
         role?:   'STUDENT' | 'FACULTY' | 'all';
-        status?: 'APPROVED' | 'PENDING' | 'SUSPENDED' | 'all';
+        status?: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'all';
     }): Promise<UsersListResponse> => {
         try {
             const from = (page - 1) * limit;
@@ -157,14 +159,20 @@ export const userManagementFunctions = {
             // 1. Base query — exclude ADMIN
             let query = supabase
                 .from('profiles')
-                .select('id, first_name, last_name, email, role, account_verified, created_at', { count: 'exact' })
+                .select('id, first_name, last_name, email, role, account_verified, is_suspended, created_at, avatar_url', { count: 'exact' })
                 .neq('role', 'ADMIN')
                 .order('created_at', { ascending: false })
                 .range(from, to);
     
             // 2. Filters — skip if 'all'
-            if (role   && role   !== 'all') query = query.eq('role', role);
-            if (status && status !== 'all') query = query.eq('account_verified', status);
+            if (role && role !== 'all') query = query.eq('role', role);
+            if (status && status !== 'all') {
+                if (status === 'SUSPENDED') {
+                    query = query.eq('is_suspended', true);
+                } else {
+                    query = query.eq('account_verified', status).eq('is_suspended', false);
+                }
+            }
     
             // 3. Search
             if (search.trim()) {
@@ -191,8 +199,7 @@ export const userManagementFunctions = {
             // 4. Split by role
             const studentIds = users.filter(u => u.role === 'STUDENT').map(u => u.id);
             const facultyIds = users.filter(u => u.role === 'FACULTY').map(u => u.id);
-    
-            // 5. Student course count — from enrollments
+          // 5. Student course count — from enrollments
             const enrollmentMap: Record<string, number> = {};
             if (studentIds.length > 0) {
                 const { data: enrollments, error: enrollError } = await supabase
@@ -230,11 +237,13 @@ export const userManagementFunctions = {
                     : (courseMap[user.id]     ?? 0);
     
                 return {
-                    id:          user.id,
-                    name:        `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || 'Unknown',
-                    email:       user.email,
-                    role:        user.role,
-                    status:      user.account_verified,
+                    id:              user.id,
+                    name:            `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || 'Unknown',
+                    email:           user.email,
+                    role:            user.role,
+                    accountVerified: user.account_verified ?? 'PENDING',
+                    isSuspended:     user.is_suspended === true,
+                    avatarUrl:       user.avatar_url,
                     courseCount,
                     joinedDate:  new Date(user.created_at!).toLocaleDateString('en-US', {
                         month: 'short',

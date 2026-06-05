@@ -18,10 +18,10 @@ export const useGetAllUsers = (
   limit: number,
   search: string,
   role: 'all' | 'STUDENT' | 'FACULTY',
-  status: 'all' | 'APPROVED' | 'PENDING' | 'SUSPENDED',
+  status: 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED',
 ) => {
   return useQuery({
-    queryKey: ['users', page, limit, search, role, status],
+    queryKey: ['users', page, limit, search, role, status,],
     queryFn: () =>
       userManagementFunctions.getAllUsers({ page, limit, search, role, status }),
   })

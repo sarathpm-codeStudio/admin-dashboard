@@ -38,10 +38,15 @@ function mapRole(role: string): UserRole {
   return 'Admin'
 }
 
-function mapStatus(status: string): UserStatus {
-  if (status === 'APPROVED') return 'active'
-  if (status === 'PENDING') return 'pending'
-  return 'suspended'
+export function resolveUserStatus(
+  accountVerified: string,
+  isSuspended: boolean,
+): UserStatus {
+  if (isSuspended) return 'suspended'
+  if (accountVerified === 'APPROVED') return 'active'
+  if (accountVerified === 'PENDING') return 'pending'
+  if (accountVerified === 'REJECTED') return 'rejected'
+  return 'pending'
 }
 
 export function mapUserListRowToRecord(user: UserListRow): UserRecord {
@@ -52,11 +57,12 @@ export function mapUserListRowToRecord(user: UserListRow): UserRecord {
     name: user.name,
     email: user.email,
     role: mapRole(user.role),
-    status: mapStatus(user.status),
+    status: resolveUserStatus(user.accountVerified, user.isSuspended),
     coursesCount: user.courseCount,
     joinedDate: user.joinedDate,
     initials: getInitials(user.name, user.email),
     avatarClassName: avatarPalette[paletteIndex]!,
+    avatarUrl: user.avatarUrl,
   }
 }
 
@@ -70,9 +76,10 @@ export function mapUserTypeFilterToRole(
 
 export function mapStatusFilterToApi(
   status: UserFilterValues['status'],
-): 'all' | 'APPROVED' | 'PENDING' | 'SUSPENDED' {
+): 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' {
   if (status === 'active') return 'APPROVED'
   if (status === 'pending') return 'PENDING'
+  if (status === 'rejected') return 'REJECTED'
   if (status === 'suspended') return 'SUSPENDED'
   return 'all'
 }

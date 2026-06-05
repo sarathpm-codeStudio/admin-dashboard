@@ -3,6 +3,7 @@ import { cn } from '@/utils/cn'
 export type StatusBadgeVariant =
   | 'active'
   | 'pending'
+  | 'rejected'
   | 'suspended'
   | 'info'
   | 'courseActive'
@@ -13,6 +14,7 @@ export type StatusBadgeVariant =
 const variantFilledStyles: Record<StatusBadgeVariant, string> = {
   active: 'bg-emerald-50 text-emerald-700',
   pending: 'bg-amber-50 text-amber-700',
+  rejected: 'bg-red-50 text-red-700',
   suspended: 'bg-red-50 text-red-700',
   info: 'bg-blue-50 text-blue-700',
   courseActive: 'bg-[#001E251A] text-[#00A6BF]',
@@ -25,6 +27,7 @@ const variantFilledStyles: Record<StatusBadgeVariant, string> = {
 const variantTextStyles: Record<StatusBadgeVariant, string> = {
   active: 'text-emerald-700',
   pending: 'text-amber-700',
+  rejected: 'text-red-700',
   suspended: 'text-red-700',
   info: 'text-blue-700',
   courseActive: 'text-[#00A6BF]',

@@ -1,6 +1,6 @@
 export type UserRole = 'Student' | 'Faculty' | 'Admin'
 
-export type UserStatus = 'active' | 'pending' | 'suspended'
+export type UserStatus = 'active' | 'pending' | 'rejected' | 'suspended'
 
 export type UserRecord = {
   id: string
@@ -12,4 +12,5 @@ export type UserRecord = {
   joinedDate: string
   initials: string
   avatarClassName: string
+  avatarUrl: string | null
 }

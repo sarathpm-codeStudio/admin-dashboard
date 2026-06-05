@@ -8,16 +8,20 @@ import { Paragraph } from '@/components/ui/Typography'
 import { USERS_TABLE_SCROLL_MAX_HEIGHT, USERS_PAGE_SIZE } from '@/features/users/utils/constants'
 import type { UserRecord, UserStatus } from '@/features/users/types'
 import { cn } from '@/utils/cn'
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
+
 
 const statusVariant: Record<UserStatus, StatusBadgeVariant> = {
   active: 'active',
   pending: 'pending',
+  rejected: 'rejected',
   suspended: 'suspended',
 }
 
 const statusLabel: Record<UserStatus, string> = {
   active: 'Active',
   pending: 'Pending',
+  rejected: 'Rejected',
   suspended: 'Suspended',
 }
 
@@ -55,7 +59,7 @@ export function UsersTable({
                 user.avatarClassName,
               )}
             >
-              {user.initials}
+              {user.avatarUrl ? <ProfileAvatar src={user.avatarUrl} alt={user.name} sizeClassName="size-10" roundedClassName="rounded-full" /> : user.initials}
             </div>
             <div className="min-w-0">
               {user.role === 'Faculty' ? (
@@ -126,7 +130,8 @@ export function UsersTable({
         cell: (user) => (
           <div className="flex justify-center">
             <Paragraph variant="muted">
-              {user.coursesCount} Courses
+              {/* {user.coursesCount} Courses */}
+              {user.coursesCount === 0 ? 'No courses' : user.coursesCount + ' Courses'}
             </Paragraph>
           </div>
         ),
