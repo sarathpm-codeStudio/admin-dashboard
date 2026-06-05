@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import { fetchProfileForAuth } from '@/api/profile.api'
+import { fetchProfileForAuth } from '@/api/auth/profile.api'
 import { isAuthNetworkError } from '@/config/auth'
 import { supabase } from '@/config/supabase'
 import {

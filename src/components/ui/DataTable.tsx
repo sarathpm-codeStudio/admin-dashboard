@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { DataTableBodySkeleton } from '@/components/ui/DataTableBodySkeleton'
 import { Card } from '@/components/ui/Card'
 import { Pagination } from '@/components/ui/Pagination'
 import { Paragraph } from '@/components/ui/Typography'
@@ -104,6 +105,10 @@ type DataTableProps<T> = {
   alwaysShowPagination?: boolean
   /** Optional class on the footer row */
   footerClassName?: string
+  /** Show skeleton rows instead of data */
+  isLoading?: boolean
+  /** Skeleton row count while loading (defaults to data.length or 10) */
+  loadingRowCount?: number
 }
 
 const stickyHeaderCellClass =
@@ -253,9 +258,12 @@ export function DataTable<T>({
   appearance = 'default',
   alwaysShowPagination = false,
   footerClassName,
+  isLoading = false,
+  loadingRowCount,
 }: DataTableProps<T>) {
   const prefersReducedMotion = useReducedMotion()
-  const motionEnabled = animateRows && !prefersReducedMotion
+  const motionEnabled = animateRows && !prefersReducedMotion && !isLoading
+  const skeletonRows = loadingRowCount ?? (data.length > 0 ? data.length : 10)
   const tbodyKey = rowAnimationKey ?? page
 
   const cardLayoutClass =
@@ -301,17 +309,25 @@ export function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <DataTableBody
-            columns={columns}
-            data={data}
-            getRowKey={getRowKey}
-            emptyMessage={emptyMessage}
-            animate={animateRows}
-            motionEnabled={motionEnabled}
-            tbodyKey={tbodyKey}
-            scrollableBody={scrollableBody}
-            appearance={appearance}
-          />
+          {isLoading ? (
+            <DataTableBodySkeleton
+              columns={columns}
+              rowCount={skeletonRows}
+              scrollableBody={scrollableBody}
+            />
+          ) : (
+            <DataTableBody
+              columns={columns}
+              data={data}
+              getRowKey={getRowKey}
+              emptyMessage={emptyMessage}
+              animate={animateRows}
+              motionEnabled={motionEnabled}
+              tbodyKey={tbodyKey}
+              scrollableBody={scrollableBody}
+              appearance={appearance}
+            />
+          )}
     </table>
   )
 
@@ -334,7 +350,9 @@ export function DataTable<T>({
         >
           {showTotalCount && footerLayout === 'between' && (
             <Paragraph variant="muted" className="text-sm text-[#94a3b8]">
-              {footerSummary ?? `Total ${totalCount.toLocaleString()}`}
+              {isLoading
+                ? 'Loading…'
+                : (footerSummary ?? `Total ${totalCount.toLocaleString()}`)}
             </Paragraph>
           )}
           {(alwaysShowPagination || totalPages > 1) && (
@@ -343,6 +361,7 @@ export function DataTable<T>({
               totalPages={totalPages}
               onPageChange={onPageChange}
               variant={paginationVariant}
+              disabled={isLoading}
             />
           )}
         </div>

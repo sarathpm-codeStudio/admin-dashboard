@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   UserFiltersBar,
   type UserFilterValues,
@@ -6,12 +6,13 @@ import {
 import { UserManagementHeader } from '@/features/users/components/UserManagementHeader'
 import { UserSummaryStats } from '@/features/users/components/UserSummaryStats'
 import { UsersTable } from '@/features/users/components/UsersTable'
+import { USERS_PAGE_SIZE } from '@/features/users/utils/constants'
+import { useGetAllUsers } from '@/features/users/hooks/useUserManagement'
 import {
-  mockUsers,
-  USERS_PAGE_SIZE,
-  type UserRecord,
-} from '@/features/users/data/mockUsers'
-import { isJoinedDateInRange } from '@/features/users/utils/joinedDate'
+  mapStatusFilterToApi,
+  mapUserListRowToRecord,
+  mapUserTypeFilterToRole,
+} from '@/features/users/utils/mapUserFromApi'
 
 const defaultFilters: UserFilterValues = {
   search: '',
@@ -22,57 +23,43 @@ const defaultFilters: UserFilterValues = {
   joinedDateTo: '',
 }
 
-function filterUsers(users: UserRecord[], filters: UserFilterValues): UserRecord[] {
-  const query = filters.search.trim().toLowerCase()
-
-  return users.filter((user) => {
-    if (query) {
-      const matchesQuery =
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.id.includes(query)
-      if (!matchesQuery) return false
-    }
-
-    if (filters.userType !== 'all' && user.role.toLowerCase() !== filters.userType) {
-      return false
-    }
-
-    if (filters.status !== 'all' && user.status !== filters.status) {
-      return false
-    }
-
-    if (filters.joinedDateFrom || filters.joinedDateTo) {
-      if (!isJoinedDateInRange(user.joinedDate, filters.joinedDateFrom, filters.joinedDateTo)) {
-        return false
-      }
-    }
-
-    return true
-  })
-}
-
 export function UserManagementView() {
   const [filters, setFilters] = useState<UserFilterValues>(defaultFilters)
   const [page, setPage] = useState(1)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
 
-  const filteredUsers = useMemo(
-    () => filterUsers(mockUsers, filters),
-    [filters],
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim()), 300)
+    return () => window.clearTimeout(timer)
+  }, [filters.search])
+
+  const apiRole = mapUserTypeFilterToRole(filters.userType)
+  const apiStatus = mapStatusFilterToApi(filters.status)
+
+  const { data, isLoading } = useGetAllUsers(
+    page,
+    USERS_PAGE_SIZE,
+    debouncedSearch,
+    apiRole,
+    apiStatus,
   )
 
-  const displayTotal = filteredUsers.length
+  const tableUsers = useMemo(
+    () => (data?.data ?? []).map(mapUserListRowToRecord),
+    [data?.data],
+  )
 
-  const totalPages = Math.max(1, Math.ceil(displayTotal / USERS_PAGE_SIZE))
-
-  const paginatedUsers = useMemo(() => {
-    const start = (page - 1) * USERS_PAGE_SIZE
-    return filteredUsers.slice(start, start + USERS_PAGE_SIZE)
-  }, [filteredUsers, page])
+  const pagination = data?.pagination
+  const totalCount = pagination?.total ?? 0
+  const totalPages = Math.max(1, pagination?.total_pages ?? 1)
 
   const handleFiltersChange = (next: UserFilterValues) => {
     setFilters(next)
     setPage(1)
+  }
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage)
   }
 
   return (
@@ -81,11 +68,12 @@ export function UserManagementView() {
       <UserSummaryStats />
       <UserFiltersBar values={filters} onChange={handleFiltersChange} />
       <UsersTable
-        users={paginatedUsers}
-        totalCount={displayTotal}
-        page={page}
+        users={tableUsers}
+        totalCount={totalCount}
+        page={pagination?.current_page ?? page}
         totalPages={totalPages}
-        onPageChange={setPage}
+        onPageChange={handlePageChange}
+        isLoading={isLoading}
       />
     </div>
   )

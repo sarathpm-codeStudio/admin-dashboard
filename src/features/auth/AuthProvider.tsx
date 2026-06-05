@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { resolveAuthUser } from '@/api/auth.api'
+import { resolveAuthUser } from '@/api/auth/auth.api'
 import { isSupabaseConfigured } from '@/config/auth'
 import { supabase } from '@/config/supabase'
 import { useAuthStore } from '@/store/authStore'

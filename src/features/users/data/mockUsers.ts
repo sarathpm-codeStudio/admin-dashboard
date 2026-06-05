@@ -1,20 +1,7 @@
-export type UserRole = 'Student' | 'Faculty' | 'Admin'
-
-export type UserStatus = 'active' | 'pending' | 'suspended'
-
 import { formatJoinedDate } from '@/features/users/utils/joinedDate'
+import type { UserRecord } from '@/features/users/types'
 
-export type UserRecord = {
-  id: string
-  name: string
-  email: string
-  role: UserRole
-  status: UserStatus
-  coursesCount: number
-  joinedDate: string
-  initials: string
-  avatarClassName: string
-}
+export type { UserRecord, UserRole, UserStatus } from '@/features/users/types'
 
 export const userSummaryStats = {
   totalUsers: 12540,
@@ -172,9 +159,9 @@ function buildMockUsers(count: number): UserRecord[] {
 export const mockUsers = buildMockUsers(856)
 
 export const TOTAL_USERS_COUNT = 856
-/** 10 rows per page; scroll inside table to see rows 6–10 */
-export const USERS_PAGE_SIZE = 10
 
-/** At least 5 rows visible; header ~2.75rem + 5 × ~4.5rem row */
-export const USERS_TABLE_VISIBLE_ROWS = 5
-export const USERS_TABLE_SCROLL_MAX_HEIGHT = 'max-h-[26rem]'
+export {
+  USERS_PAGE_SIZE,
+  USERS_TABLE_SCROLL_MAX_HEIGHT,
+  USERS_TABLE_VISIBLE_ROWS,
+} from '@/features/users/utils/constants'

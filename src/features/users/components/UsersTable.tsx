@@ -5,11 +5,8 @@ import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
 import { StatusBadge, type StatusBadgeVariant } from '@/components/ui/StatusBadge'
 import { Paragraph } from '@/components/ui/Typography'
-import {
-  USERS_TABLE_SCROLL_MAX_HEIGHT,
-  type UserRecord,
-  type UserStatus,
-} from '@/features/users/data/mockUsers'
+import { USERS_TABLE_SCROLL_MAX_HEIGHT, USERS_PAGE_SIZE } from '@/features/users/utils/constants'
+import type { UserRecord, UserStatus } from '@/features/users/types'
 import { cn } from '@/utils/cn'
 
 const statusVariant: Record<UserStatus, StatusBadgeVariant> = {
@@ -33,9 +30,17 @@ type UsersTableProps = {
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  isLoading?: boolean
 }
 
-export function UsersTable({ users, totalCount, page, totalPages, onPageChange }: UsersTableProps) {
+export function UsersTable({
+  users,
+  totalCount,
+  page,
+  totalPages,
+  onPageChange,
+  isLoading = false,
+}: UsersTableProps) {
   const columns = useMemo<DataTableColumn<UserRecord>[]>(
     () => [
       {
@@ -121,7 +126,7 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
         cell: (user) => (
           <div className="flex justify-center">
             <Paragraph variant="muted">
-              {user.coursesCount === 0 ? '—' : `${user.coursesCount} Courses`}
+              {user.coursesCount} Courses
             </Paragraph>
           </div>
         ),
@@ -167,7 +172,9 @@ export function UsersTable({ users, totalCount, page, totalPages, onPageChange }
       page={page}
       totalPages={totalPages}
       onPageChange={onPageChange}
-      animateRows
+      isLoading={isLoading}
+      loadingRowCount={USERS_PAGE_SIZE}
+      animateRows={!isLoading}
       scrollableBody
       scrollBodyMaxHeight={USERS_TABLE_SCROLL_MAX_HEIGHT}
       className="shrink-0"

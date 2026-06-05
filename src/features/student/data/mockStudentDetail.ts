@@ -1,4 +1,4 @@
-import type { UserStatus } from '@/features/users/data/mockUsers'
+import type { UserStatus } from '@/features/users/types'
 
 import studentAvatar from '@/asset/image/elena.png'
 

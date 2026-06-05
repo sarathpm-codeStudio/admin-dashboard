@@ -8,6 +8,7 @@ type PaginationProps = {
   className?: string
   /** Text labels for prev/next and bordered pills — faculty revenue table */
   variant?: 'icon' | 'labeled'
+  disabled?: boolean
 }
 
 function getPageItems(page: number, totalPages: number): (number | 'ellipsis')[] {
@@ -47,6 +48,7 @@ export function Pagination({
   onPageChange,
   className,
   variant = 'icon',
+  disabled = false,
 }: PaginationProps) {
   const items = getPageItems(page, totalPages)
   const labeled = variant === 'labeled'
@@ -56,7 +58,7 @@ export function Pagination({
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
-        disabled={page <= 1}
+        disabled={disabled || page <= 1}
         className={
           labeled
             ? labeledNavButtonClass
@@ -78,6 +80,7 @@ export function Pagination({
             key={item}
             type="button"
             onClick={() => onPageChange(item)}
+            disabled={disabled}
             aria-current={page === item ? 'page' : undefined}
             className={cn(
               labeled ? labeledPageButtonClass : 'flex min-w-8 items-center justify-center rounded-nav px-2 py-1 text-sm font-medium transition-colors',
@@ -98,7 +101,7 @@ export function Pagination({
       <button
         type="button"
         onClick={() => onPageChange(page + 1)}
-        disabled={page >= totalPages}
+        disabled={disabled || page >= totalPages}
         className={
           labeled
             ? labeledNavButtonClass

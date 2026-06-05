@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { getAuthErrorMessage, signInWithPassword } from '@/api/auth.api'
+import { getAuthErrorMessage, signInWithPassword } from '@/api/auth/auth.api'
 import { isSupabaseConfigured } from '@/config/auth'
 import { useToast } from '@/hooks/useToast'
 import { useAuthStore } from '@/store/authStore'
