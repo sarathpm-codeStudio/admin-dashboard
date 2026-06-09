@@ -1,7 +1,5 @@
 import type { UserStatus } from '@/features/users/types'
 
-import studentAvatar from '@/asset/image/elena.png'
-
 export type StudentCourseStatus = 'completed' | 'active'
 
 export type EnrolledCourse = {
@@ -44,7 +42,6 @@ export const mockStudentElena: StudentDetail = {
   phone: '+91 5248554665',
   email: 'e.rodriguez@academy.edu',
   status: 'active',
-  avatarUrl: studentAvatar,
   stats: {
     coursesEnrolled: 3,
     testScore: '94.8%',

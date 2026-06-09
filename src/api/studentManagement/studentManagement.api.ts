@@ -2,6 +2,7 @@ import { supabase } from "@/config/supabase"
 
 export type Student = {
     id: string
+    avatar_url: string
     last_active: string
     email: string
     created_at: string
@@ -11,7 +12,7 @@ export const studentManagementFunctions = {
     getStudentById: async (studentId: string) => {
         const { data: students, error } = await supabase
             .from('profiles')
-            .select('account_id, last_active, email, role, created_at, phone')
+            .select('avatar_url, account_id, last_active, email, role, created_at, phone')
             .eq('role', 'STUDENT')
             .eq('id', studentId)
         if (error) {

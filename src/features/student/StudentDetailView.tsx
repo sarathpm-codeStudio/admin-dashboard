@@ -86,6 +86,7 @@ export function StudentDetailView() {
     ...base,
     id: apiStudent.account_id,
     studentId: apiStudent.account_id,
+    avatarUrl: apiStudent.avatar_url || undefined,
     name:
       apiStudent.email?.split('@')[0]?.replace(/[._]/g, ' ') ?? base.name,
     email: apiStudent.email ?? base.email,
