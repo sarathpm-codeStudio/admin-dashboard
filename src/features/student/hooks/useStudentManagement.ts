@@ -5,5 +5,6 @@ export const useGetStudentById = (studentId: string) => {
     return useQuery({
         queryKey: ['student', studentId],
         queryFn: () => studentManagementFunctions.getStudentById(studentId),
+        enabled: Boolean(studentId),
     })
 }
