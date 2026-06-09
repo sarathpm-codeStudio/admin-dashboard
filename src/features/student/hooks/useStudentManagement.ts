@@ -8,3 +8,11 @@ export const useGetStudentById = (studentId: string) => {
         enabled: Boolean(studentId),
     })
 }
+
+export const useGetStudentCourses = (studentId: string, page: number, limit: number, search: string) => {
+    return useQuery({
+        queryKey: ['student-courses', studentId, page, limit, search],
+        queryFn: () => studentManagementFunctions.getStudentCourses({ studentId, page, limit, search }),
+        enabled: Boolean(studentId),
+    })
+}

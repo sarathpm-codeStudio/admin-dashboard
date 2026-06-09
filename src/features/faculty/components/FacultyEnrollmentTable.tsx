@@ -119,6 +119,19 @@ export function FacultyEnrollmentTable({
         ),
       },
       {
+        id: 'test_score',
+        header: 'Test score',
+        width: '14.5rem',
+        align: 'center',
+        cell: (row) => (
+          <div className="mx-auto flex w-full max-w-[12.5rem] items-center justify-center gap-3">
+            <span className={cn('shrink-0', cellTextClass)}>
+              {row.test_score}%
+            </span> 
+          </div>
+        ),
+      },
+      {
         id: 'status',
         header: 'Status',
         width: '6.5rem',

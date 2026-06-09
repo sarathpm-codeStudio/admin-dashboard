@@ -16,6 +16,7 @@ export type FacultyEnrollment = {
   enrollmentDate: string
   progressPercent: number
   status: EnrollmentStatus
+  test_score?: number | undefined
 }
 
 /** Matches faculty profile stat — drives pagination (98 pages at 25/page) */
