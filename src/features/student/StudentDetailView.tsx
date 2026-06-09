@@ -8,6 +8,7 @@ import { EnrolledCoursesTable } from '@/features/student/components/EnrolledCour
 import { StudentProfileHeader } from '@/features/student/components/StudentProfileHeader'
 import { getStudentById } from '@/features/student/data/mockStudentDetail'
 import { getStudentStatItems } from '@/features/student/data/studentStatItems'
+import { useGetStudentById } from '@/features/student/hooks/useStudentManagement'
 
 const sectionEase = [0.22, 1, 0.36, 1] as const
 
@@ -15,6 +16,28 @@ type AnimatedSectionProps = {
   index: number
   children: ReactNode
   className?: string
+}
+
+function formatJoinedDate(isoDate: string | undefined): string {
+  if (!isoDate) return '—'
+  return new Date(isoDate).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+function formatRecentActive(isoDate: string | undefined): string {
+  if (!isoDate) return '—'
+  const date = new Date(isoDate)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+  return isToday ? `Today ${time.toLowerCase()}` : date.toLocaleDateString('en-US')
 }
 
 function AnimatedSection({ index, children, className }: AnimatedSectionProps) {
@@ -38,10 +61,37 @@ function AnimatedSection({ index, children, className }: AnimatedSectionProps) {
 
 export function StudentDetailView() {
   const { studentId } = useParams<{ studentId: string }>()
-  const student = studentId ? getStudentById(studentId) : undefined
+  const { data, isLoading, isError } = useGetStudentById(studentId ?? '')
 
-  if (!student) {
+  if (!studentId) {
     return <Navigate to="/users" replace />
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <p className="text-sm text-nav">Loading student...</p>
+      </div>
+    )
+  }
+
+  const apiStudent = Array.isArray(data) ? data[0] : undefined
+  const base = getStudentById(studentId)
+
+  if (isError || !apiStudent || !base) {
+    return <Navigate to="/users" replace />
+  }
+
+  const student = {
+    ...base,
+    id: apiStudent.account_id,
+    studentId: apiStudent.account_id,
+    name:
+      apiStudent.email?.split('@')[0]?.replace(/[._]/g, ' ') ?? base.name,
+    email: apiStudent.email ?? base.email,
+    phone: apiStudent.phone ?? base.phone,
+    joined: formatJoinedDate(apiStudent.created_at),
+    recentActive: formatRecentActive(apiStudent.last_active),
   }
 
   return (

@@ -19,7 +19,7 @@ export type StudentDetail = {
   name: string
   studentId: string
   course: string
-  lastLogin: string
+  recentActive: string
   joined: string
   phone: string
   email: string
@@ -39,7 +39,7 @@ export const mockStudentElena: StudentDetail = {
   name: 'Elena Rodriguez',
   studentId: '2024-ER8921',
   course: 'CMA',
-  lastLogin: 'Today 11:40 pm',
+  recentActive: 'Today 11:40 pm',
   joined: '02/12/2026',
   phone: '+91 5248554665',
   email: 'e.rodriguez@academy.edu',

@@ -1,6 +1,6 @@
 import {
   Clock,
-  GraduationCap,
+  // GraduationCap,
   Mail,
   MessageSquare,
 } from 'lucide-react'
@@ -55,11 +55,12 @@ function getMetaColumns(student: StudentDetail): MetaField[][] {
       { icon: FaKey, text: `Joined ${student.joined}` },
     ],
     [
-      { icon: GraduationCap, text: student.course },
+      // { icon: GraduationCap, text: student.course },
+      { icon: Clock, text: `Recent active : ${student.recentActive}` },
       { icon: LuPhoneCall, text: student.phone },
     ],
     [
-      { icon: Clock, text: `Last login : ${student.lastLogin}` },
+      // { icon: Clock, text: `Last login : ${student.lastLogin}` },
       { icon: Mail, text: student.email },
     ],
   ]
