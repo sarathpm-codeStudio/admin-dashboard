@@ -3,7 +3,7 @@ import { studentManagementFunctions } from "@/api/studentManagement/studentManag
 
 export const useGetStudentById = (studentId: string) => {
     return useQuery({
-        queryKey: ['students', studentId],
+        queryKey: ['student', studentId],
         queryFn: () => studentManagementFunctions.getStudentById(studentId),
     })
 }
