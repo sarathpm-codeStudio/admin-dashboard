@@ -2,6 +2,7 @@ import { supabase } from "@/config/supabase"
 
 export type Student = {
     id: string
+    avatar_url: string
     last_active: string
     email: string
     created_at: string

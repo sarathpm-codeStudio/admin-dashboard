@@ -5,11 +5,10 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { FaRegIdCard } from 'react-icons/fa'
+import { FaRegIdCard, FaUser } from 'react-icons/fa'
 import { FaKey } from 'react-icons/fa6'
 import { LuPhoneCall } from 'react-icons/lu'
 import type { IconType } from 'react-icons'
-import studentAvatar from '@/asset/image/elena.png'
 import { Button } from '@/components/ui/Button'
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Header1, Paragraph } from '@/components/ui/Typography'
@@ -66,18 +65,33 @@ function getMetaColumns(student: StudentDetail): MetaField[][] {
   ]
 }
 
+const profileAvatarSizeClass = 'size-[126px] shrink-0 sm:size-[136px]'
+
 export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
   const metaColumns = getMetaColumns(student)
 
   return (
     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 flex-1 items-start gap-6 sm:gap-8">
-        <ProfileAvatar
-          src={student.avatarUrl ?? studentAvatar}
-          sizeClassName="size-[126px] shrink-0 sm:size-[136px]"
-          roundedClassName="rounded-[14px]"
-          className="mt-0"
-        />
+        {student.avatarUrl ? (
+          <ProfileAvatar
+            src={student.avatarUrl}
+            alt={student.name}
+            sizeClassName={profileAvatarSizeClass}
+            roundedClassName="rounded-[14px]"
+            className="mt-0"
+          />
+        ) : (
+          <div
+            className={cn(
+              'mt-0 flex items-center justify-center rounded-[14px] bg-[#DFE0FF] text-[#000B60]',
+              profileAvatarSizeClass,
+            )}
+            aria-label={`${student.name} profile`}
+          >
+            <FaUser className="size-12 sm:size-14" aria-hidden />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <Header1
             size="display"
