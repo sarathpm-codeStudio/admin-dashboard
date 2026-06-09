@@ -12,6 +12,12 @@ export const studentManagementFunctions = {
    
     getStudentById: async (studentId: string) => {
         try {
+
+            // Add this to your function temporarily
+const { data: { user }, error: authError } = await supabase.auth.getUser();
+console.log('current user:', user);
+console.log('user metadata:', user?.user_metadata);
+console.log('role:', user?.user_metadata?.role);
             // 1. Student profile
             const { data: student, error: studentError } = await supabase
                 .from('profiles')
@@ -58,6 +64,10 @@ export const studentManagementFunctions = {
                 .from('enrollments')
                 .select('*', { count: 'exact', head: true })
                 .eq('student_id', studentId);
+
+                console.log('studentId:>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', studentId);
+                console.log('courseEnrolled count:', courseEnrolled);
+                console.log('enrollError:', enrollError);
     
             if (enrollError) throw new Error(enrollError.message);
     
@@ -102,6 +112,8 @@ export const studentManagementFunctions = {
                 (sum, e) => sum + (e.amount_paid ?? 0), 0
             ) ?? 0;
     
+            
+
             return {
                 // Student profile
                 student,
@@ -336,6 +348,6 @@ export const studentManagementFunctions = {
         }
     },
 
-    
+
 
 }
