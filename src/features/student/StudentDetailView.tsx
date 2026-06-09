@@ -6,7 +6,11 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
 import { EnrolledCoursesTable } from '@/features/student/components/EnrolledCoursesTable'
 import { StudentProfileHeader } from '@/features/student/components/StudentProfileHeader'
-import { getStudentById } from '@/features/student/data/mockStudentDetail'
+import {
+  getStudentById,
+  mockStudentElena,
+} from '@/features/student/data/mockStudentDetail'
+import type { StudentDetail } from '@/features/student/data/mockStudentDetail'
 import { getStudentStatItems } from '@/features/student/data/studentStatItems'
 import { useGetStudentById } from '@/features/student/hooks/useStudentManagement'
 
@@ -25,19 +29,6 @@ function formatJoinedDate(isoDate: string | undefined): string {
     month: '2-digit',
     year: 'numeric',
   })
-}
-
-function formatRecentActive(isoDate: string | undefined): string {
-  if (!isoDate) return '—'
-  const date = new Date(isoDate)
-  const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
-  const time = date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  })
-  return isToday ? `Today ${time.toLowerCase()}` : date.toLocaleDateString('en-US')
 }
 
 function AnimatedSection({ index, children, className }: AnimatedSectionProps) {
@@ -75,24 +66,34 @@ export function StudentDetailView() {
     )
   }
 
-  const apiStudent = Array.isArray(data) ? data[0] : undefined
-  const base = getStudentById(studentId)
-
-  if (isError || !apiStudent || !base) {
+  if (isError || !data?.student) {
     return <Navigate to="/users" replace />
   }
 
-  const student = {
+  const { student: profile, lastActive, analytics } = data
+  const base = getStudentById(studentId) ?? mockStudentElena
+
+  const display =
+    [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+    profile.email?.split('@')[0]?.replace(/[._]/g, ' ') ||
+    base.name
+
+  const student: StudentDetail = {
     ...base,
-    id: apiStudent.account_id,
-    studentId: apiStudent.account_id,
-    avatarUrl: apiStudent.avatar_url || undefined,
-    name:
-      apiStudent.email?.split('@')[0]?.replace(/[._]/g, ' ') ?? base.name,
-    email: apiStudent.email ?? base.email,
-    phone: apiStudent.phone ?? base.phone,
-    joined: formatJoinedDate(apiStudent.created_at),
-    recentActive: formatRecentActive(apiStudent.last_active),
+    id: profile.id,
+    studentId: profile.account_id ?? profile.id,
+    name: display,
+    avatarUrl: profile.avatar_url || undefined,
+    email: profile.email ?? base.email,
+    phone: profile.phone ?? base.phone,
+    joined: formatJoinedDate(profile.created_at),
+    recentActive: lastActive.display,
+    stats: {
+      coursesEnrolled: analytics.courseEnrolled,
+      testScore: analytics.testScore,
+      totalCoins: analytics.totalCoins,
+      totalSpend: analytics.totalSpend.display,
+    },
   }
 
   return (
@@ -112,7 +113,7 @@ export function StudentDetailView() {
       </AnimatedSection>
 
       <AnimatedSection index={2}>
-        <SummaryStatsGrid items={getStudentStatItems(student)} size="compact" />
+        <SummaryStatsGrid items={getStudentStatItems(analytics)} size="compact" />
       </AnimatedSection>
 
       <AnimatedSection index={3} className="space-y-4">
