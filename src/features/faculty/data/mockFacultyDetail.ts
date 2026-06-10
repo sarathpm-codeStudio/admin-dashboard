@@ -5,12 +5,13 @@ import activityOverlayImage from '@/asset/image/Overlay.png'
 import facultyProfileAvatar from '@/asset/image/John Smith Profile.png'
 import { ACTIVITY_EDIT_ICON_COLOR } from '@/features/faculty/data/activityIconColors'
 
-export type FacultyStatus = 'active' | 'pending' | 'suspended'
+export type FacultyStatus = 'active' | 'pending' | 'rejected' | 'suspended'
 
 export type FacultyCertificate = {
   id: string
   label: string
   fileName: string
+  fileUrl: string
 }
 
 export type FacultyDetail = {
@@ -94,8 +95,8 @@ export const mockFacultyJohnSmith: FacultyDetail = {
   bio: 'John Smith is a Certified Management Accountant with over 12 years of experience in financial reporting, strategic planning, and corporate finance education. He has trained more than 2,000 students across undergraduate and professional certification programs. His teaching approach combines real-world case studies with exam-focused preparation, helping learners build both conceptual clarity and practical skills.',
   qualifications: ['CMA', 'CA', 'MBA'],
   certificates: [
-    { id: 'cma', label: 'CMA CERTIFICATE', fileName: 'cma_certificate.pdf' },
-    { id: 'id', label: 'IDENTITY PROOF', fileName: 'identity_proof.pdf' },
+    { id: 'cma', label: 'CMA CERTIFICATE', fileName: 'cma_certificate.pdf', fileUrl: 'https://www.cma.com/certificate.pdf' },
+    { id: 'id', label: 'IDENTITY PROOF', fileName: 'identity_proof.pdf', fileUrl: 'https://www.cma.com/identity_proof.pdf' },
   ],
   stats: {
     coursesCreated: 8,

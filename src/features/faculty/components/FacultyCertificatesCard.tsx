@@ -1,23 +1,53 @@
 import { Download, Eye } from 'lucide-react'
 import { AiOutlineSafetyCertificate } from 'react-icons/ai'
 import type { FacultyCertificate } from '@/features/faculty/data/mockFacultyDetail'
+import {
+  FACULTY_PROFILE_CARD_HEIGHT,
+  FACULTY_PROFILE_CARD_SCROLL_CLASS,
+} from '@/features/faculty/utils/constants'
 import { Paragraph } from '@/components/ui/Typography'
 import { cn } from '@/utils/cn'
 
 type FacultyCertificatesCardProps = {
   certificates: FacultyCertificate[]
+  className?: string
 }
 
-export function FacultyCertificatesCard({ certificates }: FacultyCertificatesCardProps) {
+function openCertificate(fileUrl: string) {
+  window.open(fileUrl, '_blank', 'noopener,noreferrer')
+}
+
+async function downloadCertificate(fileUrl: string, fileName: string) {
+  try {
+    const response = await fetch(fileUrl)
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = fileName
+    link.click()
+    URL.revokeObjectURL(objectUrl)
+  } catch {
+    openCertificate(fileUrl)
+  }
+}
+
+export function FacultyCertificatesCard({ certificates, className }: FacultyCertificatesCardProps) {
   return (
-    <div className="rounded-card bg-primary-gradient p-5 text-white shadow-sm">
-      <div className="mb-4 flex items-center gap-2">
+    <div
+      className={cn(
+        FACULTY_PROFILE_CARD_HEIGHT,
+        'flex flex-col overflow-hidden rounded-card bg-primary-gradient p-5 text-white shadow-sm',
+        className,
+      )}
+    >
+      <div className="mb-4 flex shrink-0 items-center gap-2">
         <AiOutlineSafetyCertificate className="size-5 shrink-0" aria-hidden />
         <Paragraph variant="emphasis" className="text-white">
           Certificates
         </Paragraph>
       </div>
-      <ul className="m-0 list-none space-y-3 p-0">
+      <ul className={cn('m-0 list-none space-y-3 p-0', FACULTY_PROFILE_CARD_SCROLL_CLASS)}>
         {certificates.map((certificate) => (
           <li
             key={certificate.id}
@@ -35,9 +65,12 @@ export function FacultyCertificatesCard({ certificates }: FacultyCertificatesCar
               <button
                 type="button"
                 aria-label={`View ${certificate.label}`}
+                disabled={!certificate.fileUrl}
+                onClick={() => openCertificate(certificate.fileUrl)}
                 className={cn(
                   'flex size-8 items-center justify-center rounded-nav',
                   'text-white/90 transition-colors hover:bg-white/20',
+                  'disabled:pointer-events-none disabled:opacity-40',
                 )}
               >
                 <Eye className="size-4" aria-hidden />
@@ -45,9 +78,12 @@ export function FacultyCertificatesCard({ certificates }: FacultyCertificatesCar
               <button
                 type="button"
                 aria-label={`Download ${certificate.label}`}
+                disabled={!certificate.fileUrl}
+                onClick={() => downloadCertificate(certificate.fileUrl, certificate.fileName)}
                 className={cn(
                   'flex size-8 items-center justify-center rounded-nav',
                   'text-white/90 transition-colors hover:bg-white/20',
+                  'disabled:pointer-events-none disabled:opacity-40',
                 )}
               >
                 <Download className="size-4" aria-hidden />

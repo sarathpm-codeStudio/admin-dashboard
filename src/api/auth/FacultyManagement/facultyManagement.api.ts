@@ -138,6 +138,7 @@ export const facultyManagementFunctions={
                     email:            faculty.email,
                     phone:            faculty.phone,
                     avatar_url:       faculty.avatar_url,
+                    bio:              faculty.bio,
                     qualification:    faculty.qualification,
                     job_title:        faculty.job_title,
                     status:           faculty.is_suspended ? 'SUSPENDED' : faculty.account_verified,
@@ -186,7 +187,7 @@ export const facultyManagementFunctions={
         try {
     
             // 1. Academic profiles — multiple
-            const { data: academicProfiles, error: academicError } = await supabase
+            const { data: academicProfiles, error: academicError  } = await supabase
                 .from('academic_profiles')
                 .select('*')
                 .eq('faculty_id', facultyId)

@@ -19,7 +19,7 @@ function hashIndex(id: string, modulo: number): number {
   return hash
 }
 
-function getInitials(name: string, email: string): string {
+function getInitials(name: string, email: string | null | undefined): string {
   const trimmed = name.trim()
   if (trimmed && trimmed !== 'Unknown') {
     const parts = trimmed.split(/\s+/).filter(Boolean)
@@ -28,8 +28,11 @@ function getInitials(name: string, email: string): string {
     }
     return trimmed.slice(0, 2).toUpperCase()
   }
-  const local = email.split('@')[0] ?? email
-  return local.slice(0, 2).toUpperCase()
+  if (email) {
+    const local = email.split('@')[0] ?? email
+    return local.slice(0, 2).toUpperCase()
+  }
+  return '??'
 }
 
 function mapRole(role: string): UserRole {
@@ -55,7 +58,7 @@ export function mapUserListRowToRecord(user: UserListRow): UserRecord {
   return {
     id: user.id,
     name: user.name,
-    email: user.email,
+    email: user.email ?? '',
     role: mapRole(user.role),
     status: resolveUserStatus(user.accountVerified, user.isSuspended),
     coursesCount: user.courseCount,

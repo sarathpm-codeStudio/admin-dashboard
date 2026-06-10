@@ -3,7 +3,7 @@ import { supabase } from '@/config/supabase'
 export type UserListRow = {
   id: string
   name: string
-  email: string
+  email: string | null
   role: string
   accountVerified: string
   isSuspended: boolean

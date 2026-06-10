@@ -6,6 +6,10 @@ import { cn } from '@/utils/cn'
 import { imageMaskStyle } from '@/utils/imageMaskStyle'
 
 import qualificationsDecoration from '@/asset/image/quali.png'
+import {
+  FACULTY_PROFILE_CARD_HEIGHT,
+  FACULTY_PROFILE_CARD_SCROLL_CLASS,
+} from '@/features/faculty/utils/constants'
 
 type FacultyQualificationsCardProps = {
   qualifications: string[]
@@ -21,16 +25,17 @@ export function FacultyQualificationsCard({
   return (
     <Card
       className={cn(
-        'flex h-full flex-col overflow-hidden bg-surface-input px-5 pb-5 pt-3',
+        FACULTY_PROFILE_CARD_HEIGHT,
+        'flex flex-col overflow-hidden bg-surface-input px-5 pb-5 pt-3',
         className,
       )}
     >
-      <CardBody className="flex flex-1 flex-col gap-4">
+      <CardBody className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
         <SectionHeader
           title="Qualifications"
           titleSize="card"
           titleClassName="text-xs font-medium uppercase tracking-wide"
-          className="items-center"
+          className="shrink-0 items-center"
           action={
             decorationImage ? (
               <div
@@ -42,7 +47,12 @@ export function FacultyQualificationsCard({
           }
         />
 
-        <ul className="relative z-10 -mt-2 m-0 flex flex-1 list-none flex-col gap-2 p-0">
+        <ul
+          className={cn(
+            'relative z-10 -mt-2 m-0 flex list-none flex-col gap-2 p-0',
+            FACULTY_PROFILE_CARD_SCROLL_CLASS,
+          )}
+        >
           {qualifications.map((qualification) => (
             <li key={qualification}>
               <button
