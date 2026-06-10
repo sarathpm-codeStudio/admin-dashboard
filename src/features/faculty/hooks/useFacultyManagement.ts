@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { facultyManagementFunctions } from "@/api/auth/FacultyManagement/facultyManagement.api"
+import { facultyManagementFunctions } from '@/api/FacultyManagement/facultyManagement.api'
 
 export const useGetFacultyById = (facultyId: string) => {
     return useQuery({
