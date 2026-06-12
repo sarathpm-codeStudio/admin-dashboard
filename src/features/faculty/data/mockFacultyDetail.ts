@@ -36,6 +36,8 @@ export type FacultyDetail = {
     reviewCount: number
   }
   recentActivity: ActivityListItemData[]
+  documentType?: string
+  documentUrl?: string
 }
 
 const johnSmithActivity: ActivityListItemData[] = [

@@ -6,6 +6,8 @@ import { Navigate, useParams } from 'react-router-dom'
 
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 
+import { DetailHeaderSkeleton, CardSkeleton } from '@/components/ui/DetailViewSkeleton'
+
 import { SectionHeader } from '@/components/ui/SectionHeader'
 
 import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
@@ -146,9 +148,11 @@ export function StudentDetailView() {
 
     return (
 
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
 
-        <p className="text-sm text-nav">Loading student...</p>
+        <DetailHeaderSkeleton />
+
+        <CardSkeleton />
 
       </div>
 
