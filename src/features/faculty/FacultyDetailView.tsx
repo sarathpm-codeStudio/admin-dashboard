@@ -50,18 +50,18 @@ export function FacultyDetailView() {
   const { facultyId } = useParams<{ facultyId: string }>()
 
   const { data, isLoading, isError } = useGetFacultyById(facultyId ?? '')
-  const{data:academicData, isLoading: isLoadingAcademic} = useGetFacultyAcademicProfile(facultyId ?? '')
-   const{mutateAsync: updateStatus}=  useUpdateUserStatus(facultyId ?? '') 
+  const { data: academicData, isLoading: isLoadingAcademic } = useGetFacultyAcademicProfile(facultyId ?? '')
+  const { mutateAsync: updateStatus } = useUpdateUserStatus(facultyId ?? '')
 
   if (!facultyId) {
     return <Navigate to="/users" replace />
   }
-  if(isLoading){
+  if (isLoading) {
     return <div className="flex min-h-0 flex-1 items-center justify-center">
       <p className="text-sm text-nav">Loading faculty...</p>
     </div>
   }
-  if(isError || !data){
+  if (isError || !data) {
     return <div className="flex min-h-0 flex-1 items-center justify-center">
       <p className="text-sm text-nav">Error loading faculty...</p>
     </div>
@@ -73,11 +73,11 @@ export function FacultyDetailView() {
     ...(base || {}),
     id: profile.id,
     name: profile.name || base?.name || '',
-    title: profile.job_title ?? base?.title ,
-    email: profile.email ?? base?.email ,
-    phone: profile.phone ?? base?.phone ,
+    title: profile.job_title ?? base?.title,
+    email: profile.email ?? base?.email,
+    phone: profile.phone ?? base?.phone,
     avatarUrl: profile.avatar_url || undefined,
-    bio: profile.bio ?? base?.bio ,
+    bio: profile.bio ?? base?.bio,
     stats: {
       coursesCreated: analytics.coursesCreated.total,
       coursesNew: analytics.coursesCreated.newCount,
@@ -99,30 +99,32 @@ export function FacultyDetailView() {
           : 'pending',
     initials: base?.initials || '',
 
-    } 
+  }
 
-const qualificationsFromApi = academicData?.academicProfiles?.map((item) =>{const parts=[item.field_of_study].filter(Boolean)
-  return parts.length > 0 ? parts.join(' - ') : null })
-  .filter((q): q is string => Boolean(q)) ?? []
-  const qualifications=qualificationsFromApi.length > 0 ? qualificationsFromApi : profile.qualification ? profile.qualification.split(',').map((s: string) => s.trim()).filter(Boolean) : base?.qualifications ?? []
+  const qualificationsFromApi = academicData?.academicProfiles?.map((item) => {
+    const parts = [item.field_of_study].filter(Boolean)
+    return parts.length > 0 ? parts.join(' - ') : null
+  })
+    .filter((q): q is string => Boolean(q)) ?? []
+  const qualifications = qualificationsFromApi.length > 0 ? qualificationsFromApi : profile.qualification ? profile.qualification.split(',').map((s: string) => s.trim()).filter(Boolean) : base?.qualifications ?? []
 
   const certificatesFromApi: FacultyCertificate[] =
-  academicData?.academicProfiles
-    ?.filter((item) => item.document_url)
-    .map((item) => ({
-      id: item.id,
-      label: ( `${item.field_of_study} Certificate` ).toUpperCase(),
-      fileName:  item.document_url!.split('/').pop() ?? 'document',
-      fileUrl: item.document_url,
-    })) ?? []
-const certificates: FacultyCertificate[] =
-  certificatesFromApi.length > 0 ? certificatesFromApi : base?.certificates ?? []
+    academicData?.academicProfiles
+      ?.filter((item) => item.document_url)
+      .map((item) => ({
+        id: item.id,
+        label: (`${item.field_of_study} Certificate`).toUpperCase(),
+        fileName: item.document_url!.split('/').pop() ?? 'document',
+        fileUrl: item.document_url,
+      })) ?? []
+  const certificates: FacultyCertificate[] =
+    certificatesFromApi.length > 0 ? certificatesFromApi : base?.certificates ?? []
 
-    console.log('academicData', academicData)
-console.log('qualifications', qualifications)
-console.log('certificates', certificates)
+  console.log('academicData', academicData)
+  console.log('qualifications', qualifications)
+  console.log('certificates', certificates)
 
-return (
+  return (
     <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
       <AnimatedSection index={0}>
         <Breadcrumbs
@@ -143,7 +145,7 @@ return (
           onReject={async () => { await updateStatus('REJECTED') }}
           onSuspend={async () => { await updateStatus('SUSPENDED') }}
           onActivate={async () => { await updateStatus('ACTIVATE') }}
-        />  
+        />
       </AnimatedSection>
 
       <AnimatedSection index={2}>
@@ -157,6 +159,7 @@ return (
             <FacultyBioCard bio={faculty.bio} />
           </div>
           <FacultyRecentActivityCard items={faculty.recentActivity} />
+
         </AnimatedSection>
 
         <AnimatedSection index={4} className="flex flex-col gap-6">
