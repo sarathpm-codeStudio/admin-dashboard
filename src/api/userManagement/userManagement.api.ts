@@ -272,7 +272,7 @@ export const userManagementFunctions = {
         }
     },
 
-    updateUserStatus: async (userId: string, status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED') => {
+    updateUserStatus: async (userId: string, status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'ACTIVATE') => {
         try {
 
             if (status === "SUSPENDED") {
@@ -284,7 +284,20 @@ export const userManagementFunctions = {
                 if (error) throw new Error(error.message);
 
 
-            } else {
+            } else if (status === "ACTIVATE") {
+
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ is_suspended: false })
+                    .eq('id', userId);
+
+                if (error) throw new Error(error.message);
+
+
+            }
+            
+            
+            else {
 
                 const { error } = await supabase
                     .from('profiles')

@@ -17,7 +17,7 @@ import {
   type FacultyCertificate,
 } from '@/features/faculty/data/mockFacultyDetail'
 import { useGetFacultyAcademicProfile, useGetFacultyById } from './hooks/useFacultyManagement'
-
+import { useUpdateUserStatus } from '../users/hooks/useUserManagement'
 
 const sectionEase = [0.22, 1, 0.36, 1] as const
 
@@ -51,6 +51,7 @@ export function FacultyDetailView() {
 
   const { data, isLoading, isError } = useGetFacultyById(facultyId ?? '')
   const{data:academicData, isLoading: isLoadingAcademic} = useGetFacultyAcademicProfile(facultyId ?? '')
+   const{mutateAsync: updateStatus}=  useUpdateUserStatus(facultyId ?? '') 
 
   if (!facultyId) {
     return <Navigate to="/users" replace />
@@ -100,7 +101,6 @@ export function FacultyDetailView() {
 
     } 
 
-
 const qualificationsFromApi = academicData?.academicProfiles?.map((item) =>{const parts=[item.field_of_study].filter(Boolean)
   return parts.length > 0 ? parts.join(' - ') : null })
   .filter((q): q is string => Boolean(q)) ?? []
@@ -121,6 +121,7 @@ const certificates: FacultyCertificate[] =
     console.log('academicData', academicData)
 console.log('qualifications', qualifications)
 console.log('certificates', certificates)
+
 return (
     <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
       <AnimatedSection index={0}>
@@ -138,6 +139,10 @@ return (
           faculty={faculty}
           isSuspended={profile.is_suspended}
           accountVerified={profile.account_verified}
+          onApprove={async () => { await updateStatus('APPROVED') }}
+          onReject={async () => { await updateStatus('REJECTED') }}
+          onSuspend={async () => { await updateStatus('SUSPENDED') }}
+          onActivate={async () => { await updateStatus('ACTIVATE') }}
         />  
       </AnimatedSection>
 

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Header2, Paragraph } from '@/components/ui/Typography'
 import { cn } from '@/utils/cn'
@@ -86,7 +86,14 @@ export function ConfirmModal({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {confirmLabel}
+            {isLoading ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                {confirmLabel}
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </div>
       </div>

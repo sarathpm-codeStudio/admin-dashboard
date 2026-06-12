@@ -8,6 +8,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import type { FacultyDetail, FacultyStatus } from '@/features/faculty/data/mockFacultyDetail'
+import { useToast } from '@/hooks/useToast'
 import { cn } from '@/utils/cn'
 
 const statusVariant: Record<
@@ -38,12 +39,41 @@ function resolveFacultyStatus(
   return 'pending'
 }
 
+function getLoadingMessage(action: FacultyConfirmAction, facultyName: string): string {
+  switch (action) {
+    case 'approve':
+      return `Approving ${facultyName}...`
+    case 'reject':
+      return `Rejecting ${facultyName}...`
+    case 'suspend':
+      return `Suspending ${facultyName}...`
+    case 'activate':
+      return `Activating ${facultyName}...`
+  }
+}
+
+function getSuccessMessage(action: FacultyConfirmAction, facultyName: string): string {
+  switch (action) {
+    case 'approve':
+      return `${facultyName} has been approved.`
+    case 'reject':
+      return `${facultyName} has been rejected.`
+    case 'suspend':
+      return `${facultyName} has been suspended.`
+    case 'activate':
+      return `${facultyName} has been activated.`
+  }
+}
+
 type FacultyProfileHeaderProps = {
   faculty: FacultyDetail
   isSuspended?: boolean
   accountVerified?: string
+  onApprove?: () => void | Promise<void>
+  onReject?: () => void | Promise<void>
+  onSuspend?: () => void | Promise<void>
+  onActivate?: () => void | Promise<void>
 }
-
 const headerButtonClass =
   'outline-none ring-0 ring-offset-0 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 active:outline-none'
 
@@ -102,6 +132,7 @@ type StatusActionHandlers = {
 function renderStatusActions(
   profileStatus: FacultyStatus,
   handlers: StatusActionHandlers,
+  disabled = false,
 ) {
   switch (profileStatus) {
     case 'active':
@@ -111,6 +142,7 @@ function renderStatusActions(
           type="button"
           className={cn(headerButtonClass, 'text-red-600 hover:bg-red-50')}
           onClick={handlers.onSuspend}
+          disabled={disabled}
         >
           Suspend
         </Button>
@@ -123,6 +155,7 @@ function renderStatusActions(
             type="button"
             className={cn(headerButtonClass, 'text-primary hover:bg-primary-50')}
             onClick={handlers.onApprove}
+            disabled={disabled}
           >
             Approved
           </Button>
@@ -131,6 +164,7 @@ function renderStatusActions(
             type="button"
             className={cn(headerButtonClass, 'text-red-600 hover:bg-red-50')}
             onClick={handlers.onReject}
+            disabled={disabled}
           >
             Reject
           </Button>
@@ -143,6 +177,7 @@ function renderStatusActions(
           type="button"
           className={cn(headerButtonClass, 'text-primary hover:bg-primary-50')}
           onClick={handlers.onApprove}
+          disabled={disabled}
         >
           Approved
         </Button>
@@ -154,6 +189,7 @@ function renderStatusActions(
           type="button"
           className={cn(headerButtonClass, 'text-primary hover:bg-primary-50')}
           onClick={handlers.onActivate}
+          disabled={disabled}
         >
           Activate
         </Button>
@@ -167,22 +203,53 @@ export function FacultyProfileHeader({
   faculty,
   isSuspended,
   accountVerified,
+  onApprove,
+  onReject,
+  onSuspend,
+  onActivate,
 }: FacultyProfileHeaderProps) {
   const profileStatus =
     isSuspended === undefined && accountVerified === undefined
       ? faculty.status
       : resolveFacultyStatus(isSuspended, accountVerified)
 
+  const toast = useToast()
   const [confirmAction, setConfirmAction] = useState<FacultyConfirmAction | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   const confirmConfig = confirmAction
     ? getConfirmModalConfig(confirmAction, faculty.name)
     : null
 
-  const handleConfirm = () => {
-    setConfirmAction(null)
-  }
+  const handleConfirm = async () => {
+    if (!confirmAction) return
 
+    setIsUpdating(true)
+    const loadingToastId = toast.info(getLoadingMessage(confirmAction, faculty.name), {
+      title: 'Updating status',
+      duration: 60_000,
+    })
+
+    try {
+      if (confirmAction === 'approve') await onApprove?.()
+      if (confirmAction === 'reject') await onReject?.()
+      if (confirmAction === 'suspend') await onSuspend?.()
+      if (confirmAction === 'activate') await onActivate?.()
+
+      toast.dismiss(loadingToastId)
+      toast.success(getSuccessMessage(confirmAction, faculty.name), {
+        title: 'Status updated',
+      })
+      setConfirmAction(null)
+    } catch (error) {
+      toast.dismiss(loadingToastId)
+      const message =
+        error instanceof Error ? error.message : 'Failed to update faculty status.'
+      toast.error(message, { title: 'Update failed' })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
   const actionHandlers: StatusActionHandlers = {
     onApprove: () => setConfirmAction('approve'),
     onReject: () => setConfirmAction('reject'),
@@ -259,8 +326,12 @@ export function FacultyProfileHeader({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
-          {renderStatusActions(profileStatus, actionHandlers)}
-          <Button type="button" className={cn(headerButtonClass, 'min-w-[7.5rem]')}>
+          {renderStatusActions(profileStatus, actionHandlers, isUpdating)}
+          <Button
+            type="button"
+            className={cn(headerButtonClass, 'min-w-[7.5rem]')}
+            disabled={isUpdating}
+          >
             <MessageSquare className="size-4" aria-hidden />
             Message
           </Button>
@@ -270,13 +341,14 @@ export function FacultyProfileHeader({
 
     <ConfirmModal
       open={confirmAction !== null}
-      onClose={() => setConfirmAction(null)}
+      onClose={() => !isUpdating && setConfirmAction(null)}
       onConfirm={handleConfirm}
       title={confirmConfig?.title ?? ''}
       message={confirmConfig?.message ?? ''}
-      confirmLabel={confirmConfig?.confirmLabel ?? 'Confirm'}
+      confirmLabel={isUpdating ? 'Updating...' : (confirmConfig?.confirmLabel ?? 'Confirm')}
       confirmVariant={confirmConfig?.confirmVariant ?? 'primary'}
       cancelLabel="Cancel"
+      isLoading={isUpdating}
     />
     </>
   )

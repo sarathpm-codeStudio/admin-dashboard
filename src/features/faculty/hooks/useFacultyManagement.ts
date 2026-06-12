@@ -16,3 +16,4 @@ export const useGetFacultyAcademicProfile = (facultyId: string) => {
         enabled: Boolean(facultyId),
     })
 }
+
