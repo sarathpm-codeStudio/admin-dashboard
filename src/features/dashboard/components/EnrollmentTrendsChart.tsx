@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Area,
   CartesianGrid,
@@ -11,12 +11,12 @@ import {
 } from 'recharts'
 import { Card, CardBody } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { ChartPeriodFilter } from '@/features/dashboard/components/ChartPeriodFilter'
 import {
   enrollmentMonthTickLabels,
   enrollmentSubtitles,
   enrollmentTooltipMonths,
-  enrollmentTrendsByPeriod,
   type EnrollmentTrendPoint,
   type TrendPeriod,
 } from '@/features/dashboard/data/chartTrends'
@@ -24,13 +24,11 @@ import {
   DASHBOARD_TRENDS_CHART_HEIGHT_CLASS,
   DASHBOARD_TRENDS_CHART_MARGIN,
 } from '@/features/dashboard/constants/chartHeights'
-import { useTrendPeriod } from '@/features/dashboard/hooks/useTrendPeriod'
+import { useGetEnrollmentTrends } from '@/features/dashboard/hooks/useDashboardmanagement'
 import { cn } from '@/utils/cn'
 
-const STUDENTS_STROKE = '#000b60'
+const STUDENTS_STROKE = '#2c1452'
 const FACULTY_STROKE = '#22D3EE'
-const MONTH_Y_MAX = 3000
-const MONTH_Y_TICKS = [0, 500, 1000, 1500, 2000, 2500]
 
 type EnrollmentTrendsChartProps = { className?: string }
 
@@ -81,17 +79,17 @@ function EnrollmentTooltip({
 
   return (
     <div className="rounded-lg border border-[#e2e8f0]/80 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.12)]">
-      <p className="text-sm font-bold text-[#000b60]">{heading}</p>
+      <p className="text-sm font-bold text-[#2c1452]">{heading}</p>
       <div className="mt-2.5 space-y-1.5">
         <div className="flex items-center justify-between gap-8 text-sm">
           <span className="text-[#64748B]">Students</span>
-          <span className="font-bold text-[#000b60]">
+          <span className="font-bold text-[#2c1452]">
             {students != null ? students.toLocaleString() : '—'}
           </span>
         </div>
         <div className="flex items-center justify-between gap-8 text-sm">
           <span className="text-[#64748B]">Faculty</span>
-          <span className="font-bold text-[#000b60]">
+          <span className="font-bold text-[#2c1452]">
             {faculty != null ? faculty.toLocaleString() : '—'}
           </span>
         </div>
@@ -100,11 +98,7 @@ function EnrollmentTooltip({
   )
 }
 
-function getYAxisConfig(period: TrendPeriod, data: EnrollmentTrendPoint[]) {
-  if (period === 'month') {
-    return { domain: [0, MONTH_Y_MAX] as [number, number], ticks: MONTH_Y_TICKS }
-  }
-
+function getYAxisConfig(_period: TrendPeriod, data: EnrollmentTrendPoint[]) {
   const max = Math.max(
     ...data.flatMap((point) => [point.students, point.faculty]),
     1,
@@ -115,10 +109,32 @@ function getYAxisConfig(period: TrendPeriod, data: EnrollmentTrendPoint[]) {
   return { domain: [0, ceiling] as [number, number], ticks }
 }
 
+const EMPTY_TRENDS: EnrollmentTrendPoint[] = []
+
+function EnrollmentChartSkeleton() {
+  const barHeights = ['45%', '70%', '55%', '85%', '60%', '90%', '75%']
+
+  return (
+    <div className="flex h-full w-full gap-3">
+      <div className="flex flex-col justify-between py-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-2.5 w-8" />
+        ))}
+      </div>
+      <div className="flex flex-1 items-end justify-between gap-3 border-l border-b border-slate-100 px-2 pb-6">
+        {barHeights.map((height, index) => (
+          <Skeleton key={index} className="w-full max-w-[36px]" style={{ height }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps) {
-  const { period, setPeriod, data } = useTrendPeriod(enrollmentTrendsByPeriod)
+  const [period, setPeriod] = useState<TrendPeriod>('month')
+  const { data: trends = EMPTY_TRENDS, isLoading, isError } = useGetEnrollmentTrends(period)
   const subtitle = enrollmentSubtitles[period]
-  const yAxis = useMemo(() => getYAxisConfig(period, data), [period, data])
+  const yAxis = useMemo(() => getYAxisConfig(period, trends), [period, trends])
 
   return (
     <Card className={cn('w-full p-6', className)}>
@@ -153,8 +169,15 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
         </div>
 
         <div className={cn('shrink-0', DASHBOARD_TRENDS_CHART_HEIGHT_CLASS)}>
+          {isLoading ? (
+            <EnrollmentChartSkeleton />
+          ) : isError ? (
+            <div className="flex h-full items-center justify-center text-sm text-[#dc2626]">
+              Failed to load enrollment trends.
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={DASHBOARD_TRENDS_CHART_MARGIN}>
+            <ComposedChart key={period} data={trends} margin={DASHBOARD_TRENDS_CHART_MARGIN}>
             <defs>
               <linearGradient id="enrollmentStudentsFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6366F1" stopOpacity={0.18} />
@@ -206,7 +229,9 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
               stroke="none"
               fill="url(#enrollmentFacultyFill)"
               fillOpacity={1}
-              isAnimationActive={false}
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
             />
 
             <Area
@@ -215,7 +240,9 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
               stroke="none"
               fill="url(#enrollmentStudentsFill)"
               fillOpacity={1}
-              isAnimationActive={false}
+              isAnimationActive
+              animationDuration={800}
+              animationEasing="ease-out"
             />
 
             <Line
@@ -227,7 +254,9 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
               strokeDasharray="6 4"
               dot={false}
               activeDot={{ r: 5, fill: FACULTY_STROKE, stroke: '#fff', strokeWidth: 2 }}
-              isAnimationActive={false}
+              isAnimationActive
+              animationDuration={900}
+              animationEasing="ease-out"
             />
 
             <Line
@@ -243,10 +272,13 @@ export function EnrollmentTrendsChart({ className }: EnrollmentTrendsChartProps)
                 strokeWidth: 2,
               }}
               activeDot={{ r: 6, fill: STUDENTS_STROKE, stroke: '#fff', strokeWidth: 2 }}
-              isAnimationActive={false}
+              isAnimationActive
+              animationDuration={1000}
+              animationEasing="ease-out"
             />
             </ComposedChart>
           </ResponsiveContainer>
+          )}
         </div>
       </CardBody>
     </Card>

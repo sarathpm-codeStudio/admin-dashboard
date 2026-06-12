@@ -41,7 +41,7 @@ const johnSmithReviews: FacultyReviewRecord[] = [
     id: 'r1',
     studentName: 'Emily Martinez',
     initials: 'EM',
-    avatarClassName: 'bg-[#DFE0FF] text-[#000B60]',
+    avatarClassName: 'bg-[#DFE0FF] text-[#2c1452]',
     courseLabel: 'CS401: Advanced Data Structures',
     dateLabel: 'Nov 14, 2023',
     rating: 5,

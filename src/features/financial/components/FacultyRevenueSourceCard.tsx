@@ -43,7 +43,7 @@ export function FacultyRevenueSourceCard({
             value={source.bundlesPercent}
             className="h-3"
             trackClassName="bg-white"
-            fillClassName="rounded-full bg-[#142283]"
+            fillClassName="rounded-full bg-[#2c1452]"
           />
         </div>
 

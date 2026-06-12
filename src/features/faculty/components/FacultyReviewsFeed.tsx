@@ -57,7 +57,7 @@ export function FacultyReviewsFeed({
     <section className={cn('space-y-5', className)}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#000B60]">Student Feedback Feed</h2>
+          <h2 className="text-xl font-bold text-[#2c1452]">Student Feedback Feed</h2>
           <p className="mt-1 text-sm text-[#454652]">
             {totalReviews} Total Reviews • Showing latest first
           </p>

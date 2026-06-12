@@ -140,7 +140,7 @@ function renderStatusActions(
         <Button
           variant="secondary"
           type="button"
-          className={cn(headerButtonClass, 'text-red-600 hover:bg-red-50')}
+          className={cn(headerButtonClass, 'text-red-600 !w-[120px] hover:bg-red-50')}
           onClick={handlers.onSuspend}
           disabled={disabled}
         >
@@ -259,97 +259,97 @@ export function FacultyProfileHeader({
 
   return (
     <>
-    <Card className={cardPaddingClass}>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="relative size-[84px] shrink-0 sm:size-[92px]">
-            {faculty.avatarUrl ? (
-              <div className="size-full overflow-hidden rounded-2xl">
+      <Card className={cardPaddingClass}>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative size-[84px] shrink-0 sm:size-[92px]">
+              {faculty.avatarUrl ? (
+                <div className="size-full overflow-hidden rounded-2xl">
+                  <img
+                    src={faculty.avatarUrl}
+                    alt={faculty.name}
+                    className="size-full object-cover object-center"
+                  />
+                </div>
+              ) : (
+                <div
+                  className="flex size-full items-center justify-center rounded-2xl bg-[#DFE0FF] text-[#2c1452]"
+                  aria-label={`${faculty.name} profile`}
+                >
+                  <FaUser className="size-10 sm:size-11" aria-hidden />
+                </div>
+              )}
+              {profileStatus === 'active' ? (
                 <img
-                  src={faculty.avatarUrl}
-                  alt={faculty.name}
-                  className="size-full object-cover object-center"
+                  src={verifiedBadgeImage}
+                  alt=""
+                  className="absolute -bottom-1 -right-1 size-6 rounded-lg object-contain drop-shadow-md"
+                  aria-label="Verified faculty"
+                />
+              ) : null}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Header1 size="display" className="text-2xl sm:text-3xl">
+                  {faculty.name}
+                </Header1>
+                <StatusBadge
+                  label={statusLabel[profileStatus]}
+                  variant={statusVariant[profileStatus]}
+                  className="uppercase tracking-wide"
                 />
               </div>
-            ) : (
-              <div
-                className="flex size-full items-center justify-center rounded-2xl bg-[#DFE0FF] text-[#000B60]"
-                aria-label={`${faculty.name} profile`}
-              >
-                <FaUser className="size-10 sm:size-11" aria-hidden />
-              </div>
-            )}
-            {profileStatus === 'active' ? (
-              <img
-                src={verifiedBadgeImage}
-                alt=""
-                className="absolute -bottom-1 -right-1 size-6 rounded-lg object-contain drop-shadow-md"
-                aria-label="Verified faculty"
-              />
-            ) : null}
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Header1 size="display" className="text-2xl sm:text-3xl">
-                {faculty.name}
-              </Header1>
-              <StatusBadge
-                label={statusLabel[profileStatus]}
-                variant={statusVariant[profileStatus]}
-                className="uppercase tracking-wide"
-              />
-            </div>
-            {/* <Paragraph
+              {/* <Paragraph
               variant="muted"
               className="mt-1 inline-flex items-center gap-1.5"
             >
               <GraduationCap className="size-4 shrink-0 text-nav" aria-hidden />
               {faculty.title}
             </Paragraph> */}
-            <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-4">
-              <Paragraph
-                variant="small"
-                className="inline-flex items-center gap-2 text-nav"
-              >
-                <Mail className="size-4 shrink-0" aria-hidden />
-                {faculty.email}
-              </Paragraph>
-              <Paragraph
-                variant="small"
-                className="inline-flex items-center gap-2 text-nav"
-              >
-                <Phone className="size-4 shrink-0" aria-hidden />
-                {faculty.phone}
-              </Paragraph>
+              <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:gap-4">
+                <Paragraph
+                  variant="small"
+                  className="inline-flex items-center gap-2 text-nav"
+                >
+                  <Mail className="size-4 shrink-0" aria-hidden />
+                  {faculty.email}
+                </Paragraph>
+                <Paragraph
+                  variant="small"
+                  className="inline-flex items-center gap-2 text-nav"
+                >
+                  <Phone className="size-4 shrink-0" aria-hidden />
+                  {faculty.phone}
+                </Paragraph>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2">
-          {renderStatusActions(profileStatus, actionHandlers, isUpdating)}
-          <Button
-            type="button"
-            className={cn(headerButtonClass, 'min-w-[7.5rem]')}
-            disabled={isUpdating}
-          >
-            <MessageSquare className="size-4" aria-hidden />
-            Message
-          </Button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {renderStatusActions(profileStatus, actionHandlers, isUpdating)}
+            <Button
+              type="button"
+              className={cn(headerButtonClass, 'min-w-[7.5rem]')}
+              disabled={isUpdating}
+            >
+              <MessageSquare className="size-4" aria-hidden />
+              Message
+            </Button>
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
 
-    <ConfirmModal
-      open={confirmAction !== null}
-      onClose={() => !isUpdating && setConfirmAction(null)}
-      onConfirm={handleConfirm}
-      title={confirmConfig?.title ?? ''}
-      message={confirmConfig?.message ?? ''}
-      confirmLabel={isUpdating ? 'Updating...' : (confirmConfig?.confirmLabel ?? 'Confirm')}
-      confirmVariant={confirmConfig?.confirmVariant ?? 'primary'}
-      cancelLabel="Cancel"
-      isLoading={isUpdating}
-    />
+      <ConfirmModal
+        open={confirmAction !== null}
+        onClose={() => !isUpdating && setConfirmAction(null)}
+        onConfirm={handleConfirm}
+        title={confirmConfig?.title ?? ''}
+        message={confirmConfig?.message ?? ''}
+        confirmLabel={isUpdating ? 'Updating...' : (confirmConfig?.confirmLabel ?? 'Confirm')}
+        confirmVariant={confirmConfig?.confirmVariant ?? 'primary'}
+        cancelLabel="Cancel"
+        isLoading={isUpdating}
+      />
     </>
   )
 }

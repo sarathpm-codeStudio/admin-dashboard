@@ -32,20 +32,20 @@ export function PendingActionItem({
           <Icon className={cn('size-5', iconClassName)} strokeWidth={2.25} aria-hidden />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-[#1B2559]">{title}</p>
+          <p className="truncate text-sm font-bold text-[#2c1452]">{title}</p>
           <p className="truncate text-sm text-[#5F5E5E]">{subtitle}</p>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-4">
         <button
           type="button"
-          className="rounded-[10px] bg-[#EEF2FF] px-4 py-2 text-sm font-medium text-[#4318FF] transition-colors hover:bg-[#E0E7FF]"
+          className="rounded-[10px] bg-[#EEF2FF] px-4 py-2 text-sm font-medium text-[#2c1452] transition-colors hover:bg-[#E0E7FF]"
         >
           Review
         </button>
         <button
           type="button"
-          className="rounded-[10px] bg-[#1B2559] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          className="rounded-[10px] bg-[#2c1452] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
         >
           Approve
         </button>
@@ -72,7 +72,7 @@ export function PendingActionsList({ actions, className }: PendingActionsListPro
           <h2 className="text-base font-bold text-[#191c1e]">Pending Actions</h2>
           <button
             type="button"
-            className="shrink-0 text-sm font-medium text-[#4318FF] transition-colors hover:text-[#3311DB]"
+            className="shrink-0 text-sm font-medium text-[#2c1452] transition-colors hover:text-[#1d0d38]"
           >
             View All Task
           </button>

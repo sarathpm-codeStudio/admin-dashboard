@@ -23,7 +23,7 @@ export function ReviewCard({ review, className }: ReviewCardProps) {
         <div
           className={cn(
             'w-1.5 shrink-0',
-            accentColor === 'red' ? 'bg-[#BA1A1A]' : 'bg-[#000B60]',
+            accentColor === 'red' ? 'bg-[#BA1A1A]' : 'bg-[#2c1452]',
           )}
           aria-hidden
         />
@@ -71,7 +71,7 @@ export function ReviewCard({ review, className }: ReviewCardProps) {
             {review.replyRequired ? (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#EEF2FF] px-3 py-2 text-sm font-semibold text-[#000B60] transition-colors hover:bg-[#E0E7FF]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#EEF2FF] px-3 py-2 text-sm font-semibold text-[#2c1452] transition-colors hover:bg-[#E0E7FF]"
               >
                 <CornerUpLeft className="size-4" aria-hidden />
                 Reply as Admin (Required)
@@ -79,7 +79,7 @@ export function ReviewCard({ review, className }: ReviewCardProps) {
             ) : (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#000B60] transition-colors hover:opacity-80"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2c1452] transition-colors hover:opacity-80"
               >
                 <CornerUpLeft className="size-4" aria-hidden />
                 Reply as Admin
@@ -87,7 +87,7 @@ export function ReviewCard({ review, className }: ReviewCardProps) {
             )}
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#454652] transition-colors hover:text-[#000B60]"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#454652] transition-colors hover:text-[#2c1452]"
             >
               <FileText className="size-4" aria-hidden />
               Feature Review

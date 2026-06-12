@@ -84,7 +84,7 @@ export function StudentProfileHeader({ student }: StudentProfileHeaderProps) {
         ) : (
           <div
             className={cn(
-              'mt-0 flex items-center justify-center rounded-[14px] bg-[#DFE0FF] text-[#000B60]',
+              'mt-0 flex items-center justify-center rounded-[14px] bg-[#DFE0FF] text-[#2c1452]',
               profileAvatarSizeClass,
             )}
             aria-label={`${student.name} profile`}

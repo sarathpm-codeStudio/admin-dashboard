@@ -5,7 +5,7 @@ import {
 import type { FacultyEarningsMonth } from '@/features/financial/data/mockFacultyRevenue'
 import { cn } from '@/utils/cn'
 
-const CHART_LEGEND_CURRENT = '#142283'
+const CHART_LEGEND_CURRENT = '#2c1452'
 const CHART_TITLE_CLASS = 'text-[18px] font-bold leading-7 text-[#1E1B4B]'
 const MARCH_INDEX = 2
 const MARCH_TOOLTIP_VALUE = 64366

@@ -1,7 +1,7 @@
 export type TrendPeriod = 'week' | 'month' | 'year'
 
 export type EnrollmentTrendPoint = {
-  label: string
+  label: string | undefined
   students: number
   faculty: number
 }
@@ -73,8 +73,8 @@ export const periodSubtitles: Record<TrendPeriod, string> = {
 
 export const enrollmentSubtitles: Record<TrendPeriod, string> = {
   week: 'Institutional user growth breakdown (Last 7 Days)',
-  month: 'Institutional user growth breakdown (Last 6 Months)',
-  year: 'Institutional user growth breakdown (Last 5 Years)',
+  month: 'Institutional user growth breakdown (Last 4 Weeks)',
+  year: 'Institutional user growth breakdown (Last 12 Months)',
 }
 
 /** Full month labels for enrollment chart X-axis (month period) */

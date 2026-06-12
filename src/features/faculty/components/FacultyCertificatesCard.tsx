@@ -5,7 +5,7 @@ import {
   FACULTY_PROFILE_CARD_HEIGHT,
   FACULTY_PROFILE_CARD_SCROLL_CLASS,
 } from '@/features/faculty/utils/constants'
-import { Paragraph } from '@/components/ui/Typography'
+import { Header2, Paragraph } from '@/components/ui/Typography'
 import { cn } from '@/utils/cn'
 
 type FacultyCertificatesCardProps = {
@@ -43,9 +43,12 @@ export function FacultyCertificatesCard({ certificates, className }: FacultyCert
     >
       <div className="mb-4 flex shrink-0 items-center gap-2">
         <AiOutlineSafetyCertificate className="size-5 shrink-0" aria-hidden />
-        <Paragraph variant="emphasis" className="text-white">
+        {/* <Paragraph variant="emphasis" className="text-white">
           Certificates
-        </Paragraph>
+        </Paragraph> */}
+        <Header2 size="card" className="text-white">
+          Certificates
+        </Header2>
       </div>
       <ul className={cn('m-0 list-none space-y-3 p-0', FACULTY_PROFILE_CARD_SCROLL_CLASS)}>
         {certificates.map((certificate) => (

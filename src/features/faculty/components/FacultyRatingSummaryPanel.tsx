@@ -35,7 +35,7 @@ export function FacultyRatingSummaryPanel({
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#454652]">
           AVG RATING
         </p>
-        <p className="text-[3.5rem] font-bold leading-none tracking-tight text-[#000B60]">
+        <p className="text-[3.5rem] font-bold leading-none tracking-tight text-[#2c1452]">
           {summary.averageRating.toFixed(1)}
         </p>
         <StarRating
@@ -56,11 +56,11 @@ export function FacultyRatingSummaryPanel({
           'w-full shrink-0 justify-center md:w-[248px]',
         )}
       >
-        <h2 className="text-base font-bold text-[#000B60]">Rating Distribution</h2>
+        <h2 className="text-base font-bold text-[#2c1452]">Rating Distribution</h2>
         <ul className="mt-6 space-y-4">
           {summary.distribution.map((row) => (
             <li key={row.stars} className="flex items-center">
-              <span className="w-3 text-sm font-bold tabular-nums text-[#000B60]">
+              <span className="w-3 text-sm font-bold tabular-nums text-[#2c1452]">
                 {row.stars}
               </span>
               <Star

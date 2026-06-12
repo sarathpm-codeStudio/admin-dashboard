@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, cardPaddingClass } from '@/components/ui/Card'
 import { Textarea } from '@/components/ui/Textarea'
-import { Paragraph } from '@/components/ui/Typography'
+import { Header2, Paragraph } from '@/components/ui/Typography'
 import { useAddNoteToProfile } from '../hooks/useFacultyManagement'
 import { useToast } from '@/hooks/useToast'
 
@@ -37,12 +37,15 @@ export function FacultyAdminNoteCard({ facultyId, adminNote }: { facultyId: stri
   return (
     <Card className={cardPaddingClass}>
       <CardBody>
-        <Paragraph
+        {/* <Paragraph
           variant="label"
           className="uppercase tracking-wide text-ink-heading"
         >
           Internal admin note
-        </Paragraph>
+        </Paragraph> */}
+        <Header2 size="card" className="text-ink-heading">
+          Internal Admin Note
+        </Header2>
         <Textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}

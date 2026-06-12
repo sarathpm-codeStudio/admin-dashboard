@@ -42,7 +42,7 @@ export const EARNINGS_GROWTH_CHART_MARGIN = {
   bottom: 0,
 } as const
 
-const CHART_BAR = '#142283'
+const CHART_BAR = '#2c1452'
 const CHART_AXIS_COLOR = '#5F5E5E'
 const DEFAULT_PINNED_BADGE = '#6366F1'
 

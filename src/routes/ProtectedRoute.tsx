@@ -1,14 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { isSupabaseConfigured } from '@/config/auth'
 import { useAuthStore } from '@/store/authStore'
-
-function AuthLoadingScreen() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-page">
-      <p className="text-sm text-nav">Loading…</p>
-    </div>
-  )
-}
+import { AuthLoadingScreen } from '@/components/ui/AuthLoadingScreen'
 
 export function ProtectedRoute() {
   const isInitializing = useAuthStore((state) => state.isInitializing)

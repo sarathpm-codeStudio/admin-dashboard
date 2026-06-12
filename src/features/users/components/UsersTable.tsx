@@ -100,7 +100,7 @@ export function UsersTable({
         cell: (user) => (
           <div className="flex justify-center">
             <Paragraph
-              className={user.role === 'Faculty' ? 'font-medium text-[#000B60]' : undefined}
+              className={user.role === 'Faculty' ? 'font-medium text-[#2c1452]' : undefined}
             >
               {user.role}
             </Paragraph>
