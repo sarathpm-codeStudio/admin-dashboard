@@ -272,7 +272,11 @@ export const userManagementFunctions = {
         }
     },
 
-    updateUserStatus: async (userId: string, status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'ACTIVATE') => {
+    updateUserStatus: async (
+        userId: string,
+        status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'ACTIVATE',
+        options?: { rejectReason?: string; adminNote?: string },
+    ) => {
         try {
 
             if (status === "SUSPENDED") {
@@ -295,13 +299,20 @@ export const userManagementFunctions = {
 
 
             }
-            
-            
+
+
             else {
+
+                const updates: Record<string, unknown> = { account_verified: status };
+
+                if (status === "REJECTED") {
+                    updates.acc_reject_reason = options?.rejectReason || null;
+                    updates.admin_note = options?.adminNote || null;
+                }
 
                 const { error } = await supabase
                     .from('profiles')
-                    .update({ account_verified: status })
+                    .update(updates)
                     .eq('id', userId);
 
                 if (error) throw new Error(error.message);

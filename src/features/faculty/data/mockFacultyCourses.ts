@@ -96,6 +96,19 @@ const mockFacultyCourses: FacultyCourse[] = [
   },
 ]
 
+/**
+ * Filter options for the enrollment course dropdown — the faculty's published
+ * courses only (drafts are excluded). Value matches enrollment `courseName`.
+ */
+export function getFacultyCourseFilterOptions(
+  facultyId: string,
+): { value: string; label: string }[] {
+  return getFacultyCourses(facultyId)
+    .filter((course) => course.status !== 'draft')
+    .map((course) => ({ value: course.name, label: course.name }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
 /** Mock lookup — replace with API when backend is wired */
 export function getFacultyCourses(facultyId: string): FacultyCourse[] {
   const normalizedId =

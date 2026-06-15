@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
 import { FacultyRevenueAnalyticsPanel } from '@/features/financial/components/FacultyRevenueAnalyticsPanel'
@@ -19,6 +19,8 @@ import { getFacultyById } from '@/features/faculty/data/mockFacultyDetail'
 
 export function FacultyRevenueView() {
   const { facultyId } = useParams<{ facultyId: string }>()
+  const [searchParams] = useSearchParams()
+  const facultyNameParam = searchParams.get('facultyName') ?? ''
   const faculty = facultyId ? getFacultyById(facultyId) : undefined
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -78,7 +80,7 @@ export function FacultyRevenueView() {
         items={[
           { label: 'Financials', to: '/financial' },
           { label: 'Faculty Revenue', to: '/financial' },
-          { label: faculty.name, className: 'text-[#4F46E5]' },
+          { label: facultyNameParam || faculty.name, className: 'text-[#4F46E5]' },
         ]}
       />
 

@@ -1,7 +1,6 @@
 import filterIcon from '@/asset/image/filter.png'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { Select } from '@/components/ui/Select'
-import { FACULTY_COURSE_CATEGORIES } from '@/features/faculty/data/mockFacultyCourses'
 import type { FacultyCourseFilterValues } from '@/features/faculty/utils/filterFacultyCourses'
 import { cn } from '@/utils/cn'
 
@@ -16,21 +15,14 @@ const filterSelectClass = cn(
 type FacultyCoursesFiltersBarProps = {
   values: FacultyCourseFilterValues
   onChange: (values: FacultyCourseFilterValues) => void
+  categories?: string[]
   className?: string
-}
-
-const categoryLabels: Record<string, string> = {
-  accounting: 'Accounting',
-  taxation: 'Taxation',
-  finance: 'Finance',
-  audit: 'Audit',
-  forensic: 'Forensic',
-  systems: 'Systems',
 }
 
 export function FacultyCoursesFiltersBar({
   values,
   onChange,
+  categories = [],
   className,
 }: FacultyCoursesFiltersBarProps) {
   const update = (patch: Partial<FacultyCourseFilterValues>) => {
@@ -72,9 +64,9 @@ export function FacultyCoursesFiltersBar({
         className={filterSelectClass}
       >
         <option value="all">Category: All</option>
-        {FACULTY_COURSE_CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <option key={category} value={category}>
-            {categoryLabels[category] ?? category}
+            {category}
           </option>
         ))}
       </Select>

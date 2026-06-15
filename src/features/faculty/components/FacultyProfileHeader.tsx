@@ -1,4 +1,4 @@
-import { Mail, MessageSquare, Phone } from 'lucide-react'
+import { Mail, MessageSquare, Phone, UserCheck } from 'lucide-react'
 import { useState } from 'react'
 import { FaUser } from 'react-icons/fa'
 import verifiedBadgeImage from '@/asset/image/Background.png'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, cardPaddingClass } from '@/components/ui/Card'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Textarea } from '@/components/ui/Textarea'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import type { FacultyDetail, FacultyStatus } from '@/features/faculty/data/mockFacultyDetail'
 import { useToast } from '@/hooks/useToast'
@@ -65,12 +66,23 @@ function getSuccessMessage(action: FacultyConfirmAction, facultyName: string): s
   }
 }
 
+export type FacultyRejectDetails = {
+  reasons: string[]
+  note: string
+}
+
+const REJECT_REASONS = [
+  'Incomplete profile',
+  'Invalid documents',
+  'Insufficient experience',
+] as const
+
 type FacultyProfileHeaderProps = {
   faculty: FacultyDetail
   isSuspended?: boolean
   accountVerified?: string
   onApprove?: () => void | Promise<void>
-  onReject?: () => void | Promise<void>
+  onReject?: (details: FacultyRejectDetails) => void | Promise<void>
   onSuspend?: () => void | Promise<void>
   onActivate?: () => void | Promise<void>
 }
@@ -93,15 +105,16 @@ function getConfirmModalConfig(
   switch (action) {
     case 'approve':
       return {
-        title: 'Approve faculty',
-        message: `Are you sure you want to approve ${facultyName}? They will be granted faculty access.`,
-        confirmLabel: 'Approved',
+        title: 'Approve Faculty?',
+        message:
+          'This will grant the instructor immediate dashboard access and activate their university profile.',
+        confirmLabel: 'Confirm Approval',
         confirmVariant: 'primary',
       }
     case 'reject':
       return {
-        title: 'Reject faculty',
-        message: `Are you sure you want to reject ${facultyName}? Their application will be declined.`,
+        title: 'Select Reason for Rejection',
+        message: `Select why ${facultyName}'s application is being declined.`,
         confirmLabel: 'Reject',
         confirmVariant: 'outline-danger',
       }
@@ -157,7 +170,7 @@ function renderStatusActions(
             onClick={handlers.onApprove}
             disabled={disabled}
           >
-            Approved
+            Approve
           </Button>
           <Button
             variant="secondary"
@@ -216,6 +229,22 @@ export function FacultyProfileHeader({
   const toast = useToast()
   const [confirmAction, setConfirmAction] = useState<FacultyConfirmAction | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [rejectReasons, setRejectReasons] = useState<string[]>([])
+  const [rejectNote, setRejectNote] = useState('')
+
+  const toggleRejectReason = (reason: string) => {
+    setRejectReasons((current) =>
+      current.includes(reason)
+        ? current.filter((item) => item !== reason)
+        : [...current, reason],
+    )
+  }
+
+  const closeConfirm = () => {
+    setConfirmAction(null)
+    setRejectReasons([])
+    setRejectNote('')
+  }
 
   const confirmConfig = confirmAction
     ? getConfirmModalConfig(confirmAction, faculty.name)
@@ -232,7 +261,8 @@ export function FacultyProfileHeader({
 
     try {
       if (confirmAction === 'approve') await onApprove?.()
-      if (confirmAction === 'reject') await onReject?.()
+      if (confirmAction === 'reject')
+        await onReject?.({ reasons: rejectReasons, note: rejectNote.trim() })
       if (confirmAction === 'suspend') await onSuspend?.()
       if (confirmAction === 'activate') await onActivate?.()
 
@@ -240,7 +270,7 @@ export function FacultyProfileHeader({
       toast.success(getSuccessMessage(confirmAction, faculty.name), {
         title: 'Status updated',
       })
-      setConfirmAction(null)
+      closeConfirm()
     } catch (error) {
       toast.dismiss(loadingToastId)
       const message =
@@ -341,7 +371,7 @@ export function FacultyProfileHeader({
 
       <ConfirmModal
         open={confirmAction !== null}
-        onClose={() => !isUpdating && setConfirmAction(null)}
+        onClose={() => !isUpdating && closeConfirm()}
         onConfirm={handleConfirm}
         title={confirmConfig?.title ?? ''}
         message={confirmConfig?.message ?? ''}
@@ -349,7 +379,51 @@ export function FacultyProfileHeader({
         confirmVariant={confirmConfig?.confirmVariant ?? 'primary'}
         cancelLabel="Cancel"
         isLoading={isUpdating}
-      />
+        layout={confirmAction === 'approve' ? 'centered' : 'default'}
+        icon={confirmAction === 'approve' ? <UserCheck className="size-6" aria-hidden /> : undefined}
+        footnote={
+          confirmAction === 'approve'
+            ? 'By confirming, you agree to the University Employment Terms and automated onboarding procedures.'
+            : undefined
+        }
+        confirmDisabled={confirmAction === 'reject' && rejectReasons.length === 0}
+      >
+        {confirmAction === 'reject' ? (
+          <div className="space-y-4">
+            <fieldset className="space-y-2" disabled={isUpdating}>
+              {REJECT_REASONS.map((reason) => (
+                <label
+                  key={reason}
+                  className="flex cursor-pointer items-center gap-3 text-sm text-ink"
+                >
+                  <input
+                    type="checkbox"
+                    checked={rejectReasons.includes(reason)}
+                    onChange={() => toggleRejectReason(reason)}
+                    className="size-4 rounded border-[#cbd5e1] text-primary focus:ring-primary-50"
+                  />
+                  {reason}
+                </label>
+              ))}
+            </fieldset>
+
+            <div className="space-y-2">
+              <Paragraph
+                variant="small"
+                className="font-semibold uppercase tracking-wide text-nav"
+              >
+                Additional Internal Notes
+              </Paragraph>
+              <Textarea
+                value={rejectNote}
+                onChange={(event) => setRejectNote(event.target.value)}
+                placeholder="Explain the decision for the administrative record..."
+                disabled={isUpdating}
+              />
+            </div>
+          </div>
+        ) : null}
+      </ConfirmModal>
     </>
   )
 }

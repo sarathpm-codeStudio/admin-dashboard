@@ -1,7 +1,7 @@
 
 
 import { supabase } from "@/config/supabase"
-import type { EnrollmentTrendPoint, TrendPeriod } from "@/features/dashboard/data/chartTrends"
+import type { EnrollmentTrendPoint, RevenueTrendPoint, TrendPeriod } from "@/features/dashboard/data/chartTrends"
 
 export const dashboardManagementFunctions = {
 
@@ -345,7 +345,106 @@ export const dashboardManagementFunctions = {
         } catch (error: any) {
             throw new Error(error.message);
         }
-    }
+    },
+
+    getRevenueTrends: async (period: TrendPeriod): Promise<RevenueTrendPoint[]> => {
+        try {
+
+            // 1. Fetch all revenue records (direct enrollments + bundle enrollments)
+            const { data: directRevenue, error: directRevenueError } = await supabase
+                .from('enrollments')
+                .select('amount_paid, created_at')
+                .eq('is_bundle_enrollment', false);
+
+            if (directRevenueError) throw new Error(directRevenueError.message);
+
+            const { data: bundleRevenue, error: bundleRevenueError } = await supabase
+                .from('bundle_enrollments')
+                .select('amount_paid, created_at');
+
+            if (bundleRevenueError) throw new Error(bundleRevenueError.message);
+
+            const allRevenue = [
+                ...(directRevenue ?? []),
+                ...(bundleRevenue ?? []),
+            ];
+
+            const now = new Date();
+
+            // Sum revenue for records with created_at within [start, end)
+            const revenueInRange = (start: Date, end: Date) => {
+                let total = 0;
+                for (const r of allRevenue) {
+                    if (!r.created_at) continue;
+                    const d = new Date(r.created_at);
+                    if (d >= start && d < end) {
+                        total += r.amount_paid ?? 0;
+                    }
+                }
+                return total;
+            };
+
+            let result: RevenueTrendPoint[] = [];
+
+            if (period === 'week') {
+                // Last 7 days — daily granularity
+                const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+                for (let i = 6; i >= 0; i--) {
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - i);
+                    start.setHours(0, 0, 0, 0);
+
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 1);
+
+                    result.push({
+                        label: dayLabels[start.getDay()],
+                        revenue: revenueInRange(start, end),
+                    });
+                }
+            }
+
+            else if (period === 'month') {
+                // Last 4 weeks — weekly granularity
+                for (let i = 3; i >= 0; i--) {
+                    const end = new Date(now);
+                    end.setDate(now.getDate() - (i * 7));
+                    end.setHours(23, 59, 59, 999);
+
+                    const start = new Date(end);
+                    start.setDate(end.getDate() - 7);
+
+                    result.push({
+                        label: `Week ${4 - i}`, // Week 1, Week 2, Week 3, Week 4
+                        revenue: revenueInRange(start, end),
+                    });
+                }
+            }
+
+            else if (period === 'year') {
+                // Last 12 months — monthly granularity
+                const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                for (let i = 11; i >= 0; i--) {
+                    const start = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0);
+                    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1, 0, 0, 0, 0);
+
+                    result.push({
+                        label: monthLabels[start.getMonth()],
+                        revenue: revenueInRange(start, end),
+                    });
+                }
+            }
+
+            return result;
+
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    },
+
+
 
 
 }

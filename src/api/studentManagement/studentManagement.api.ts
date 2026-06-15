@@ -9,15 +9,15 @@ export type Student = {
     phone: string
 }
 export const studentManagementFunctions = {
-   
+
     getStudentById: async (studentId: string) => {
         try {
 
             // Add this to your function temporarily
-const { data: { user }, error: authError } = await supabase.auth.getUser();
-console.log('current user:', user);
-console.log('user metadata:', user?.user_metadata);
-console.log('role:', user?.user_metadata?.role);
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            console.log('current user:', user);
+            console.log('user metadata:', user?.user_metadata);
+            console.log('role:', user?.user_metadata?.role);
             // 1. Student profile
             const { data: student, error: studentError } = await supabase
                 .from('profiles')
@@ -25,10 +25,10 @@ console.log('role:', user?.user_metadata?.role);
                 .eq('role', 'STUDENT')
                 .eq('id', studentId)
                 .single();
-    
+
             if (studentError) throw new Error(studentError.message);
-            if (!student)     throw new Error('Student not found');
-    
+            if (!student) throw new Error('Student not found');
+
             // 2. Last active — latest session
             const { data: lastSession } = await supabase
                 .from('usage_sessions')
@@ -37,107 +37,107 @@ console.log('role:', user?.user_metadata?.role);
                 .order('started_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
-    
+
             const formatLastActive = (dateStr: string | null): string => {
                 if (!dateStr) return 'Never';
-                const date      = new Date(dateStr);
-                const now       = new Date();
-                const isToday   = date.toDateString() === now.toDateString();
+                const date = new Date(dateStr);
+                const now = new Date();
+                const isToday = date.toDateString() === now.toDateString();
                 const yesterday = new Date(now);
                 yesterday.setDate(now.getDate() - 1);
                 const isYesterday = date.toDateString() === yesterday.toDateString();
                 const timeStr = date.toLocaleTimeString('en-US', {
-                    hour:   '2-digit',
+                    hour: '2-digit',
                     minute: '2-digit',
                     hour12: true,
                 });
-                if (isToday)     return `Today ${timeStr}`;
+                if (isToday) return `Today ${timeStr}`;
                 if (isYesterday) return `Yesterday ${timeStr}`;
                 return date.toLocaleDateString('en-US', {
                     month: 'short',
-                    day:   'numeric',
+                    day: 'numeric',
                 }) + `, ${timeStr}`;
             };
-    
+
             // 3. Course enrolled count
             const { count: courseEnrolled, error: enrollError } = await supabase
                 .from('enrollments')
                 .select('*', { count: 'exact', head: true })
                 .eq('student_id', studentId);
 
-                console.log('studentId:>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', studentId);
-                console.log('courseEnrolled count:', courseEnrolled);
-                console.log('enrollError:', enrollError);
-    
+            console.log('studentId:>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>', studentId);
+            console.log('courseEnrolled count:', courseEnrolled);
+            console.log('enrollError:', enrollError);
+
             if (enrollError) throw new Error(enrollError.message);
-    
+
             // 4. Test score — avg correct rate across all completed attempts
             const { data: attempts, error: attemptError } = await supabase
                 .from('test_attempts')
                 .select('correct_count, total_questions')
                 .eq('student_id', studentId)
                 .not('submitted_at', 'is', null);
-    
+
             if (attemptError) throw new Error(attemptError.message);
-    
-            const totalCorrect   = attempts?.reduce((sum, a) => sum + (a.correct_count   ?? 0), 0) ?? 0;
-            const totalQuestions = attempts?.reduce((sum, a) => sum + (a.total_questions  ?? 0), 0) ?? 0;
-            const testScore      = totalQuestions > 0
+
+            const totalCorrect = attempts?.reduce((sum, a) => sum + (a.correct_count ?? 0), 0) ?? 0;
+            const totalQuestions = attempts?.reduce((sum, a) => sum + (a.total_questions ?? 0), 0) ?? 0;
+            const testScore = totalQuestions > 0
                 ? parseFloat(((totalCorrect / totalQuestions) * 100).toFixed(1))
                 : 0;
-    
+
             // 5. Total coins — sum of CREDIT minus DEBIT
             const { data: coinData, error: coinError } = await supabase
                 .from('coin_transactions')
                 .select('coin_count, type')
                 .eq('user_id', studentId);
-    
+
             if (coinError) throw new Error(coinError.message);
-    
+
             const totalCoins = coinData?.reduce((sum, c) => {
                 return c.type === 'CREDIT'
                     ? sum + (c.coin_count ?? 0)
-                    : sum - (c.coin_count ?? 0);
+                    : sum;
             }, 0) ?? 0;
-    
+
             // 6. Total spend — sum of amount_paid from enrollments
             const { data: spendData, error: spendError } = await supabase
                 .from('enrollments')
                 .select('amount_paid')
                 .eq('student_id', studentId);
-    
+
             if (spendError) throw new Error(spendError.message);
-    
+
             const totalSpend = spendData?.reduce(
                 (sum, e) => sum + (e.amount_paid ?? 0), 0
             ) ?? 0;
-    
-            
+
+
 
             return {
                 // Student profile
                 student,
-    
+
                 // Last active
                 lastActive: {
-                    display:    formatLastActive(lastSession?.started_at ?? null),
-                    raw:        lastSession?.started_at  ?? null,
-                    platform:   lastSession?.platform    ?? null,
+                    display: formatLastActive(lastSession?.started_at ?? null),
+                    raw: lastSession?.started_at ?? null,
+                    platform: lastSession?.platform ?? null,
                     screenName: lastSession?.screen_name ?? null,
                 },
-    
+
                 // Analytics cards
                 analytics: {
                     courseEnrolled: courseEnrolled ?? 0,              // "03"
-                    testScore:      `${testScore}%`,                  // "94.8%"
-                    totalCoins:     totalCoins,                       // "1,200"
+                    testScore: `${testScore}%`,                  // "94.8%"
+                    totalCoins: totalCoins,                       // "1,200"
                     totalSpend: {
-                        amount:  totalSpend,
+                        amount: totalSpend,
                         display: `₹${totalSpend.toLocaleString('en-IN')}`, // "₹12500"
                     },
                 },
             };
-    
+
         } catch (error: any) {
             throw new Error(error.message);
         }
@@ -174,6 +174,12 @@ console.log('role:', user?.user_metadata?.role);
           id,
           title,
           faculty_id
+        ),
+        faculty:profiles!enrollments_faculty_id_fkey (
+          id,
+          first_name,
+          last_name,
+          avatar_url
         )
       `,
                     { count: "exact" }
@@ -334,6 +340,7 @@ console.log('role:', user?.user_metadata?.role);
                     progress,
                     status,
                     test_score,
+                    faculty: item.faculty,
                 };
             });
 

@@ -10,12 +10,12 @@ import { FacultyBioCard } from '@/features/faculty/components/FacultyBioCard'
 import { FacultyCertificatesCard } from '@/features/faculty/components/FacultyCertificatesCard'
 import { FacultyIdVerificationCard } from '@/features/faculty/components/FacultyIdVerificationCard'
 import { FacultyProfileHeader } from '@/features/faculty/components/FacultyProfileHeader'
+import { FacultyRejectionWidget } from '@/features/faculty/components/FacultyRejectionWidget'
 import { FacultyQualificationsCard } from '@/features/faculty/components/FacultyQualificationsCard'
 import { FacultyRecentActivityCard } from '@/features/faculty/components/FacultyRecentActivityCard'
 import { getFacultyStatItems } from '@/features/faculty/data/facultyStatItems'
 import {
   FacultyDetail,
-  getFacultyById,
   type FacultyCertificate,
 } from '@/features/faculty/data/mockFacultyDetail'
 import { useGetFacultyAcademicProfile, useGetFacultyById } from './hooks/useFacultyManagement'
@@ -168,14 +168,20 @@ export function FacultyDetailView() {
           isSuspended={profile.is_suspended}
           accountVerified={profile.account_verified}
           onApprove={async () => { await updateStatus('APPROVED') }}
-          onReject={async () => { await updateStatus('REJECTED') }}
+          onReject={async ({ reasons, note }) => {
+            await updateStatus({
+              status: 'REJECTED',
+              rejectReason: reasons.join(', '),
+              adminNote: note,
+            })
+          }}
           onSuspend={async () => { await updateStatus('SUSPENDED') }}
           onActivate={async () => { await updateStatus('ACTIVATE') }}
         />
       </AnimatedSection>
 
       <AnimatedSection index={2}>
-        <SummaryStatsGrid items={getFacultyStatItems(analytics, facultyId ?? '')} size="compact" />
+        <SummaryStatsGrid items={getFacultyStatItems(analytics, facultyId ?? '', profile?.name)} size="compact" />
       </AnimatedSection>
 
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
@@ -210,6 +216,10 @@ export function FacultyDetailView() {
           <HelpFab />
         </div>
       </AnimatedSection>
+
+      {profile.account_verified === 'REJECTED' ? (
+        <FacultyRejectionWidget reason={profile.acc_reject_reason} />
+      ) : null}
     </div>
   )
 }

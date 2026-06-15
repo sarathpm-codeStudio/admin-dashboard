@@ -1,6 +1,7 @@
 import { Calculator, Star, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Card } from '@/components/ui/Card'
+import { Carousel } from '@/components/ui/Carousel'
 import { cn } from '@/utils/cn'
 import { topPerformers } from '@/features/dashboard/data/mockData'
 
@@ -38,38 +39,46 @@ export function TopPerformers({ className }: TopPerformersProps) {
     >
       <h2 className="mb-4 text-base font-bold text-[#111827]">Top Performers</h2>
 
-      <div className="flex flex-col gap-3">
-        <PerformerRow
-          leading={
-            <img
-              src={faculty.avatarUrl}
-              alt=""
-              className="size-12 rounded-lg object-cover object-center"
-            />
-          }
-          name={faculty.name}
-          subtitle={`${faculty.category} • ${faculty.metric}`}
-          trailing={
-            <Star className="size-5 fill-[#F59E0B] text-[#F59E0B]" aria-hidden />
-          }
-        />
-
-        <PerformerRow
-          leading={
-            <div
-              className="flex size-12 items-center justify-center rounded-lg bg-[#E0E7FF] text-[#4338CA]"
-              aria-hidden
-            >
-              <Calculator className="size-6 stroke-[1.75]" />
-            </div>
-          }
-          name={course.name}
-          subtitle={`${course.category} • ${course.metric}`}
-          trailing={
-            <TrendingUp className="size-5 text-[#2563EB]" strokeWidth={2.25} aria-hidden />
-          }
-        />
-      </div>
+      <Carousel
+        autoPlayInterval={4000}
+        slides={[
+          <PerformerRow
+            key="faculty"
+            leading={
+              <img
+                src={faculty.avatarUrl}
+                alt=""
+                className="size-12 rounded-lg object-cover object-center"
+              />
+            }
+            name={faculty.name}
+            subtitle={`${faculty.category} • ${faculty.metric}`}
+            trailing={
+              <Star className="size-5 fill-[#F59E0B] text-[#F59E0B]" aria-hidden />
+            }
+          />,
+          <PerformerRow
+            key="course"
+            leading={
+              <div
+                className="flex size-12 items-center justify-center rounded-lg bg-[#E0E7FF] text-[#4338CA]"
+                aria-hidden
+              >
+                <Calculator className="size-6 stroke-[1.75]" />
+              </div>
+            }
+            name={course.name}
+            subtitle={`${course.category} • ${course.metric}`}
+            trailing={
+              <TrendingUp
+                className="size-5 text-[#2563EB]"
+                strokeWidth={2.25}
+                aria-hidden
+              />
+            }
+          />,
+        ]}
+      />
     </Card>
   )
 }

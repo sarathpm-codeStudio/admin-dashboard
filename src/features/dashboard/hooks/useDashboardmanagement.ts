@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { dashboardManagementFunctions } from "@/api/dashboard/dashboard.api"
 import type { DashboardAnalytics } from "@/features/dashboard/data/dashboardStatItems"
-import { EnrollmentTrendPoint } from "../data/chartTrends"
+import { EnrollmentTrendPoint, RevenueTrendPoint } from "../data/chartTrends"
 
 
 
@@ -19,5 +19,13 @@ export const useGetEnrollmentTrends = (period: 'week' | 'month' | 'year') => {
     return useQuery<EnrollmentTrendPoint[]>({
         queryKey: ['enrollment-trends', period],
         queryFn: () => dashboardManagementFunctions.getEnrollmentTrends(period),
+    });
+};
+
+
+export const useGetRevenueTrends = (period: 'week' | 'month' | 'year') => {
+    return useQuery<RevenueTrendPoint[]>({
+        queryKey: ['revenue-trends', period],
+        queryFn: () => dashboardManagementFunctions.getRevenueTrends(period),
     });
 };

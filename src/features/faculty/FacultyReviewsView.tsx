@@ -14,7 +14,9 @@ const REVIEWS_SUMMARY_COLUMN_CLASS = 'w-full max-w-[44rem] min-w-0'
 
 export function FacultyReviewsView() {
   const { facultyId } = useParams<{ facultyId: string }>()
+
   const faculty = facultyId ? getFacultyById(facultyId) : undefined
+
 
   if (!faculty || !facultyId) {
     return <Navigate to="/users" replace />
