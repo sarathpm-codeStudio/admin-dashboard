@@ -54,7 +54,7 @@ export function FacultyDetailView() {
    const{mutateAsync: updateStatus}=  useUpdateUserStatus(facultyId ?? '') 
 
   if (!facultyId) {
-    return <Navigate to="/users" replace />
+    return <Navigate to="/users" replace /> 
   }
   if(isLoading){
     return <div className="flex min-h-0 flex-1 items-center justify-center">
