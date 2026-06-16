@@ -47,14 +47,14 @@ const growthDisplay = (percent: number): string => {
   return `${arrow} ${Math.abs(percent)}% from last month`
 }
 
-const toDbCourseStatus = (status: CourseApprovalStatus): string =>
-  status === 'RESUBMIT' ? 'resubmit' : status
-
 const fromDbCourseStatus = (raw: string | null | undefined): CourseApprovalStatus => {
-  const value = (raw ?? 'PENDING').toLowerCase()
-  if (value === 'resubmit') return 'RESUBMIT'
-  const upper = value.toUpperCase()
-  if (upper === 'APPROVED' || upper === 'PENDING' || upper === 'REJECTED') {
+  const upper = (raw ?? 'PENDING').toUpperCase()
+  if (
+    upper === 'APPROVED' ||
+    upper === 'PENDING' ||
+    upper === 'REJECTED' ||
+    upper === 'RESUBMIT'
+  ) {
     return upper as CourseApprovalStatus
   }
   return 'PENDING'
@@ -207,13 +207,11 @@ export const courseManagementFunctions = {
         )
         .eq('is_deleted', false)
         .eq('is_draft', false)
-        .order('created_at', { ascending: false })
-        .range(from, to)
 
-      // 2. Filters — skip if 'all' / 'any'
+      // 2. Filters — skip if 'all' / 'any' (before range so count + pagination are correct)
       if (category && category !== 'all') query = query.eq('category', category)
       if (facultyId && facultyId !== 'all') query = query.eq('faculty_id', facultyId)
-      if (status && status !== 'all') query = query.eq('status', toDbCourseStatus(status))
+      if (status && status !== 'all') query = query.eq('status', status)
       if (price && price !== 'any') {
         if (price === 'free') query = query.or('final_price.eq.0,price.eq.0')
         else if (price === 'paid') query = query.gt('final_price', 0)
@@ -223,6 +221,8 @@ export const courseManagementFunctions = {
       if (search.trim()) {
         query = query.ilike('title', `%${search.trim()}%`)
       }
+
+      query = query.order('created_at', { ascending: false }).range(from, to)
 
       const { data: courses, error, count } = await query
       if (error) throw new Error(error.message)
@@ -305,7 +305,7 @@ export const courseManagementFunctions = {
     try {
       if (courseIds.length === 0) return { success: true }
 
-      const updates: Record<string, unknown> = { status: toDbCourseStatus(status) }
+      const updates: Record<string, unknown> = { status }
 
       if (status === 'REJECTED') {
         updates.rejection_reason = options?.rejectReason ?? null

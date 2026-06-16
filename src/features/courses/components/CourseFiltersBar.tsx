@@ -99,7 +99,7 @@ export function CourseFiltersBar({ values, onChange, className }: CourseFiltersB
       >
         <option value="all">Status: All</option>
         <option value="APPROVED">Approved</option>
-        <option value="resubmit">Resubmit</option>
+        <option value="RESUBMIT">Resubmit</option>
         <option value="REJECTED">Rejected</option>
       </Select>
 
