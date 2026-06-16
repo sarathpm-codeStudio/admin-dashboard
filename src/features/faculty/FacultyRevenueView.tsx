@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
+import type { FacultyPayoutTransaction } from '@/api/FacultyManagement/facultyManagement.api'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
 import { FacultyRevenueAnalyticsPanel } from '@/features/financial/components/FacultyRevenueAnalyticsPanel'
@@ -15,7 +16,7 @@ import {
 
 const TRANSACTION_PAGE_SIZE = 10
 
-const EMPTY_ROWS: never[] = []
+const EMPTY_ROWS: FacultyPayoutTransaction[] = []
 
 export function FacultyRevenueView() {
   const { facultyId } = useParams<{ facultyId: string }>()
