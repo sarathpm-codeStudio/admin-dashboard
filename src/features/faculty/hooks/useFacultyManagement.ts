@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
 import { facultyManagementFunctions } from '@/api/FacultyManagement/facultyManagement.api'
 import { queryClient } from "@/config/queryClient"
+import type { RevenueTrendPoint, TrendPeriod } from "@/features/dashboard/data/chartTrends"
 
 export const useGetFacultyById = (facultyId: string) => {
     return useQuery({
@@ -98,6 +99,53 @@ export const useGetFacultyRevenueStats = (facultyId: string) => {
         queryKey: ['faculty-revenue-stats', facultyId],
         queryFn: () => facultyManagementFunctions.getFacultyRevenueStats(facultyId),
         enabled: Boolean(facultyId),
+    })
+}
+
+
+export const useGetFacultyRevenueTrends = (facultyId: string, period: TrendPeriod) => {
+    return useQuery<RevenueTrendPoint[]>({
+        queryKey: ['faculty-revenue-trends', facultyId, period],
+        queryFn: () => facultyManagementFunctions.getFacultyRevenueTrends(facultyId, period),
+        enabled: Boolean(facultyId),
+    })
+}
+
+
+export const useGetFacultyRevenueSource = (facultyId: string) => {
+    return useQuery({
+        queryKey: ['faculty-revenue-source', facultyId],
+        queryFn: () => facultyManagementFunctions.getFacultyRevenueSource(facultyId),
+        enabled: Boolean(facultyId),
+    })
+}
+
+
+type FacultyTransactionFilters = {
+    search?: string
+    startDate?: string
+    endDate?: string
+}
+
+export const useGetFacultyTransactions = (
+    facultyId: string,
+    page: number,
+    filters: FacultyTransactionFilters = {},
+    pageSize = 10,
+) => {
+    const { search = '', startDate = '', endDate = '' } = filters
+    return useQuery({
+        queryKey: ['faculty-transactions', facultyId, page, pageSize, search, startDate, endDate],
+        queryFn: () =>
+            facultyManagementFunctions.getFacultyTransactions(facultyId, {
+                limit: pageSize,
+                offset: (page - 1) * pageSize,
+                search,
+                startDate,
+                endDate,
+            }),
+        enabled: Boolean(facultyId),
+        placeholderData: keepPreviousData,
     })
 }
 

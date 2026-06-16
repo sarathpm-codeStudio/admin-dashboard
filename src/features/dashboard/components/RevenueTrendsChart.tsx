@@ -21,11 +21,16 @@ type RevenueTrendsChartProps = { className?: string }
 
 const EMPTY_TRENDS: RevenueTrendPoint[] = []
 
-/** Index + value of the highest revenue bucket, for the pinned tooltip badge. */
+/**
+ * Index + value of the bucket to pin the tooltip badge on.
+ * Defaults to the current bucket (last day/week/month) so an all-equal or
+ * all-zero dataset highlights "today" rather than the first bucket. A strictly
+ * higher earlier bucket still wins as the peak.
+ */
 function getPeakPoint(data: RevenueTrendPoint[]) {
   if (data.length === 0) return null
-  let peakIndex = 0
-  for (let i = 1; i < data.length; i++) {
+  let peakIndex = data.length - 1
+  for (let i = data.length - 2; i >= 0; i--) {
     if ((data[i]?.revenue ?? 0) > (data[peakIndex]?.revenue ?? 0)) peakIndex = i
   }
   return { index: peakIndex, value: data[peakIndex]?.revenue ?? 0 }

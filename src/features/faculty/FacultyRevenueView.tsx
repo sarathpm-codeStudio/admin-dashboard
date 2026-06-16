@@ -6,17 +6,16 @@ import { FacultyRevenueAnalyticsPanel } from '@/features/financial/components/Fa
 import { FacultyRevenuePageHeader } from '@/features/financial/components/FacultyRevenuePageHeader'
 import { FacultyTransactionsTable } from '@/features/financial/components/FacultyTransactionsTable'
 import { getFacultyRevenueStatItems } from '@/features/financial/data/facultyRevenueStatItems'
-import {
-  getFacultyEarningsGrowth,
-  getFacultyRevenueSource,
-  getFacultyRevenueSummary,
-  getFacultyTransactions,
-  TRANSACTION_DISPLAY_TOTAL,
-  TRANSACTION_PAGE_SIZE,
-} from '@/features/financial/data/mockFacultyRevenue'
-import { filterFacultyTransactions } from '@/features/financial/utils/filterFacultyTransactions'
+import { getFacultyRevenueSummary } from '@/features/financial/data/mockFacultyRevenue'
 import { getFacultyById } from '@/features/faculty/data/mockFacultyDetail'
-import { useGetFacultyRevenueStats } from '@/features/faculty/hooks/useFacultyManagement'
+import {
+  useGetFacultyRevenueStats,
+  useGetFacultyTransactions,
+} from '@/features/faculty/hooks/useFacultyManagement'
+
+const TRANSACTION_PAGE_SIZE = 10
+
+const EMPTY_ROWS: never[] = []
 
 export function FacultyRevenueView() {
   const { facultyId } = useParams<{ facultyId: string }>()
@@ -24,6 +23,8 @@ export function FacultyRevenueView() {
   const facultyNameParam = searchParams.get('facultyName') ?? ''
   const faculty = facultyId ? getFacultyById(facultyId) : undefined
   const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [page, setPage] = useState(1)
 
   const { data: revenueStats } = useGetFacultyRevenueStats(facultyId ?? '')
@@ -33,41 +34,29 @@ export function FacultyRevenueView() {
     [facultyId],
   )
 
-  const earningsData = useMemo(
-    () => (facultyId ? getFacultyEarningsGrowth(facultyId) : []),
-    [facultyId],
+  const {
+    data: transactions,
+    isLoading: isTransactionsLoading,
+    isError: isTransactionsError,
+  } = useGetFacultyTransactions(
+    facultyId ?? '',
+    page,
+    { search, startDate: dateFrom, endDate: dateTo },
+    TRANSACTION_PAGE_SIZE,
   )
 
-  const revenueSource = useMemo(
-    () => (facultyId ? getFacultyRevenueSource(facultyId) : getFacultyRevenueSource('john-smith')),
-    [facultyId],
-  )
-
-  const allTransactions = useMemo(
-    () => (facultyId ? getFacultyTransactions(facultyId) : []),
-    [facultyId],
-  )
-
-  const filteredTransactions = useMemo(
-    () => filterFacultyTransactions(allTransactions, search),
-    [allTransactions, search],
-  )
-
-  const usingSearch = search.trim() !== ''
-  const displayTotal = usingSearch
-    ? filteredTransactions.length
-    : TRANSACTION_DISPLAY_TOTAL
-
+  const tableRows = transactions?.items ?? EMPTY_ROWS
+  const displayTotal = transactions?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(displayTotal / TRANSACTION_PAGE_SIZE))
-
-  const tableRows = useMemo(() => {
-    const start = (page - 1) * TRANSACTION_PAGE_SIZE
-    const source = usingSearch ? filteredTransactions : allTransactions
-    return source.slice(start, start + TRANSACTION_PAGE_SIZE)
-  }, [page, usingSearch, filteredTransactions, allTransactions])
 
   const handleSearchChange = (value: string) => {
     setSearch(value)
+    setPage(1)
+  }
+
+  const handleDateChange = (from: string, to: string) => {
+    setDateFrom(from)
+    setDateTo(to)
     setPage(1)
   }
 
@@ -77,7 +66,15 @@ export function FacultyRevenueView() {
 
   const statItems = getFacultyRevenueStatItems(summary).map((item) => {
     if (item.id === 'total-revenue' && revenueStats) {
-      return { ...item, value: revenueStats.totalRevenue.display }
+      const { display, growthDisplay, isPositive } = revenueStats.totalRevenue
+      const badgeClass = isPositive
+        ? 'inline-flex rounded-full bg-[#A8EDFF] px-2.5 py-0.5 text-xs font-semibold text-[#00A6BF]'
+        : 'inline-flex rounded-full bg-[#FFE4E6] px-2.5 py-0.5 text-xs font-semibold text-[#E11D48]'
+      return {
+        ...item,
+        value: display,
+        footer: <span className={badgeClass}>{growthDisplay}</span>,
+      }
     }
     if (item.id === 'pending-payout' && revenueStats) {
       return { ...item, value: revenueStats.pendingPayout.display }
@@ -99,7 +96,7 @@ export function FacultyRevenueView() {
 
       <SummaryStatsGrid items={statItems} columns={2} className="gap-6" />
 
-      <FacultyRevenueAnalyticsPanel earnings={earningsData} source={revenueSource} />
+      <FacultyRevenueAnalyticsPanel facultyId={facultyId} />
 
       <FacultyTransactionsTable
         rows={tableRows}
@@ -107,8 +104,13 @@ export function FacultyRevenueView() {
         page={page}
         totalPages={totalPages}
         search={search}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
         onSearchChange={handleSearchChange}
+        onDateChange={handleDateChange}
         onPageChange={setPage}
+        isLoading={isTransactionsLoading}
+        isError={isTransactionsError}
       />
     </div>
   )

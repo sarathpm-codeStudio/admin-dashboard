@@ -1,9 +1,10 @@
-import type { LabelProps } from 'recharts'
+import type { LabelProps, TooltipProps } from 'recharts'
 import {
   Bar,
   BarChart,
   LabelList,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
@@ -12,6 +13,8 @@ import { cn } from '@/utils/cn'
 export type EarningsGrowthBarPoint = {
   label: string
   revenue: number
+  /** Original (pre-scaled) value shown in the hover tooltip / badge. */
+  actual?: number
 }
 
 export type EarningsGrowthPinnedLabel = {
@@ -61,6 +64,7 @@ export function toRelativeBarHeights(
     return data.map((point) => ({
       label: point.label,
       revenue: EARNINGS_BAR_HEIGHT_MIN,
+      actual: point.revenue,
     }))
   }
 
@@ -69,6 +73,7 @@ export function toRelativeBarHeights(
     revenue: Math.round(
       EARNINGS_BAR_HEIGHT_MIN + ((point.revenue - min) / range) * span,
     ),
+    actual: point.revenue,
   }))
 }
 
@@ -126,6 +131,31 @@ function PinnedBarLabel(badgeColor: string, value: number, targetIndex: number) 
   }
 }
 
+function HoverTooltip({ active, payload }: TooltipProps<number, string>) {
+  if (!active || payload == null || payload.length === 0) return null
+
+  const point = payload[0]?.payload as EarningsGrowthBarPoint | undefined
+  if (point == null) return null
+
+  const value = point.actual ?? point.revenue
+
+  // Same badge style as the pinned peak label (indigo pill + pointer).
+  return (
+    <div className="relative flex flex-col items-center">
+      <div
+        className="rounded-md px-3 py-1 text-[11px] font-semibold text-white shadow-sm"
+        style={{ backgroundColor: DEFAULT_PINNED_BADGE }}
+      >
+        {formatRupee(value)}
+      </div>
+      <div
+        className="h-0 w-0 border-x-[5px] border-t-[5px] border-x-transparent"
+        style={{ borderTopColor: DEFAULT_PINNED_BADGE }}
+      />
+    </div>
+  )
+}
+
 type EarningsGrowthBarChartProps = {
   data: EarningsGrowthBarPoint[]
   className?: string
@@ -170,6 +200,13 @@ export function EarningsGrowthBarChart({
             dy={10}
           />
           <YAxis hide domain={yAxisDomain} />
+          <Tooltip
+            cursor={false}
+            content={<HoverTooltip />}
+            isAnimationActive
+            animationDuration={200}
+            animationEasing="ease-out"
+          />
           <Bar
             dataKey="revenue"
             fill={CHART_BAR}

@@ -14,14 +14,14 @@ export function FacultyRevenuePageHeader({ className }: FacultyRevenuePageHeader
       </h1>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button
+        {/* <Button
           type="button"
           variant="outline"
           className="shrink-0  bg-[#E6E8EA] text-sm font-medium text-[#454652] hover:bg-[#dce0e3]"
         >
           <Calendar className="size-4" aria-hidden />
           Last 12 Months
-        </Button>
+        </Button> */}
         <Button type="button" variant="primary" className="shrink-0">
           <Download className="size-4" aria-hidden />
           Export Statement

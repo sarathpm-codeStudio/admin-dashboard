@@ -1,28 +1,33 @@
 import { useMemo } from 'react'
-import filterIcon from '@/asset/image/filter.png'
+import type { FacultyPayoutStatus, FacultyPayoutTransaction } from '@/api/FacultyManagement/facultyManagement.api'
 import { Card } from '@/components/ui/Card'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
-import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import type { StatusBadgeVariant } from '@/components/ui/StatusBadge'
 import { Header2 } from '@/components/ui/Typography'
-import type { FacultyTransaction } from '@/features/financial/data/mockFacultyRevenue'
-import { cn } from '@/utils/cn'
+import { JoinedDateFilter } from '@/features/users/components/JoinedDateFilter'
 
-const typeBadgeVariant = {
-  bundle: 'bundle',
-  individual: 'individual',
-} as const
+const statusBadge: Record<FacultyPayoutStatus, { label: string; variant: StatusBadgeVariant }> = {
+  SUCCESS: { label: 'SUCCESS', variant: 'active' },
+  PENDING: { label: 'PENDING', variant: 'pending' },
+  FAILED: { label: 'FAILED', variant: 'rejected' },
+}
 
 type FacultyTransactionsTableProps = {
-  rows: FacultyTransaction[]
+  rows: FacultyPayoutTransaction[]
   totalCount: number
   page: number
   totalPages: number
   search: string
+  dateFrom: string
+  dateTo: string
   onSearchChange: (value: string) => void
+  onDateChange: (from: string, to: string) => void
   onPageChange: (page: number) => void
+  isLoading?: boolean
+  isError?: boolean
 }
 
 export function FacultyTransactionsTable({
@@ -31,75 +36,62 @@ export function FacultyTransactionsTable({
   page,
   totalPages,
   search,
+  dateFrom,
+  dateTo,
   onSearchChange,
+  onDateChange,
   onPageChange,
+  isLoading = false,
+  isError = false,
 }: FacultyTransactionsTableProps) {
-  const columns = useMemo<DataTableColumn<FacultyTransaction>[]>(
+  const columns = useMemo<DataTableColumn<FacultyPayoutTransaction>[]>(
     () => [
       {
         id: 'transactionId',
         header: 'Transaction ID',
-        width: '12rem',
-        cell: (row) => (
-          <span className="text-sm text-[#94a3b8]">#{row.transactionId}</span>
-        ),
-      },
-      {
-        id: 'courseName',
-        header: 'Course Name',
-        cell: (row) => (
-          <span className="text-sm font-semibold text-[#1E1B4B]">{row.courseName}</span>
-        ),
-      },
-      {
-        id: 'student',
-        header: 'Student',
         width: '14rem',
         cell: (row) => (
-          <div className="flex items-center gap-2.5">
-            {row.studentAvatarUrl ? (
-              <ProfileAvatar
-                src={row.studentAvatarUrl}
-                alt=""
-                sizeClassName="size-8"
-                roundedClassName="rounded-full"
-              />
-            ) : (
-              <div
-                className={cn(
-                  'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                  row.studentAvatarClassName,
-                )}
-              >
-                {row.studentInitials}
-              </div>
-            )}
-            <span className="text-sm font-medium text-[#334155]">{row.studentName}</span>
-          </div>
+          <span className="text-sm font-semibold text-[#1E1B4B]">#{row.transactionId}</span>
+        ),
+      },
+      {
+        id: 'amount',
+        header: 'Payout Amount',
+        width: '10rem',
+        cell: (row) => (
+          <span className="text-sm font-semibold text-[#1E1B4B]">{row.amountDisplay}</span>
+        ),
+      },
+      {
+        id: 'gross',
+        header: 'Gross Amount',
+        width: '10rem',
+        cell: (row) => (
+          <span className="text-sm text-[#334155]">{row.grossDisplay}</span>
         ),
       },
       {
         id: 'date',
         header: 'Date',
-        width: '9.5rem',
+        width: '10rem',
         cell: (row) => (
-          <span className="text-sm text-[#334155]">{row.date}</span>
+          <span className="text-sm text-[#334155]">{row.dateDisplay}</span>
         ),
       },
       {
-        id: 'type',
-        header: 'Type',
+        id: 'status',
+        header: 'Status',
         width: '8.5rem',
         align: 'right',
         headerClassName: 'text-right',
-        cell: (row) => (
-          <div className="flex justify-end">
-            <StatusBadge
-              label={row.type === 'bundle' ? 'BUNDLE' : 'INDIVIDUAL'}
-              variant={typeBadgeVariant[row.type]}
-            />
-          </div>
-        ),
+        cell: (row) => {
+          const badge = statusBadge[row.status] ?? statusBadge.PENDING
+          return (
+            <div className="flex justify-end">
+              <StatusBadge label={badge.label} variant={badge.variant} />
+            </div>
+          )
+        },
       },
     ],
     [],
@@ -109,29 +101,29 @@ export function FacultyTransactionsTable({
     <Card className="overflow-hidden p-6 shadow-sm">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <Header2 size="card" className="text-[#1E1B4B]">
-          Recent Transactions
+          Payout Transactions
         </Header2>
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput
-            placeholder="Search transactions..."
+            placeholder="Search by transaction ID..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             wrapperClassName="w-full min-w-[12rem] sm:w-72"
             className="rounded-lg border-0 bg-[#F8FAFC] shadow-none focus:border-0 focus:bg-[#F8FAFC] focus:ring-0"
           />
-          <button
-            type="button"
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg border-0 bg-[#F8FAFC] transition-colors hover:bg-[#F1F5F9]"
-            aria-label="Filter transactions"
-          >
-            <img src={filterIcon} alt="" className="size-4" aria-hidden />
-          </button>
+          <JoinedDateFilter
+            label="Date Range"
+            from={dateFrom}
+            to={dateTo}
+            onChange={onDateChange}
+            className="shrink-0"
+            fieldClassName="h-10 rounded-lg border-0 bg-[#F8FAFC] px-3 text-sm font-medium text-[#64748B] transition-colors hover:bg-[#F1F5F9]"
+          />
         </div>
       </div>
 
       <DataTable
         bare
-        appearance="minimal"
         columns={columns}
         data={rows}
         getRowKey={(row) => row.id}
@@ -139,9 +131,13 @@ export function FacultyTransactionsTable({
         page={page}
         totalPages={totalPages}
         onPageChange={onPageChange}
+        isLoading={isLoading}
+        emptyMessage={
+          isError
+            ? 'Could not load payout transactions. Please try again.'
+            : 'No payout transactions found.'
+        }
         footerLayout="between"
-        footerSummary={`Showing ${rows.length} of ${totalCount.toLocaleString()} transactions`}
-        paginationVariant="labeled"
         alwaysShowPagination
         className="rounded-none border-0 shadow-none"
       />

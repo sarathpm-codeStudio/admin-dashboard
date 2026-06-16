@@ -76,44 +76,33 @@ export const dashboardManagementFunctions = {
 
             if (coursesThisMonthError) throw new Error(coursesThisMonthError.message);
 
-            // 4. Total Revenue (direct + bundle)
-            const { data: directRevenueData, error: directRevenueError } = await supabase
-                .from('enrollments')
-                .select('amount_paid, created_at')
-                .eq('is_bundle_enrollment', false);
+            // 4. Total Revenue (admin commission = PLATFORM_FEE rows in faculty_transactions)
+            // The admin's revenue is the platform commission it keeps, NOT the gross
+            // amount students paid. Each PLATFORM_FEE row's `amount` holds the admin
+            // commission for a single enrollment / bundle enrollment.
+            const { data: platformFeeData, error: platformFeeError } = await supabase
+                .from('faculty_transactions')
+                .select('amount, transacted_at')
+                .eq('type', 'PLATFORM_FEE');
 
-            if (directRevenueError) throw new Error(directRevenueError.message);
+            if (platformFeeError) throw new Error(platformFeeError.message);
 
-            const { data: bundleRevenueData, error: bundleRevenueError } = await supabase
-                .from('bundle_enrollments')
-                .select('amount_paid, created_at');
-
-            if (bundleRevenueError) throw new Error(bundleRevenueError.message);
-
-            const directTotal = directRevenueData?.reduce(
-                (sum, e) => sum + (e.amount_paid ?? 0), 0
+            const totalRevenue = platformFeeData?.reduce(
+                (sum, t) => sum + (t.amount ?? 0), 0
             ) ?? 0;
-
-            const bundleTotal = bundleRevenueData?.reduce(
-                (sum, e) => sum + (e.amount_paid ?? 0), 0
-            ) ?? 0;
-
-            const totalRevenue = directTotal + bundleTotal;
 
             // Revenue growth (this month vs last month)
-            const revenueInRange = (data: { amount_paid: number; created_at: string }[] | null, start: string, end?: string) =>
-                (data ?? []).filter(e => {
-                    const d = new Date(e.created_at);
+            const revenueInRange = (data: { amount: number; transacted_at: string }[] | null, start: string, end?: string) =>
+                (data ?? []).filter(t => {
+                    const d = new Date(t.transacted_at);
                     return d >= new Date(start) && (!end || d < new Date(end));
-                }).reduce((sum, e) => sum + (e.amount_paid ?? 0), 0);
+                }).reduce((sum, t) => sum + (t.amount ?? 0), 0);
 
             const revenueThisMonth =
-                revenueInRange(directRevenueData, thisMonthStart) +
-                revenueInRange(bundleRevenueData, thisMonthStart);
+                revenueInRange(platformFeeData, thisMonthStart);
 
             const revenueLastMonth =
-                revenueInRange(directRevenueData, lastMonthStart, thisMonthStart) +
-                revenueInRange(bundleRevenueData, lastMonthStart, thisMonthStart);
+                revenueInRange(platformFeeData, lastMonthStart, thisMonthStart);
 
             const revenueGrowth = revenueLastMonth > 0
                 ? parseFloat((((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100).toFixed(1))
@@ -350,35 +339,28 @@ export const dashboardManagementFunctions = {
     getRevenueTrends: async (period: TrendPeriod): Promise<RevenueTrendPoint[]> => {
         try {
 
-            // 1. Fetch all revenue records (direct enrollments + bundle enrollments)
-            const { data: directRevenue, error: directRevenueError } = await supabase
-                .from('enrollments')
-                .select('amount_paid, created_at')
-                .eq('is_bundle_enrollment', false);
+            // 1. Fetch admin revenue records (PLATFORM_FEE rows in faculty_transactions).
+            // Admin revenue is the platform commission, recorded per enrollment/bundle
+            // at payout time. Each row's `amount` is the admin commission.
+            const { data: platformFeeData, error: platformFeeError } = await supabase
+                .from('faculty_transactions')
+                .select('amount, transacted_at')
+                .eq('type', 'PLATFORM_FEE');
 
-            if (directRevenueError) throw new Error(directRevenueError.message);
+            if (platformFeeError) throw new Error(platformFeeError.message);
 
-            const { data: bundleRevenue, error: bundleRevenueError } = await supabase
-                .from('bundle_enrollments')
-                .select('amount_paid, created_at');
-
-            if (bundleRevenueError) throw new Error(bundleRevenueError.message);
-
-            const allRevenue = [
-                ...(directRevenue ?? []),
-                ...(bundleRevenue ?? []),
-            ];
+            const allRevenue = platformFeeData ?? [];
 
             const now = new Date();
 
-            // Sum revenue for records with created_at within [start, end)
+            // Sum revenue for records with transacted_at within [start, end)
             const revenueInRange = (start: Date, end: Date) => {
                 let total = 0;
                 for (const r of allRevenue) {
-                    if (!r.created_at) continue;
-                    const d = new Date(r.created_at);
+                    if (!r.transacted_at) continue;
+                    const d = new Date(r.transacted_at);
                     if (d >= start && d < end) {
-                        total += r.amount_paid ?? 0;
+                        total += r.amount ?? 0;
                     }
                 }
                 return total;
