@@ -1,4 +1,4 @@
-export type CourseApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED'
+export type CourseApprovalStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'RESUBMIT'
 
 export type CoursesAnalytics = {
   totalCourses: number

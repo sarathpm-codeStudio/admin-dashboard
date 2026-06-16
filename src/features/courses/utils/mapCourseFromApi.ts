@@ -8,6 +8,7 @@ export function mapCourseListRowToRecord(row: CourseListRow): CourseRecord {
 export function mapStatusFilterToApi(
   status: string,
 ): CourseApprovalStatus | 'all' {
+  if (status === 'resubmit' || status === 'RESUBMIT') return 'RESUBMIT'
   if (status === 'APPROVED' || status === 'PENDING' || status === 'REJECTED') {
     return status
   }

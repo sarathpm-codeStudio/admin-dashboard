@@ -16,18 +16,21 @@ const statusLabel: Record<CourseApprovalStatus, string> = {
   APPROVED: 'Approved',
   PENDING: 'Pending',
   REJECTED: 'Rejected',
+  RESUBMIT: 'Resubmit',
 }
 
 const statusVariant: Record<CourseApprovalStatus, StatusBadgeVariant> = {
   APPROVED: 'active',
   PENDING: 'pending',
   REJECTED: 'rejected',
+  RESUBMIT: 'info',
 }
 
 const statusDotClass: Record<CourseApprovalStatus, string> = {
   APPROVED: 'bg-emerald-500',
   PENDING: 'bg-amber-500',
   REJECTED: 'bg-red-500',
+  RESUBMIT: 'bg-blue-500',
 }
 
 const COL_WIDTH = `${100 / 6}%`

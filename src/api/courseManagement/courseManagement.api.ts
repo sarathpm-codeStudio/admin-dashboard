@@ -47,6 +47,19 @@ const growthDisplay = (percent: number): string => {
   return `${arrow} ${Math.abs(percent)}% from last month`
 }
 
+const toDbCourseStatus = (status: CourseApprovalStatus): string =>
+  status === 'RESUBMIT' ? 'resubmit' : status
+
+const fromDbCourseStatus = (raw: string | null | undefined): CourseApprovalStatus => {
+  const value = (raw ?? 'PENDING').toLowerCase()
+  if (value === 'resubmit') return 'RESUBMIT'
+  const upper = value.toUpperCase()
+  if (upper === 'APPROVED' || upper === 'PENDING' || upper === 'REJECTED') {
+    return upper as CourseApprovalStatus
+  }
+  return 'PENDING'
+}
+
 export const courseManagementFunctions = {
   getCourseManagementAnalytics: async (): Promise<CoursesAnalytics> => {
     try {
@@ -200,7 +213,7 @@ export const courseManagementFunctions = {
       // 2. Filters — skip if 'all' / 'any'
       if (category && category !== 'all') query = query.eq('category', category)
       if (facultyId && facultyId !== 'all') query = query.eq('faculty_id', facultyId)
-      if (status && status !== 'all') query = query.eq('status', status)
+      if (status && status !== 'all') query = query.eq('status', toDbCourseStatus(status))
       if (price && price !== 'any') {
         if (price === 'free') query = query.or('final_price.eq.0,price.eq.0')
         else if (price === 'paid') query = query.gt('final_price', 0)
@@ -249,7 +262,7 @@ export const courseManagementFunctions = {
         const studentsCount = new Set(courseEnrollments.map((e) => e.student_id)).size
         const revenue = courseEnrollments.reduce((sum, e) => sum + (e.amount_paid ?? 0), 0)
         const priceAmount = course.final_price ?? course.price ?? 0
-        const rawStatus = (course.status ?? 'PENDING') as string
+        const rawStatus = course.status as string | null
 
         return {
           id: course.id,
@@ -259,9 +272,7 @@ export const courseManagementFunctions = {
           category: course.category ?? '',
           price: priceAmount,
           priceDisplay: formatCurrency(priceAmount),
-          status: (['APPROVED', 'PENDING', 'REJECTED'].includes(rawStatus)
-            ? rawStatus
-            : 'PENDING') as CourseApprovalStatus,
+          status: fromDbCourseStatus(rawStatus),
           isDraft: course.is_draft === true,
           studentsCount,
           revenueDisplay: formatRevenue(revenue),
@@ -294,7 +305,7 @@ export const courseManagementFunctions = {
     try {
       if (courseIds.length === 0) return { success: true }
 
-      const updates: Record<string, unknown> = { status }
+      const updates: Record<string, unknown> = { status: toDbCourseStatus(status) }
 
       if (status === 'REJECTED') {
         updates.rejection_reason = options?.rejectReason ?? null
@@ -331,3 +342,5 @@ export const courseManagementFunctions = {
     }
   },
 }
+
+
