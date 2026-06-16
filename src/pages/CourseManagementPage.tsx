@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/ui/PlaceholderPage'
+import { CourseManagementView } from '@/features/courses/CourseManagementView'
 
 export function CourseManagementPage() {
-  return <PlaceholderPage title="Course Management" />
+  return <CourseManagementView />
 }
