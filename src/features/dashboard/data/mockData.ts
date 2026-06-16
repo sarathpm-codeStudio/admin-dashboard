@@ -1,48 +1,13 @@
 import facultyAvatar from '@/asset/image/john.png'
 import {
   BarChart3,
-  BookOpen,
   CirclePlay,
-  IdCard,
   IndianRupee,
   Megaphone,
   UserCheck,
   UserPlus,
-  Users,
-  Wallet,
   type LucideIcon,
 } from 'lucide-react'
-
-export const dashboardStats = [
-  {
-    label: 'Total Students',
-    value: '25,000',
-    icon: Users,
-    iconTileClassName: 'bg-[#EEF2FF]',
-    iconClassName: 'text-[#142283]',
-  },
-  {
-    label: 'Total Faculty',
-    value: '1,200',
-    icon: IdCard,
-    iconTileClassName: 'bg-[#F0FDF4]',
-    iconClassName: 'text-[#15803D]',
-  },
-  {
-    label: 'Total Courses',
-    value: '850',
-    icon: BookOpen,
-    iconTileClassName: 'bg-[#FFF7ED]',
-    iconClassName: 'text-[#C2410C]',
-  },
-  {
-    label: 'Total Revenue',
-    value: '₹1.8 Cr',
-    icon: Wallet,
-    iconTileClassName: 'bg-[#FEFCE8]',
-    iconClassName: 'text-[#4D7C0F]',
-  },
-] as const
 
 export type PendingAction = {
   id: string

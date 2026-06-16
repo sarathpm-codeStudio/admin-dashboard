@@ -45,30 +45,33 @@ export function SummaryStatsGrid({
   const placeholderCount =
     skeletonCount ?? (items.length > 0 ? items.length : columns)
 
+  // query
+
+
   return (
     <div className={cn('grid gap-4', columnGridClass[columns], className)}>
       {isLoading
         ? Array.from({ length: placeholderCount }, (_, index) => (
-            <SummaryStatCardSkeleton
-              key={`skeleton-${index}`}
-              layout={skeletonProps?.layout ?? items[0]?.layout ?? 'stacked'}
-              size={skeletonProps?.size ?? items[0]?.size ?? size}
-              className={skeletonProps?.className ?? items[0]?.className}
-              footerClassName={
-                skeletonProps?.footerClassName ?? items[0]?.footerClassName
-              }
-            />
-          ))
+          <SummaryStatCardSkeleton
+            key={`skeleton-${index}`}
+            layout={skeletonProps?.layout ?? items[0]?.layout ?? 'stacked'}
+            size={skeletonProps?.size ?? items[0]?.size ?? size}
+            className={skeletonProps?.className ?? items[0]?.className}
+            footerClassName={
+              skeletonProps?.footerClassName ?? items[0]?.footerClassName
+            }
+          />
+        ))
         : items.map((item, index) => {
-            const { id, size: itemSize, ...cardProps } = item
-            return (
-              <SummaryStatCard
-                key={id ?? item.label ?? index}
-                size={itemSize ?? size}
-                {...cardProps}
-              />
-            )
-          })}
+          const { id, size: itemSize, ...cardProps } = item
+          return (
+            <SummaryStatCard
+              key={id ?? item.label ?? index}
+              size={itemSize ?? size}
+              {...cardProps}
+            />
+          )
+        })}
     </div>
   )
 }

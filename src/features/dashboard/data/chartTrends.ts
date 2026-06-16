@@ -1,7 +1,7 @@
 export type TrendPeriod = 'week' | 'month' | 'year'
 
 export type EnrollmentTrendPoint = {
-  label: string
+  label: string | undefined
   students: number
   faculty: number
 }
@@ -22,12 +22,10 @@ export const enrollmentTrendsByPeriod: Record<TrendPeriod, EnrollmentTrendPoint[
     { label: 'Sun', students: 25000, faculty: 1200 },
   ],
   month: [
-    { label: 'Jan', students: 950, faculty: 500 },
-    { label: 'Feb', students: 1350, faculty: 720 },
-    { label: 'Mar', students: 2000, faculty: 950 },
-    { label: 'Apr', students: 1750, faculty: 800 },
-    { label: 'May', students: 2240, faculty: 412 },
-    { label: 'Jun', students: 2700, faculty: 1200 },
+    { label: 'Week 1', students: 950, faculty: 500 },
+    { label: 'Week 2', students: 1350, faculty: 720 },
+    { label: 'Week 3', students: 2000, faculty: 950 },
+    { label: 'Week 4', students: 2700, faculty: 1200 },
   ],
   year: [
     { label: '2020', students: 12000, faculty: 520 },
@@ -73,27 +71,16 @@ export const periodSubtitles: Record<TrendPeriod, string> = {
 
 export const enrollmentSubtitles: Record<TrendPeriod, string> = {
   week: 'Institutional user growth breakdown (Last 7 Days)',
-  month: 'Institutional user growth breakdown (Last 6 Months)',
-  year: 'Institutional user growth breakdown (Last 5 Years)',
+  month: 'Institutional user growth breakdown (Last 4 Weeks)',
+  year: 'Institutional user growth breakdown (Last 12 Months)',
 }
 
-/** Full month labels for enrollment chart X-axis (month period) */
-export const enrollmentMonthTickLabels: Record<string, string> = {
-  Jan: 'JANUARY',
-  Feb: 'FEBRUARY',
-  Mar: 'MARCH',
-  Apr: 'APRIL',
-  May: 'MAY',
-  Jun: 'JUNE',
-}
-
-export const enrollmentTooltipMonths: Record<string, string> = {
-  Jan: 'JANUARY 2024',
-  Feb: 'FEBRUARY 2024',
-  Mar: 'MARCH 2024',
-  Apr: 'APRIL 2024',
-  May: 'MAY 2024',
-  Jun: 'JUNE 2024',
+/** Tooltip headings for enrollment 4-week period */
+export const enrollmentWeekTooltipLabels: Record<string, string> = {
+  'Week 1': 'Week 1',
+  'Week 2': 'Week 2',
+  'Week 3': 'Week 3',
+  'Week 4': 'Week 4 (current)',
 }
 
 export const revenueGrowthByPeriod: Record<TrendPeriod, number> = {

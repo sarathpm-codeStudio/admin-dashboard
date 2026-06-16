@@ -10,6 +10,8 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
+import brandIcon from '@/asset/icons/brand_icon.svg'
+import titleLogo from '@/asset/icons/title_logo.svg'
 
 export type NavItem = {
   label: string
@@ -35,4 +37,6 @@ export const bottomNavItems: NavItem[] = [
 export const brand = {
   name: 'Learninough',
   icon: GraduationCap,
+  brandIcon,
+  titleLogo,
 }

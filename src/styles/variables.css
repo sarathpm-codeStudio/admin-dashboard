@@ -1,9 +1,9 @@
 :root {
   /* Brand & primary — from Figma Online Learning App */
-  --color-brand: #1a237e;
-  --color-primary: #000b60;
-  --color-primary-end: #142283;
-  --color-primary-gradient: linear-gradient(135deg, #000b60 0%, #142283 100%);
+  --color-brand: #2c1452;
+  --color-primary: #2c1452;
+  --color-primary-end: #2c1452;
+  --color-primary-gradient: linear-gradient(135deg, #2c1452 0%, #2c1452 100%);
 
   /* Surfaces */
   --color-bg-page: #f8f9fb;
@@ -14,8 +14,8 @@
 
   /* Text */
   --color-text: #191c1e;
-  --color-text-heading: #000b60;
-  --color-text-brand: #1a237e;
+  --color-text-heading: #2c1452;
+  --color-text-brand: #2c1452;
   --color-text-nav: #64748b;
   --color-text-muted: #64748b;
   --color-text-label: #454652;

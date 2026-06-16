@@ -34,7 +34,7 @@ export function FacultyQualificationsCard({
         <SectionHeader
           title="Qualifications"
           titleSize="card"
-          titleClassName="text-xs font-medium uppercase tracking-wide"
+          titleClassName=" font-medium  tracking-wide"
           className="shrink-0 items-center"
           action={
             decorationImage ? (

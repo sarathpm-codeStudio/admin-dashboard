@@ -293,7 +293,6 @@ export const userManagementFunctions = {
 
                 if (error) throw new Error(error.message);
 
-
             }
             
             
@@ -315,7 +314,5 @@ export const userManagementFunctions = {
             throw new Error(error.message);
         }
     },
-
-
 
 }

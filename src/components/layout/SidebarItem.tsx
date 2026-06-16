@@ -24,7 +24,7 @@ export function SidebarItem({ item }: SidebarItemProps) {
       }
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
-      <span className="flex-1 truncate">{item.label}</span>
+      <span className="flex-1 truncate font-bold">{item.label}</span>
       {item.showChevron && <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />}
     </NavLink>
   )

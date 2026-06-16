@@ -1,5 +1,5 @@
 /** Shared plot height for dashboard Revenue + Enrollment trend charts (Figma) */
-export const DASHBOARD_TRENDS_CHART_HEIGHT_CLASS = 'h-[280px] w-full sm:h-[300px]'
+export const DASHBOARD_TRENDS_CHART_HEIGHT_CLASS = 'h-[300px] w-full sm:h-[340px]'
 
 /** Plot margins aligned with Revenue bar chart (EarningsGrowthBarChart) */
 export const DASHBOARD_TRENDS_CHART_MARGIN = {

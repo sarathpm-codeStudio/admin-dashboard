@@ -6,6 +6,8 @@ import { Navigate, useParams } from 'react-router-dom'
 
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
 
+import { DetailHeaderSkeleton, CardSkeleton } from '@/components/ui/DetailViewSkeleton'
+
 import { SectionHeader } from '@/components/ui/SectionHeader'
 
 import { SummaryStatsGrid } from '@/components/ui/SummaryStatsGrid'
@@ -27,6 +29,7 @@ import type { StudentDetail } from '@/features/student/data/mockStudentDetail'
 import { getStudentStatItems } from '@/features/student/data/studentStatItems'
 
 import { useGetStudentById, useGetStudentCourses } from '@/features/student/hooks/useStudentManagement'
+import { useUpdateUserStatus } from '@/features/users/hooks/useUserManagement'
 
 import { STUDENT_COURSES_PAGE_SIZE } from '@/features/student/utils/constants'
 
@@ -124,7 +127,7 @@ export function StudentDetailView() {
 
   } = useGetStudentCourses(studentId ?? '', page, STUDENT_COURSES_PAGE_SIZE, '')
 
-
+  const { mutateAsync: updateStatus } = useUpdateUserStatus(studentId ?? '')
 
   useEffect(() => {
 
@@ -146,9 +149,11 @@ export function StudentDetailView() {
 
     return (
 
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
 
-        <p className="text-sm text-nav">Loading student...</p>
+        <DetailHeaderSkeleton />
+
+        <CardSkeleton />
 
       </div>
 
@@ -260,7 +265,12 @@ export function StudentDetailView() {
 
       <AnimatedSection index={1}>
 
-        <StudentProfileHeader student={student} />
+        <StudentProfileHeader
+          student={student}
+          isSuspended={profile.is_suspended === true}
+          onBlock={async () => { await updateStatus('SUSPENDED') }}
+          onUnblock={async () => { await updateStatus('ACTIVATE') }}
+        />
 
       </AnimatedSection>
 

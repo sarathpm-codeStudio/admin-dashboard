@@ -22,8 +22,8 @@ export function Header1({ className, size = 'page', children, ...props }: Header
 }
 
 const header2Sizes = {
-  section: 'text-lg font-semibold leading-tight',
-  card: 'text-base font-semibold leading-tight',
+  section: 'text-[20px] font-semibold leading-tight',
+  card: 'text-[20px] font-semibold leading-tight',
 } as const
 
 export type Header2Props = HTMLAttributes<HTMLHeadingElement> & {

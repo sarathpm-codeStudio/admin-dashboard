@@ -19,7 +19,7 @@ export function FacultyReviewProfileHeader({ faculty }: FacultyReviewProfileHead
             sizeClassName="size-20 sm:size-24"
             roundedClassName="rounded-2xl"
           />
-          <Header1 size="display" className="text-2xl text-[#000B60] sm:text-3xl">
+          <Header1 size="display" className="text-2xl text-[#2c1452] sm:text-3xl">
             {faculty.name}
           </Header1>
         </div>
@@ -28,14 +28,14 @@ export function FacultyReviewProfileHeader({ faculty }: FacultyReviewProfileHead
           <Button
             type="button"
             variant="outline"
-            className="border-[#E2E8F0] bg-white text-sm font-medium text-[#000B60] hover:bg-[#F8FAFC]"
+            className="border-[#E2E8F0] bg-white text-sm font-medium text-[#2c1452] hover:bg-[#F8FAFC]"
           >
             <Download className="size-4" aria-hidden />
             Export Data
           </Button>
           <Button
             type="button"
-            className="bg-[#000B60] text-sm font-medium text-white hover:opacity-90"
+            className="bg-[#2c1452] text-sm font-medium text-white hover:opacity-90"
           >
             <Mail className="size-4" aria-hidden />
             Contact Faculty

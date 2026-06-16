@@ -26,7 +26,7 @@ function progressFillClass(percent: number) {
 
 function progressPercentTextClass(percent: number) {
   if (percent < 25) return 'text-sm font-bold text-[#BA1A1A]'
-  return 'text-sm font-bold text-[#000B60]'
+  return 'text-sm font-bold text-[#2c1452]'
 }
 
 type FacultyEnrollmentTableProps = {

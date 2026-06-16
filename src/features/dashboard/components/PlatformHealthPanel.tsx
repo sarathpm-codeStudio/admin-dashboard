@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { cn } from '@/utils/cn'
 
-const PLATFORM_STAT_VALUE = 'text-[#000b60]'
+const PLATFORM_STAT_VALUE = 'text-[#2c1452]'
 const PLATFORM_STAT_LABEL = 'text-[#5F5E5E]'
 const QUICK_ACTION_ACCENT = 'text-[#4318FF]'
 const QUICK_ACTION_LABEL = 'text-[#191c1e]'

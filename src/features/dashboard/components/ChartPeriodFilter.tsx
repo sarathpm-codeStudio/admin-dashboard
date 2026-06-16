@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { TrendPeriod } from '@/features/dashboard/data/chartTrends'
 
-const PERIODS: { value: TrendPeriod; label: string }[] = [
+const DEFAULT_PERIODS: { value: TrendPeriod; label: string }[] = [
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
   { value: 'year', label: 'Year' },
@@ -13,13 +13,19 @@ type ChartPeriodFilterProps = {
   value: TrendPeriod
   onChange: (period: TrendPeriod) => void
   className?: string
+  periods?: { value: TrendPeriod; label: string }[]
 }
 
-export function ChartPeriodFilter({ value, onChange, className }: ChartPeriodFilterProps) {
+export function ChartPeriodFilter({
+  value,
+  onChange,
+  className,
+  periods = DEFAULT_PERIODS,
+}: ChartPeriodFilterProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
-  const selectedLabel = PERIODS.find((p) => p.value === value)?.label ?? 'Month'
+  const selectedLabel = periods.find((p) => p.value === value)?.label ?? 'Month'
 
   useEffect(() => {
     if (!open) return
@@ -69,7 +75,7 @@ export function ChartPeriodFilter({ value, onChange, className }: ChartPeriodFil
           aria-label="Chart time period"
           className="absolute right-0 z-20 mt-1 min-w-full overflow-hidden rounded-nav border border-[#e2e8f0]/60 bg-white py-1 shadow-md"
         >
-          {PERIODS.map(({ value: periodValue, label }) => (
+          {periods.map(({ value: periodValue, label }) => (
             <li key={periodValue} role="option" aria-selected={value === periodValue}>
               <button
                 type="button"

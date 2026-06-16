@@ -21,7 +21,7 @@ console.log('role:', user?.user_metadata?.role);
             // 1. Student profile
             const { data: student, error: studentError } = await supabase
                 .from('profiles')
-                .select('id, account_id, first_name, last_name, email, phone, role, avatar_url, created_at, coin_balance')
+                .select('id, account_id, first_name, last_name, email, phone, role, avatar_url, created_at, coin_balance, is_suspended')
                 .eq('role', 'STUDENT')
                 .eq('id', studentId)
                 .single();

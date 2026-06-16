@@ -1,13 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-
-function AuthLoadingScreen() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-page">
-      <p className="text-sm text-nav">Loading…</p>
-    </div>
-  )
-}
+import { AuthLoadingScreen } from '@/components/ui/AuthLoadingScreen'
 
 export function PublicRoute() {
   const isInitializing = useAuthStore((state) => state.isInitializing)
