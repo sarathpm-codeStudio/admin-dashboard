@@ -9,6 +9,8 @@ type JoinedDateFilterProps = {
   onChange: (from: string, to: string) => void
   className?: string
   fieldClassName?: string
+  /** Button text when no range is selected (default "Joined Date") */
+  label?: string
 }
 
 function shortDateLabel(iso: string): string {
@@ -23,6 +25,7 @@ export function JoinedDateFilter({
   onChange,
   className,
   fieldClassName,
+  label = 'Joined Date',
 }: JoinedDateFilterProps) {
   const [open, setOpen] = useState(false)
   const [draftFrom, setDraftFrom] = useState(from)
@@ -34,7 +37,7 @@ export function JoinedDateFilter({
   const isActive = Boolean(from || to)
 
   const buttonLabel = (() => {
-    if (!isActive) return 'Joined Date'
+    if (!isActive) return label
     if (from && to) return `${shortDateLabel(from)} – ${shortDateLabel(to)}`
     if (from) return `From ${shortDateLabel(from)}`
     return `To ${shortDateLabel(to)}`
@@ -134,11 +137,11 @@ export function JoinedDateFilter({
           <div
             ref={panelRef}
             role="dialog"
-            aria-label="Joined date range"
+            aria-label={`${label} range`}
             style={{ position: 'fixed', top: panelStyle.top, left: panelStyle.left, zIndex: 50 }}
             className="w-52 rounded-nav border border-[#e2e8f0]/60 bg-white p-2.5 shadow-lg"
           >
-            <p className="mb-2 text-[11px] font-medium text-ink-heading">Joined date</p>
+            <p className="mb-2 text-[11px] font-medium text-ink-heading">{label}</p>
             <div className="grid grid-cols-2 gap-2">
               <label className="block min-w-0">
                 <span className="mb-0.5 block text-[10px] text-nav">From</span>

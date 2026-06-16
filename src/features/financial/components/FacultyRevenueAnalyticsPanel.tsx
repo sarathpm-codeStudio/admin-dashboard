@@ -1,18 +1,15 @@
 import { FacultyEarningsGrowthChart } from '@/features/financial/components/FacultyEarningsGrowthChart'
 import { FacultyRevenueSourceCard } from '@/features/financial/components/FacultyRevenueSourceCard'
-import type { FacultyEarningsMonth, FacultyRevenueSource } from '@/features/financial/data/mockFacultyRevenue'
 import { cn } from '@/utils/cn'
 
 type FacultyRevenueAnalyticsPanelProps = {
-  earnings: FacultyEarningsMonth[]
-  source: FacultyRevenueSource
+  facultyId: string
   className?: string
 }
 
 /** Earnings Growth 70% + Revenue Source 30% */
 export function FacultyRevenueAnalyticsPanel({
-  earnings,
-  source,
+  facultyId,
   className,
 }: FacultyRevenueAnalyticsPanelProps) {
   return (
@@ -23,10 +20,10 @@ export function FacultyRevenueAnalyticsPanel({
       )}
     >
       <div className="min-w-0">
-        <FacultyEarningsGrowthChart data={earnings} />
+        <FacultyEarningsGrowthChart facultyId={facultyId} />
       </div>
       <div className="min-w-0">
-        <FacultyRevenueSourceCard source={source} />
+        <FacultyRevenueSourceCard facultyId={facultyId} />
       </div>
     </div>
   )

@@ -1,6 +1,43 @@
 
 
 import { supabase } from "@/config/supabase"
+import type { RevenueTrendPoint, TrendPeriod } from "@/features/dashboard/data/chartTrends"
+
+export type FacultyPayoutStatus = 'PENDING' | 'SUCCESS' | 'FAILED'
+
+/** A single PAYOUT row from faculty_transactions, shaped for the payouts table. */
+export type FacultyPayoutTransaction = {
+    id: string
+    transactionId: string
+    amount: number
+    amountDisplay: string
+    grossAmount: number
+    grossDisplay: string
+    status: FacultyPayoutStatus
+    date: string | null
+    dateDisplay: string
+}
+
+const DEFAULT_COMMISSION_PERCENT = 20;
+
+/**
+ * Platform commission rate (%) used to derive a faculty's net share of an
+ * enrollment. Read from platform_settings; falls back to the default when the
+ * setting is missing or unparseable. Mirrors the payout calc in
+ * enrollment-payout-workflow.md §3.
+ */
+const getCommissionPercent = async (db: typeof supabase): Promise<number> => {
+    const { data, error } = await db
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "default_commission_percent")
+        .maybeSingle();
+
+    if (error) throw new Error(error.message);
+
+    const percent = Number(data?.value);
+    return Number.isFinite(percent) ? percent : DEFAULT_COMMISSION_PERCENT;
+};
 
 
 export const facultyManagementFunctions = {
@@ -74,35 +111,19 @@ export const facultyManagementFunctions = {
                     : thisMonthStudents > 0 ? 100 : 0;
             }
 
-            // 4. Total revenue — direct + bundle
-            let totalRevenue = 0;
+            // 4. Total revenue — sum of PAYOUT transactions actually paid to the faculty
+            const { data: payoutTxns, error: payoutError } = await supabase
+                .from('faculty_transactions')
+                .select('amount')
+                .eq('faculty_id', facultyId)
+                .eq('type', 'PAYOUT')
+                .eq('status', 'SUCCESS');
 
-            if (courseIds.length > 0) {
-                const { data: revenueData, error: revenueError } = await supabase
-                    .from('enrollments')
-                    .select('amount_paid')
-                    .in('course_id', courseIds)
-                    .eq('is_bundle_enrollment', false);
+            if (payoutError) throw new Error(payoutError.message);
 
-                if (revenueError) throw new Error(revenueError.message);
-
-                const directRevenue = revenueData?.reduce(
-                    (sum, e) => sum + (e.amount_paid ?? 0), 0
-                ) ?? 0;
-
-                const { data: bundleRevenue, error: bundleError } = await supabase
-                    .from('bundle_enrollments')
-                    .select('amount_paid')
-                    .eq('faculty_id', facultyId);
-
-                if (bundleError) throw new Error(bundleError.message);
-
-                const bundleTotal = bundleRevenue?.reduce(
-                    (sum, e) => sum + (e.amount_paid ?? 0), 0
-                ) ?? 0;
-
-                totalRevenue = directRevenue + bundleTotal;
-            }
+            const totalRevenue = payoutTxns?.reduce(
+                (sum, t) => sum + (t.amount ?? 0), 0
+            ) ?? 0;
 
             const formatRevenue = (amount: number): string => {
                 if (amount >= 100000) {
@@ -562,7 +583,7 @@ export const facultyManagementFunctions = {
         // ── 6. Calculate Total Revenue (sum of PAYOUT transactions) ─
         const { data: payoutTxns, error: e5 } = await supabase
             .from("faculty_transactions")
-            .select("amount")
+            .select("amount, transacted_at")
             .eq("faculty_id", facultyId)
             .eq("type", "PAYOUT")
             .eq("status", "SUCCESS");
@@ -572,6 +593,27 @@ export const facultyManagementFunctions = {
         const totalRevenue = payoutTxns.reduce(
             (sum, t) => sum + (t.amount ?? 0), 0
         );
+
+        // ── 6a. Revenue growth — this month vs last month (by payout date) ─
+        const now = new Date();
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+        const sumPayoutsInRange = (start: Date, end?: Date) =>
+            payoutTxns
+                .filter((t) => {
+                    if (!t.transacted_at) return false;
+                    const d = new Date(t.transacted_at);
+                    return d >= start && (!end || d < end);
+                })
+                .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+
+        const revenueThisMonth = sumPayoutsInRange(thisMonthStart);
+        const revenueLastMonth = sumPayoutsInRange(lastMonthStart, thisMonthStart);
+
+        const revenueGrowth = revenueLastMonth > 0
+            ? parseFloat((((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100).toFixed(1))
+            : revenueThisMonth > 0 ? 100 : 0;
 
         // ── 7. Calculate Pending Payout ───────────────────────────
         const paidSingleIds = new Set(paidSingleTxns.map((t) => t.enrollment_id));
@@ -603,10 +645,16 @@ export const facultyManagementFunctions = {
             return `₹${amount.toLocaleString('en-IN')}`;
         };
 
+        const formatGrowth = (growth: number): string =>
+            growth >= 0 ? `+${growth}%` : `${growth}%`;
+
         return {
             totalRevenue: {            // → Total Revenue card  (sum of PAYOUT transactions paid to faculty)
                 amount: totalRevenue,
                 display: formatRevenue(totalRevenue),
+                growth: revenueGrowth,                 // numeric %, negative = decrease
+                growthDisplay: formatGrowth(revenueGrowth),
+                isPositive: revenueGrowth >= 0,        // for arrow / color in the card
             },
             pendingPayout: {           // → Pending Payout card (after commission)
                 amount: pendingPayout,
@@ -614,7 +662,290 @@ export const facultyManagementFunctions = {
             },
             commissionPercent,
         };
-    }
+    },
+
+    /**
+     * Earnings Growth chart data for a single faculty, bucketed by period.
+     *
+     * A faculty's earnings are the amounts actually transferred to them, i.e. the
+     * PAYOUT rows in faculty_transactions (see enrollment-payout-workflow.md §5 —
+     * the PAYOUT row's `amount` is the total faculty share for that payout batch).
+     * This matches the "Total Revenue" card, which also sums PAYOUT transactions,
+     * so the chart and the card tell the same story.
+     *
+     * Bucketing mirrors the dashboard revenue trend:
+     *   week  → last 7 days,   daily granularity
+     *   month → last 4 weeks,  weekly granularity
+     *   year  → last 12 months, monthly granularity
+     */
+    getFacultyRevenueTrends: async (
+        facultyId: string,
+        period: TrendPeriod,
+    ): Promise<RevenueTrendPoint[]> => {
+        try {
+            const db = supabase;
+
+            // Faculty's (non-deleted) courses — enrollments are joined via course_id.
+            const { data: courses, error: coursesError } = await db
+                .from('courses')
+                .select('id')
+                .eq('faculty_id', facultyId)
+                .eq('is_deleted', false);
+
+            if (coursesError) throw new Error(coursesError.message);
+            const courseIds = (courses ?? []).map((c) => c.id);
+
+            // Faculty net revenue = (amount_paid - GST) after the platform commission.
+            // Mirrors the payout calc in enrollment-payout-workflow.md §3.
+            const commissionPercent = await getCommissionPercent(db);
+            const facultyShareRatio = 1 - commissionPercent / 100;
+            const facultyNet = (e: { amount_paid?: number; gst_amount?: number }) => {
+                const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
+                if (base <= 0) return 0;
+                return base * facultyShareRatio;
+            };
+
+            let earnings: { enrolled_at?: string; amount_paid?: number; gst_amount?: number }[] = [];
+            if (courseIds.length > 0) {
+                const { data: enrollments, error } = await db
+                    .from('enrollments')
+                    .select('enrolled_at, amount_paid, gst_amount')
+                    .in('course_id', courseIds);
+
+                if (error) throw new Error(error.message);
+                earnings = enrollments ?? [];
+            }
+
+            const now = new Date();
+
+            // Sum faculty net revenue for enrollments with enrolled_at within [start, end)
+            const earningsInRange = (start: Date, end: Date) => {
+                let total = 0;
+                for (const e of earnings) {
+                    if (!e.enrolled_at) continue;
+                    const d = new Date(e.enrolled_at);
+                    if (d >= start && d < end) {
+                        total += facultyNet(e);
+                    }
+                }
+                return Math.round(total);
+            };
+
+            const result: RevenueTrendPoint[] = [];
+
+            if (period === 'week') {
+                // Last 7 days — daily granularity
+                const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+                for (let i = 6; i >= 0; i--) {
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - i);
+                    start.setHours(0, 0, 0, 0);
+
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 1);
+
+                    result.push({
+                        label: dayLabels[start.getDay()],
+                        revenue: earningsInRange(start, end),
+                    });
+                }
+            }
+
+            else if (period === 'month') {
+                // Last 4 weeks — weekly granularity
+                for (let i = 3; i >= 0; i--) {
+                    const end = new Date(now);
+                    end.setDate(now.getDate() - (i * 7));
+                    end.setHours(23, 59, 59, 999);
+
+                    const start = new Date(end);
+                    start.setDate(end.getDate() - 7);
+
+                    result.push({
+                        label: `Week ${4 - i}`, // Week 1, Week 2, Week 3, Week 4
+                        revenue: earningsInRange(start, end),
+                    });
+                }
+            }
+
+            else if (period === 'year') {
+                // Last 12 months — monthly granularity
+                const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                for (let i = 11; i >= 0; i--) {
+                    const start = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0);
+                    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1, 0, 0, 0, 0);
+
+                    result.push({
+                        label: monthLabels[start.getMonth()],
+                        revenue: earningsInRange(start, end),
+                    });
+                }
+            }
+
+            return result;
+
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    },
+
+    /**
+     * Revenue Source split (Bundles vs Individual Courses) for a single faculty.
+     *
+     * A faculty's earned revenue is recorded per sale in faculty_transactions
+     * (see enrollment-payout-workflow.md §8):
+     *   COURSE_SALE.amount → faculty share from a single course purchase (individual)
+     *   BUNDLE_SALE.amount → faculty share from a bundle purchase          (bundles)
+     *
+     * The split is the share of each toward the faculty's total earned revenue.
+     * Percentages are rounded so they always sum to 100.
+     */
+    getFacultyRevenueSource: async (facultyId: string) => {
+        try {
+            const { data: saleTxns, error } = await supabase
+                .from('faculty_transactions')
+                .select('amount, type')
+                .eq('faculty_id', facultyId)
+                .in('type', ['COURSE_SALE', 'BUNDLE_SALE']);
+
+            if (error) throw new Error(error.message);
+
+            let individualAmount = 0;
+            let bundlesAmount = 0;
+
+            for (const t of saleTxns ?? []) {
+                if (t.type === 'BUNDLE_SALE') bundlesAmount += t.amount ?? 0;
+                else individualAmount += t.amount ?? 0;
+            }
+
+            const total = individualAmount + bundlesAmount;
+
+            const bundlesPercent = total > 0 ? Math.round((bundlesAmount / total) * 100) : 0;
+            const individualPercent = total > 0 ? 100 - bundlesPercent : 0;
+
+            return {
+                bundlesPercent,
+                individualPercent,
+                bundlesAmount,
+                individualAmount,
+                totalAmount: total,
+            };
+
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    },
+
+    /**
+     * Paginated list of a faculty's PAYOUT transactions (see
+     * enrollment-payout-workflow.md §8 — the PAYOUT row is the actual money
+     * transferred to the faculty for a payout batch).
+     *
+     * Filters:
+     *   search    → matches the transaction_id (the only text field on a payout)
+     *   startDate → payouts with transacted_at on/after this day (YYYY-MM-DD)
+     *   endDate   → payouts with transacted_at on/before this day (YYYY-MM-DD)
+     */
+    getFacultyTransactions: async (
+        facultyId: string,
+        {
+            limit = 10,
+            offset = 0,
+            search = '',
+            startDate = '',
+            endDate = '',
+        }: {
+            limit?: number
+            offset?: number
+            search?: string
+            startDate?: string
+            endDate?: string
+        } = {},
+    ) => {
+        try {
+            // Shared filter builder — applied to both the count and the page query
+            const applyFilters = (query: any) => {
+                let q = query
+                    .eq('faculty_id', facultyId)
+                    .eq('type', 'PAYOUT');
+
+                const term = search.trim();
+                if (term) q = q.ilike('transaction_id', `%${term}%`);
+
+                if (startDate) {
+                    q = q.gte('transacted_at', new Date(`${startDate}T00:00:00`).toISOString());
+                }
+                if (endDate) {
+                    q = q.lte('transacted_at', new Date(`${endDate}T23:59:59.999`).toISOString());
+                }
+
+                return q;
+            };
+
+            // 1. Total count for the current filters (drives pagination)
+            const { count, error: countError } = await applyFilters(
+                supabase.from('faculty_transactions').select('*', { count: 'exact', head: true }),
+            );
+
+            if (countError) throw new Error(countError.message);
+
+            // 2. Current page of payouts, newest first
+            const { data, error } = await applyFilters(
+                supabase
+                    .from('faculty_transactions')
+                    .select('id, transaction_id, amount, gross_amount, status, transacted_at'),
+            )
+                .order('transacted_at', { ascending: false })
+                .range(offset, offset + limit - 1);
+
+            if (error) throw new Error(error.message);
+
+            const formatRevenue = (amount: number): string => {
+                if (amount >= 100000) {
+                    return `₹${(amount / 100000).toFixed(1)} L`;
+                }
+                return `₹${amount.toLocaleString('en-IN')}`;
+            };
+
+            const formatDate = (iso: string | null): string => {
+                if (!iso) return '—';
+                const d = new Date(iso);
+                if (Number.isNaN(d.getTime())) return '—';
+                return d.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                });
+            };
+
+            const items: FacultyPayoutTransaction[] = (data ?? []).map((row: any) => ({
+                id: row.id,
+                transactionId: row.transaction_id ?? row.id,
+                amount: row.amount ?? 0,
+                amountDisplay: formatRevenue(row.amount ?? 0),
+                grossAmount: row.gross_amount ?? 0,
+                grossDisplay: formatRevenue(row.gross_amount ?? 0),
+                status: (row.status ?? 'PENDING') as FacultyPayoutStatus,
+                date: row.transacted_at ?? null,
+                dateDisplay: formatDate(row.transacted_at ?? null),
+            }));
+
+            const total = count ?? 0;
+            const nextOffset = offset + items.length;
+
+            return {
+                items,
+                total,
+                nextOffset,
+                hasMore: nextOffset < total,
+            };
+
+        } catch (error: any) {
+            throw new Error(error.message);
+        }
+    },
 
 
 

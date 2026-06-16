@@ -1,17 +1,21 @@
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { getRevenueCardHeight } from '@/features/financial/data/facultyAnalyticsLayout'
-import type { FacultyRevenueSource } from '@/features/financial/data/mockFacultyRevenue'
+import { useGetFacultyRevenueSource } from '@/features/faculty/hooks/useFacultyManagement'
 import { cn } from '@/utils/cn'
 
 type FacultyRevenueSourceCardProps = {
-  source: FacultyRevenueSource
+  facultyId: string
   className?: string
 }
 
 export function FacultyRevenueSourceCard({
-  source,
+  facultyId,
   className,
 }: FacultyRevenueSourceCardProps) {
+  const { data } = useGetFacultyRevenueSource(facultyId)
+  const bundlesPercent = data?.bundlesPercent ?? 0
+  const individualPercent = data?.individualPercent ?? 0
+
   return (
     <div
       className={cn(
@@ -36,11 +40,11 @@ export function FacultyRevenueSourceCard({
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-[#1E1B4B]">Course Bundles</p>
             <span className="text-xs font-bold text-[#1E1B4B]">
-              {source.bundlesPercent}%
+              {bundlesPercent}%
             </span>
           </div>
           <ProgressBar
-            value={source.bundlesPercent}
+            value={bundlesPercent}
             className="h-3"
             trackClassName="bg-white"
             fillClassName="rounded-full bg-[#2c1452]"
@@ -51,11 +55,11 @@ export function FacultyRevenueSourceCard({
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-[#1E1B4B]">Individual Courses</p>
             <span className="text-xs font-bold text-[#1E1B4B]">
-              {source.individualPercent}%
+              {individualPercent}%
             </span>
           </div>
           <ProgressBar
-            value={source.individualPercent}
+            value={individualPercent}
             className="h-3"
             trackClassName="bg-white"
             fillClassName="rounded-full bg-[#22D3EE]"
