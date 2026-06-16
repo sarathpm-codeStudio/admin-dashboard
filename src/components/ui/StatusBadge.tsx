@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { cn } from '@/utils/cn'
 
 export type StatusBadgeVariant =
@@ -37,7 +38,7 @@ const variantTextStyles: Record<StatusBadgeVariant, string> = {
 }
 
 type StatusBadgeProps = {
-  label: string
+  label: ReactNode
   variant?: StatusBadgeVariant
   /** `filled` = pill with background; `text` = colored label only */
   appearance?: 'filled' | 'text'
@@ -55,7 +56,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex text-xs font-medium',
+        'inline-flex items-center text-xs font-medium',
         isText ? variantTextStyles[variant] : 'rounded-full px-2.5 py-0.5',
         !isText && variantFilledStyles[variant],
         className,

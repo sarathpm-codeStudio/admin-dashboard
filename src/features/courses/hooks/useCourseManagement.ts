@@ -1,0 +1,79 @@
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { courseManagementFunctions, CoursesListResponse } from '@/api/courseManagement/courseManagement.api'
+import { queryClient } from '@/config/queryClient'
+import type { CourseApprovalStatus, CourseFilterOptions, CoursesAnalytics } from '@/features/courses/types'
+
+export const useGetCourseManagementAnalytics = () => {
+  return useQuery<CoursesAnalytics>({
+    queryKey: ['course-management-analytics'],
+    queryFn: () => courseManagementFunctions.getCourseManagementAnalytics(),
+  })
+}
+
+export const useGetCourseFilterOptions = () => {
+  return useQuery<CourseFilterOptions>({
+    queryKey: ['course-management-filter-options'],
+    queryFn: () => courseManagementFunctions.getCourseFilterOptions(),
+  })
+}
+
+export const useGetAllCourses = (
+  page: number,
+  limit: number,
+  search: string,
+  category: string,
+  facultyId: string,
+  price: 'any' | 'free' | 'paid',
+  status: CourseApprovalStatus | 'all',
+) => {
+  return useQuery<CoursesListResponse>({
+    queryKey: ['courses', page, limit, search, category, facultyId, price, status],
+    queryFn: () =>
+      courseManagementFunctions.getAllCourses({
+        page,
+        limit,
+        search,
+        category,
+        facultyId,
+        price,
+        status,
+      }),
+  })
+}
+
+type UpdateCoursesStatusInput =
+  | CourseApprovalStatus
+  | { status: CourseApprovalStatus; rejectReason?: string }
+
+export const useUpdateCoursesStatus = () => {
+  return useMutation({
+    mutationKey: ['update-courses-status'],
+    mutationFn: ({
+      courseIds,
+      input,
+    }: {
+      courseIds: string[]
+      input: UpdateCoursesStatusInput
+    }) => {
+      const payload = typeof input === 'string' ? { status: input } : input
+      return courseManagementFunctions.updateCoursesStatus(courseIds, payload.status, {
+        rejectReason: typeof input === 'string' ? undefined : input.rejectReason,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] })
+      queryClient.invalidateQueries({ queryKey: ['course-management-analytics'] })
+    },
+  })
+}
+
+export const useDeleteCourses = () => {
+  return useMutation({
+    mutationKey: ['delete-courses'],
+    mutationFn: (courseIds: string[]) => courseManagementFunctions.deleteCourses(courseIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] })
+      queryClient.invalidateQueries({ queryKey: ['course-management-analytics'] })
+    },
+  })
+}

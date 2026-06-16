@@ -10,7 +10,7 @@ export type DataTableColumnAlign = 'left' | 'center' | 'right'
 
 export type DataTableColumn<T> = {
   id: string
-  header: string
+  header: ReactNode
   cell: (row: T) => ReactNode
   className?: string
   headerClassName?: string

@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react'
+import { PiExportBold } from 'react-icons/pi'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
 
@@ -16,11 +16,11 @@ export function ExportDataButton({
       type="button"
       variant="outline"
       className={cn(
-        'shrink-0 border-transparent bg-[#E6E8EA] text-[#312E81] hover:bg-[#dce0e3] hover:text-[#312E81]',
+        'shrink-0 border-[#E0E3E5] bg-[#FFFFFF] text-[#191C1E] hover:bg-[#F8FAFC] hover:text-[#191C1E]',
         className,
       )}
     >
-      <Download className="size-4" aria-hidden />
+      <PiExportBold className="size-5" aria-hidden />
       {label}
     </Button>
   )
