@@ -37,7 +37,7 @@ export function getFacultyStatItems(analytics: any, facultyId: string, facultyNa
       id: 'total-revenue',
       label: 'Total revenue',
       value: analytics.totalRevenue.display,
-      to: `/financial/faculty/${facultyId}/revenue?tab=faculty&facultyName=${encodeURIComponent(facultyName)}`,
+      to: `${facultyBase}/revenue?tab=faculty&facultyName=${encodeURIComponent(facultyName)}`,
       cornerImage: revenueIcon,
       cornerImageAlt: 'Revenue',
     },

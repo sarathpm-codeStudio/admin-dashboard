@@ -559,14 +559,19 @@ export const facultyManagementFunctions = {
 
         if (e4) throw e4;
 
-        // ── 6. Calculate Total Revenue ────────────────────────────
-        const singleRevenue = singleEnrollments.reduce(
-            (sum, e) => sum + e.amount_paid, 0
+        // ── 6. Calculate Total Revenue (sum of PAYOUT transactions) ─
+        const { data: payoutTxns, error: e5 } = await supabase
+            .from("faculty_transactions")
+            .select("amount")
+            .eq("faculty_id", facultyId)
+            .eq("type", "PAYOUT")
+            .eq("status", "SUCCESS");
+
+        if (e5) throw e5;
+
+        const totalRevenue = payoutTxns.reduce(
+            (sum, t) => sum + (t.amount ?? 0), 0
         );
-        const bundleRevenue = bundleEnrollments.reduce(
-            (sum, b) => sum + b.amount_paid, 0
-        );
-        const totalRevenue = singleRevenue + bundleRevenue;
 
         // ── 7. Calculate Pending Payout ───────────────────────────
         const paidSingleIds = new Set(paidSingleTxns.map((t) => t.enrollment_id));
@@ -599,7 +604,7 @@ export const facultyManagementFunctions = {
         };
 
         return {
-            totalRevenue: {            // → Total Revenue card  (raw student payments)
+            totalRevenue: {            // → Total Revenue card  (sum of PAYOUT transactions paid to faculty)
                 amount: totalRevenue,
                 display: formatRevenue(totalRevenue),
             },

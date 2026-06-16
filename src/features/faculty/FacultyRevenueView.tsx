@@ -16,6 +16,7 @@ import {
 } from '@/features/financial/data/mockFacultyRevenue'
 import { filterFacultyTransactions } from '@/features/financial/utils/filterFacultyTransactions'
 import { getFacultyById } from '@/features/faculty/data/mockFacultyDetail'
+import { useGetFacultyRevenueStats } from '@/features/faculty/hooks/useFacultyManagement'
 
 export function FacultyRevenueView() {
   const { facultyId } = useParams<{ facultyId: string }>()
@@ -24,6 +25,8 @@ export function FacultyRevenueView() {
   const faculty = facultyId ? getFacultyById(facultyId) : undefined
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  const { data: revenueStats } = useGetFacultyRevenueStats(facultyId ?? '')
 
   const summary = useMemo(
     () => (facultyId ? getFacultyRevenueSummary(facultyId) : getFacultyRevenueSummary('john-smith')),
@@ -72,7 +75,15 @@ export function FacultyRevenueView() {
     return <Navigate to="/users" replace />
   }
 
-  const statItems = getFacultyRevenueStatItems(summary)
+  const statItems = getFacultyRevenueStatItems(summary).map((item) => {
+    if (item.id === 'total-revenue' && revenueStats) {
+      return { ...item, value: revenueStats.totalRevenue.display }
+    }
+    if (item.id === 'pending-payout' && revenueStats) {
+      return { ...item, value: revenueStats.pendingPayout.display }
+    }
+    return item
+  })
 
   return (
     <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto bg-surface-page pb-6">
