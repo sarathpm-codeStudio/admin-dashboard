@@ -42,14 +42,14 @@ export function AppRoutes() {
             path="userdetails/faculty/:facultyId/reviews"
             element={<FacultyReviewsPage />}
           />
+          <Route
+            path="userdetails/faculty/:facultyId/revenue"
+            element={<FacultyRevenuePage />}
+          />
           <Route path="userdetails/student/:studentId" element={<StudentDetailPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="courses" element={<CourseManagementPage />} />
           <Route path="financial" element={<FinancialManagementPage />} />
-          <Route
-            path="financial/faculty/:facultyId/revenue"
-            element={<FacultyRevenuePage />}
-          />
           <Route path="chats" element={<ChatsPage />} />
           <Route path="reports" element={<ReportsAnalyticsPage />} />
           <Route path="account" element={<AccountPage />} />

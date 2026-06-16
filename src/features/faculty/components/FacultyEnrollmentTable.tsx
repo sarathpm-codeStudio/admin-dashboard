@@ -2,39 +2,56 @@ import { useMemo } from 'react'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
-import { ProgressBar } from '@/components/ui/ProgressBar'
-import { StatusDotBadge } from '@/components/ui/StatusDotBadge'
 import { Paragraph } from '@/components/ui/Typography'
-import type { FacultyEnrollment } from '@/features/faculty/data/mockFacultyEnrollments'
 import { cn } from '@/utils/cn'
+import { useNavigate } from 'react-router-dom'
+
+export type FacultyStudentRow = {
+  id: string
+  studentId: string
+  account_id: string
+  name: string
+  initials: string
+  avatarUrl?: string
+  avatarClassName?: string
+  email: string
+  phoneNumber: string
+  enrolledCoursesCount: number
+}
 
 const cellTextClass = 'text-[#334155]'
 
 /** Squircle avatars — Figma enrollment table */
 const enrollmentAvatarRound = 'rounded-xl'
 
-const statusLabel: Record<FacultyEnrollment['status'], string> = {
-  active: 'Active',
-  pending: 'Draft/Pending',
-  completed: 'Completed',
-}
+/** Stable fallback avatar colour when the API has no avatar image. */
+const avatarPalette = [
+  'bg-violet-100 text-violet-700',
+  'bg-blue-100 text-blue-700',
+  'bg-amber-100 text-amber-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-sky-100 text-sky-700',
+  'bg-rose-100 text-rose-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-teal-100 text-teal-700',
+]
 
-function progressFillClass(percent: number) {
-  if (percent < 25) return 'bg-red-500'
-  return 'bg-primary-gradient-r'
-}
-
-function progressPercentTextClass(percent: number) {
-  if (percent < 25) return 'text-sm font-bold text-[#BA1A1A]'
-  return 'text-sm font-bold text-[#2c1452]'
+function fallbackAvatarClass(seed: string) {
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0
+  }
+  return avatarPalette[Math.abs(hash) % avatarPalette.length]
 }
 
 type FacultyEnrollmentTableProps = {
-  rows: FacultyEnrollment[]
+  rows: FacultyStudentRow[]
   totalCount: number
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  isLoading?: boolean
+  isError?: boolean
 }
 
 export function FacultyEnrollmentTable({
@@ -43,8 +60,13 @@ export function FacultyEnrollmentTable({
   page,
   totalPages,
   onPageChange,
+  isLoading = false,
+  isError = false,
 }: FacultyEnrollmentTableProps) {
-  const columns = useMemo<DataTableColumn<FacultyEnrollment>[]>(
+
+  const navigate = useNavigate()
+
+  const columns = useMemo<DataTableColumn<FacultyStudentRow>[]>(
     () => [
       {
         id: 'student',
@@ -66,80 +88,45 @@ export function FacultyEnrollmentTable({
                 className={cn(
                   'flex size-10 shrink-0 items-center justify-center text-xs font-bold',
                   enrollmentAvatarRound,
-                  row.avatarClassName,
+                  row.avatarClassName ?? fallbackAvatarClass(row.studentId || row.name),
                 )}
               >
                 {row.initials}
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 cursor-pointer" onClick={() => navigate(`/userdetails/student/${row.id}`)}>
               <p className="truncate text-sm font-semibold text-[#1E1B4B]">{row.name}</p>
               <Paragraph variant="caption" className={cn('mt-0.5', cellTextClass)}>
-                #{row.studentId}
+                {row.account_id}
               </Paragraph>
             </div>
           </div>
         ),
       },
       {
-        id: 'course',
-        header: 'Enrolled course',
-        width: '16rem',
+        id: 'courses',
+        header: 'Enrolled courses',
+        width: '10rem',
         className: 'py-4 pl-1 pr-4',
         headerClassName: 'py-3 pl-1 pr-4',
         cell: (row) => (
-          <p className={cn('text-sm font-normal', cellTextClass)}>{row.courseName}</p>
+          <p className={cn('text-sm font-normal', cellTextClass)}>{row.enrolledCoursesCount}</p>
         ),
       },
       {
-        id: 'date',
-        header: 'Enrollment date',
-        width: '9.5rem',
+        id: 'email',
+        header: 'Email',
+        width: '16rem',
         cell: (row) => (
-          <p className={cn('text-sm font-normal', cellTextClass)}>{row.enrollmentDate}</p>
+          <p className={cn('truncate text-sm font-normal', cellTextClass)}>{row.email}</p>
         ),
       },
       {
-        id: 'progress',
-        header: 'Current progress',
-        width: '14.5rem',
-        align: 'center',
+        id: 'phone',
+        header: 'Phone Number',
+        width: '12rem',
         cell: (row) => (
-          <div className="mx-auto flex w-full max-w-[12.5rem] items-center justify-center gap-3">
-            <ProgressBar
-              value={row.progressPercent}
-              className="min-w-0 flex-1"
-              trackClassName="h-2"
-              fillClassName={progressFillClass(row.progressPercent)}
-            />
-            <span className={cn('shrink-0', progressPercentTextClass(row.progressPercent))}>
-              {row.progressPercent}%
-            </span>
-          </div>
-        ),
-      },
-      {
-        id: 'test_score',
-        header: 'Test score',
-        width: '14.5rem',
-        align: 'center',
-        cell: (row) => (
-          <div className="mx-auto flex w-full max-w-[12.5rem] items-center justify-center gap-3">
-            <span className={cn('shrink-0', cellTextClass)}>
-              {row.test_score}%
-            </span> 
-          </div>
-        ),
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        width: '6.5rem',
-        align: 'center',
-        cell: (row) => (
-          <div className="flex justify-center">
-            <StatusDotBadge label={statusLabel[row.status]} variant={row.status} />
-          </div>
+          <p className={cn('text-sm font-normal', cellTextClass)}>{row.phoneNumber}</p>
         ),
       },
     ],
@@ -155,9 +142,15 @@ export function FacultyEnrollmentTable({
       page={page}
       totalPages={totalPages}
       onPageChange={onPageChange}
-      emptyMessage="No enrolled students match your filters."
-      showTotalCount={false}
-      footerLayout="end"
+      isLoading={isLoading}
+      emptyMessage={
+        isError
+          ? 'Could not load enrolled students. Please try again.'
+          : 'No enrolled students match your filters.'
+      }
+      showTotalCount
+      footerLayout="between"
+      alwaysShowPagination
       scrollableBody
       className="min-h-0 flex-1 border-0 bg-surface-page shadow-none"
     />

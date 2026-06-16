@@ -1,4 +1,4 @@
-import { FacultyRevenueView } from '@/features/financial/FacultyRevenueView'
+import { FacultyRevenueView } from '@/features/faculty/FacultyRevenueView'
 
 export function FacultyRevenuePage() {
   return <FacultyRevenueView />

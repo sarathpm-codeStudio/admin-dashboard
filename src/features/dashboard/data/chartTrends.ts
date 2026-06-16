@@ -7,7 +7,7 @@ export type EnrollmentTrendPoint = {
 }
 
 export type RevenueTrendPoint = {
-  label: string
+  label: string | undefined
   revenue: number
 }
 

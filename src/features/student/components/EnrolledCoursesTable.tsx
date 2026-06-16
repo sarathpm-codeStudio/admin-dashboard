@@ -14,7 +14,10 @@ type StudentCourseRow = {
   id: string
   title?: string
   name?: string
-  facultyName?: string
+  faculty?: {
+    first_name: string
+    last_name: string
+  }
   progress?: number
   progressPercent?: number
   test_score?: number | undefined
@@ -89,7 +92,7 @@ export function EnrolledCoursesTable({
               {course.title ?? course.name}
             </Paragraph>
             <Paragraph variant="caption" className="mt-0.5 text-[#64748B]">
-              Faculty: {course.facultyName ?? '—'}
+              Faculty: {course?.faculty?.first_name + ' ' + course?.faculty?.last_name}
             </Paragraph>
           </div>
         ),

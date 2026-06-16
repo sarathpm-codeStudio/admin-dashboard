@@ -1,10 +1,4 @@
-import {
-  ArrowDownWideNarrow,
-  Calendar,
-  ListFilter,
-  RotateCw,
-  Search,
-} from 'lucide-react'
+import { ListFilter, Search } from 'lucide-react'
 import { IconSelect } from '@/components/ui/IconSelect'
 import { Input } from '@/components/ui/Input'
 import type { FacultyEnrollmentFilterValues } from '@/features/faculty/utils/filterFacultyEnrollments'
@@ -55,7 +49,7 @@ export function FacultyEnrollmentFiltersBar({
         />
         <Input
           type="search"
-          placeholder="Search by name, ID or course..."
+          placeholder="Search by name..."
           value={values.search}
           onChange={(e) => update({ search: e.target.value })}
           className={cn(filterFieldClass, 'w-full pl-10')}
@@ -78,41 +72,7 @@ export function FacultyEnrollmentFiltersBar({
             </option>
           ))}
         </IconSelect>
-
-        <IconSelect
-          icon={Calendar}
-          value={values.enrollmentDate}
-          onChange={(e) => update({ enrollmentDate: e.target.value })}
-          aria-label="Filter by enrollment date"
-          wrapperClassName="min-w-[12rem] flex-[1_1_14rem]"
-          className={selectFieldClass}
-        >
-          <option value="all">Enrollment Date</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-        </IconSelect>
-
-        <IconSelect
-          icon={ArrowDownWideNarrow}
-          value={values.progressSort}
-          onChange={(e) => update({ progressSort: e.target.value })}
-          aria-label="Sort by progress"
-          wrapperClassName="min-w-[14rem] flex-[1_1_16rem]"
-          className={selectFieldClass}
-        >
-          <option value="high">Progress: High to Low</option>
-          <option value="low">Progress: Low to High</option>
-        </IconSelect>
       </div>
-
-      <button
-        type="button"
-        aria-label="Reset filters"
-        onClick={() => onChange(defaultEnrollmentFilters)}
-        className="ml-auto inline-flex size-10 shrink-0 items-center justify-center text-nav transition-colors hover:text-ink-heading focus:outline-none focus:ring-2 focus:ring-primary-50 focus:ring-offset-2"
-      >
-        <RotateCw className="size-5" aria-hidden />
-      </button>
     </div>
   )
 }

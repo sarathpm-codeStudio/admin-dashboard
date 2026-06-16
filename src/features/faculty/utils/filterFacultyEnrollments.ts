@@ -22,7 +22,7 @@ export function filterFacultyEnrollments(
       if (!matchesQuery) return false
     }
 
-    if (filters.course !== 'all' && row.courseSlug !== filters.course) {
+    if (filters.course !== 'all' && row.courseName !== filters.course) {
       return false
     }
 

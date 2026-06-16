@@ -8,7 +8,7 @@ const footerTrendClass =
 const footerMetaClass =
   'text-[10px] font-medium uppercase tracking-wide text-slate-400'
 
-export function getFacultyStatItems(analytics: any, facultyId: string): SummaryStatItem[] {
+export function getFacultyStatItems(analytics: any, facultyId: string, facultyName: string): SummaryStatItem[] {
   if (!analytics || !facultyId) {
     return []
   }
@@ -37,7 +37,7 @@ export function getFacultyStatItems(analytics: any, facultyId: string): SummaryS
       id: 'total-revenue',
       label: 'Total revenue',
       value: analytics.totalRevenue.display,
-      to: `/financial/faculty/${facultyId}/revenue`,
+      to: `${facultyBase}/revenue?tab=faculty&facultyName=${encodeURIComponent(facultyName)}`,
       cornerImage: revenueIcon,
       cornerImageAlt: 'Revenue',
     },

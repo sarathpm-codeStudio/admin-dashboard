@@ -30,10 +30,22 @@ export const useGetAllUsers = (
 }
 
 
+type UserStatus = 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'ACTIVATE'
+
+type UpdateUserStatusInput =
+  | UserStatus
+  | { status: UserStatus; rejectReason?: string; adminNote?: string }
+
 export const useUpdateUserStatus = (userId: string) => {
   return useMutation({
     mutationKey: ['update-user-status', userId],
-    mutationFn: (status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'ACTIVATE') => userManagementFunctions.updateUserStatus(userId, status),
+    mutationFn: (input: UpdateUserStatusInput) => {
+      const payload = typeof input === 'string' ? { status: input } : input
+      return userManagementFunctions.updateUserStatus(userId, payload.status, {
+        rejectReason: typeof input === 'string' ? undefined : input.rejectReason,
+        adminNote: typeof input === 'string' ? undefined : input.adminNote,
+      })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['faculty', userId] })
       queryClient.invalidateQueries({ queryKey: ['student', userId] })
