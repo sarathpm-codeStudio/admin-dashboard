@@ -46,6 +46,7 @@ type CoursesTableProps = {
   selectedIds: Set<string>
   onToggleRow: (id: string, checked: boolean) => void
   onToggleAll: (checked: boolean) => void
+  onRowClick?: (course: CourseRecord) => void
 }
 
 function CourseStatusBadge({ status }: { status: CourseApprovalStatus }) {
@@ -102,6 +103,7 @@ export function CoursesTable({
   selectedIds,
   onToggleRow,
   onToggleAll,
+  onRowClick,
 }: CoursesTableProps) {
   const allSelected = courses.length > 0 && courses.every((course) => selectedIds.has(course.id))
   const someSelected = courses.some((course) => selectedIds.has(course.id))
@@ -118,41 +120,61 @@ export function CoursesTable({
             aria-label="Select all courses on this page"
           />
         ),
-        width: '3rem',
+        width: '2.25rem',
+        className: 'pr-0',
         cell: (course) => (
-          <Checkbox
-            checked={selectedIds.has(course.id)}
-            onChange={(e) => onToggleRow(course.id, e.target.checked)}
-            aria-label={`Select ${course.title}`}
-          />
+          <span
+            className="inline-flex"
+            onClick={(e) => e.stopPropagation()}
+            role="presentation"
+          >
+            <Checkbox
+              checked={selectedIds.has(course.id)}
+              onChange={(e) => onToggleRow(course.id, e.target.checked)}
+              aria-label={`Select ${course.title}`}
+            />
+          </span>
         ),
       },
       {
         id: 'course',
         header: 'Course Name & Stats',
         width: '24%',
+        className: 'pl-0',
+        headerClassName: 'pl-0',
         cell: (course) => (
-          <div className="min-w-0">
-            <Paragraph variant="emphasis" className="truncate text-sm font-extrabold text-[#44474E]">
-              {course.title}
-            </Paragraph>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <span
-                className={cn(
-                  'rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px]',
-                  tableTextClass,
-                )}
-              >
-                {course.studentsCount} Students
-              </span>
-              <span
-                className={cn(
-                  'rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px]',
-                  tableTextClass,
-                )}
-              >
-                {course.revenueDisplay} Rev.
-              </span>
+          <div className="flex min-w-0 items-center gap-3">
+            {course.coverImage ? (
+              <img
+                src={course.coverImage}
+                alt={course.title}
+                className="h-14 w-20 shrink-0 rounded-lg bg-[#F1F5F9] object-contain"
+              />
+            ) : (
+              <div className="h-14 w-20 shrink-0 rounded-lg bg-[#F1F5F9]" aria-hidden />
+            )}
+            <div className="min-w-0">
+              <Paragraph variant="emphasis" className="truncate text-sm font-extrabold text-[#44474E]">
+                {course.title}
+              </Paragraph>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <span
+                  className={cn(
+                    'rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px]',
+                    tableTextClass,
+                  )}
+                >
+                  {course.studentsCount} Students
+                </span>
+                <span
+                  className={cn(
+                    'rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[11px]',
+                    tableTextClass,
+                  )}
+                >
+                  {course.revenueDisplay} Rev.
+                </span>
+              </div>
             </div>
           </div>
         ),
@@ -211,6 +233,7 @@ export function CoursesTable({
       totalPages={totalPages}
       onPageChange={onPageChange}
       isLoading={isLoading}
+      onRowClick={onRowClick}
       loadingRowCount={COURSES_PAGE_SIZE}
       animateRows={!isLoading}
       scrollableBody

@@ -26,6 +26,8 @@ export type ConfirmModalProps = {
   children?: ReactNode
   /** Disables the confirm button independently of the loading state. */
   confirmDisabled?: boolean
+  /** Replaces the default cancel/confirm footer (default layout only). Use for custom actions. */
+  footer?: ReactNode
 }
 
 export function ConfirmModal({
@@ -44,6 +46,7 @@ export function ConfirmModal({
   footnote,
   children,
   confirmDisabled = false,
+  footer,
 }: ConfirmModalProps) {
   useEffect(() => {
     if (!open) return
@@ -143,23 +146,29 @@ export function ConfirmModal({
             <Header2 size="section" id="confirm-modal-title" className="pr-8">
               {title}
             </Header2>
-            <Paragraph variant="muted" className="mt-2">
-              {message}
-            </Paragraph>
+            {message ? (
+              <Paragraph variant="muted" className="mt-2">
+                {message}
+              </Paragraph>
+            ) : null}
 
             {children ? <div className="mt-5">{children}</div> : null}
 
-            <div className="mt-6 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isLoading}
-              >
-                {cancelLabel}
-              </Button>
-              {confirmButton}
-            </div>
+            {footer ? (
+              <div className="mt-6">{footer}</div>
+            ) : (
+              <div className="mt-6 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isLoading}
+                >
+                  {cancelLabel}
+                </Button>
+                {confirmButton}
+              </div>
+            )}
           </>
         )}
       </div>

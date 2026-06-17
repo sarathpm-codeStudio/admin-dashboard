@@ -109,6 +109,8 @@ type DataTableProps<T> = {
   isLoading?: boolean
   /** Skeleton row count while loading (defaults to data.length or 10) */
   loadingRowCount?: number
+  /** Makes rows clickable; fires with the row's data. */
+  onRowClick?: (row: T) => void
 }
 
 const stickyHeaderCellClass =
@@ -166,6 +168,7 @@ type DataTableBodyProps<T> = {
   tbodyKey: string | number
   scrollableBody: boolean
   appearance: DataTableAppearance
+  onRowClick?: (row: T) => void
 }
 
 function DataTableBody<T>({
@@ -178,8 +181,9 @@ function DataTableBody<T>({
   tbodyKey,
   scrollableBody,
   appearance,
+  onRowClick,
 }: DataTableBodyProps<T>) {
-  const trClass = bodyRowClassName(scrollableBody, appearance)
+  const trClass = cn(bodyRowClassName(scrollableBody, appearance), onRowClick && 'cursor-pointer')
 
   if (!animate || !motionEnabled) {
     return (
@@ -192,7 +196,11 @@ function DataTableBody<T>({
           </tr>
         ) : (
           data.map((row) => (
-            <tr key={getRowKey(row)} className={trClass}>
+            <tr
+              key={getRowKey(row)}
+              className={trClass}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+            >
               {columns.map((column) => (
                 <td key={column.id} className={columnCellClassName(column, appearance)}>
                   {column.cell(row)}
@@ -220,7 +228,12 @@ function DataTableBody<T>({
         </motion.tr>
       ) : (
         data.map((row) => (
-          <motion.tr key={getRowKey(row)} variants={tableRowVariants} className={trClass}>
+          <motion.tr
+            key={getRowKey(row)}
+            variants={tableRowVariants}
+            className={trClass}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+          >
             {columns.map((column) => (
               <td key={column.id} className={columnCellClassName(column, appearance)}>
                 {column.cell(row)}
@@ -260,6 +273,7 @@ export function DataTable<T>({
   footerClassName,
   isLoading = false,
   loadingRowCount,
+  onRowClick,
 }: DataTableProps<T>) {
   const prefersReducedMotion = useReducedMotion()
   const motionEnabled = animateRows && !prefersReducedMotion && !isLoading
@@ -326,6 +340,7 @@ export function DataTable<T>({
               tbodyKey={tbodyKey}
               scrollableBody={scrollableBody}
               appearance={appearance}
+              onRowClick={onRowClick}
             />
           )}
     </table>

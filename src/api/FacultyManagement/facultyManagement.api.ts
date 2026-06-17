@@ -151,6 +151,63 @@ export const facultyManagementFunctions = {
                 )
                 : 0;
 
+            // 6. Pending payout — faculty share of enrollments not yet paid out.
+            //    Mirrors the calc in getFacultyRevenueStats / enrollment-payout-workflow.md §3.
+            const commissionPercent = await getCommissionPercent(supabase);
+
+            const { data: singleEnrollments, error: singleEnrollError } = await supabase
+                .from('enrollments')
+                .select('id, amount_paid, gst_amount')
+                .eq('faculty_id', facultyId)
+                .eq('is_bundle_enrollment', false);
+
+            if (singleEnrollError) throw new Error(singleEnrollError.message);
+
+            const { data: bundleEnrollments, error: bundleEnrollError } = await supabase
+                .from('bundle_enrollments')
+                .select('id, amount_paid')
+                .eq('faculty_id', facultyId);
+
+            if (bundleEnrollError) throw new Error(bundleEnrollError.message);
+
+            const { data: paidSingleTxns, error: paidSingleError } = await supabase
+                .from('faculty_transactions')
+                .select('enrollment_id')
+                .eq('faculty_id', facultyId)
+                .eq('type', 'COURSE_SALE')
+                .not('enrollment_id', 'is', null);
+
+            if (paidSingleError) throw new Error(paidSingleError.message);
+
+            const { data: paidBundleTxns, error: paidBundleError } = await supabase
+                .from('faculty_transactions')
+                .select('bundle_enrollment_id')
+                .eq('faculty_id', facultyId)
+                .eq('type', 'BUNDLE_SALE')
+                .not('bundle_enrollment_id', 'is', null);
+
+            if (paidBundleError) throw new Error(paidBundleError.message);
+
+            const paidSingleIds = new Set((paidSingleTxns ?? []).map(t => t.enrollment_id));
+            const paidBundleIds = new Set((paidBundleTxns ?? []).map(t => t.bundle_enrollment_id));
+
+            const unpaidSingleAmount = (singleEnrollments ?? [])
+                .filter(e => !paidSingleIds.has(e.id))
+                .reduce((sum, e) => {
+                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0);
+                    const commission = Math.round(base * commissionPercent / 100);
+                    return sum + (base - commission);
+                }, 0);
+
+            const unpaidBundleAmount = (bundleEnrollments ?? [])
+                .filter(b => !paidBundleIds.has(b.id))
+                .reduce((sum, b) => {
+                    const commission = Math.round((b.amount_paid ?? 0) * commissionPercent / 100);
+                    return sum + ((b.amount_paid ?? 0) - commission);
+                }, 0);
+
+            const pendingPayout = unpaidSingleAmount + unpaidBundleAmount;
+
             return {
                 // Profile
                 faculty: {
@@ -191,6 +248,11 @@ export const facultyManagementFunctions = {
                     totalRevenue: {
                         amount: totalRevenue,
                         display: formatRevenue(totalRevenue),
+                    },
+
+                    pendingPayout: {
+                        amount: pendingPayout,
+                        display: formatRevenue(pendingPayout),
                     },
 
                     avgRating: {
@@ -804,21 +866,41 @@ export const facultyManagementFunctions = {
      */
     getFacultyRevenueSource: async (facultyId: string) => {
         try {
-            const { data: saleTxns, error } = await supabase
-                .from('faculty_transactions')
-                .select('amount, type')
+            const db = supabase;
+
+            // Faculty net revenue = (amount_paid - GST) after the platform commission.
+            // Mirrors getFacultyRevenueTrends / enrollment-payout-workflow.md §3.
+            const commissionPercent = await getCommissionPercent(db);
+            const facultyShareRatio = 1 - commissionPercent / 100;
+            const facultyNet = (e: { amount_paid?: number; gst_amount?: number }) => {
+                const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
+                if (base <= 0) return 0;
+                return base * facultyShareRatio;
+            };
+
+            // Individual (single course) enrollments
+            const { data: singleEnrollments, error: singleError } = await db
+                .from('enrollments')
+                .select('amount_paid, gst_amount')
                 .eq('faculty_id', facultyId)
-                .in('type', ['COURSE_SALE', 'BUNDLE_SALE']);
+                .eq('is_bundle_enrollment', false);
 
-            if (error) throw new Error(error.message);
+            if (singleError) throw new Error(singleError.message);
 
-            let individualAmount = 0;
-            let bundlesAmount = 0;
+            // Bundle enrollments (no GST column — gross is the bundle amount)
+            const { data: bundleEnrollments, error: bundleError } = await db
+                .from('bundle_enrollments')
+                .select('amount_paid')
+                .eq('faculty_id', facultyId);
 
-            for (const t of saleTxns ?? []) {
-                if (t.type === 'BUNDLE_SALE') bundlesAmount += t.amount ?? 0;
-                else individualAmount += t.amount ?? 0;
-            }
+            if (bundleError) throw new Error(bundleError.message);
+
+            const individualAmount = Math.round(
+                (singleEnrollments ?? []).reduce((sum, e) => sum + facultyNet(e), 0),
+            );
+            const bundlesAmount = Math.round(
+                (bundleEnrollments ?? []).reduce((sum, b) => sum + facultyNet(b), 0),
+            );
 
             const total = individualAmount + bundlesAmount;
 

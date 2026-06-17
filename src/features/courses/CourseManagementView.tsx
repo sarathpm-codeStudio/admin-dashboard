@@ -10,6 +10,7 @@ import {
   type CourseFilterValues,
 } from '@/features/courses/components/CourseFiltersBar'
 import { CourseManagementHeader } from '@/features/courses/components/CourseManagementHeader'
+import { CourseReviewModal } from '@/features/courses/components/CourseReviewModal'
 import { CourseSummaryStats } from '@/features/courses/components/CourseSummaryStats'
 import { CoursesTable } from '@/features/courses/components/CoursesTable'
 import {
@@ -38,6 +39,7 @@ export function CourseManagementView() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [pendingAction, setPendingAction] = useState<CourseBulkAction | null>(null)
+  const [reviewCourseId, setReviewCourseId] = useState<string | null>(null)
 
   const { mutateAsync: updateCoursesStatus } = useUpdateCoursesStatus()
   const { mutateAsync: deleteCourses } = useDeleteCourses()
@@ -125,6 +127,10 @@ export function CourseManagementView() {
     clearSelection()
   }
 
+  const handleTakeAction = (courseId: string) => {
+    setSelectedIds((prev) => new Set(prev).add(courseId))
+  }
+
   return (
     <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
       <CourseManagementHeader />
@@ -141,6 +147,7 @@ export function CourseManagementView() {
           selectedIds={selectedIds}
           onToggleRow={handleToggleRow}
           onToggleAll={handleToggleAll}
+          onRowClick={(course) => setReviewCourseId(course.id)}
           isLoading={isLoading}
         />
 
@@ -179,6 +186,12 @@ export function CourseManagementView() {
         onApprove={handleBulkApprove}
         onReject={handleBulkReject}
         onDelete={handleBulkDelete}
+      />
+
+      <CourseReviewModal
+        courseId={reviewCourseId}
+        onClose={() => setReviewCourseId(null)}
+        onTakeAction={handleTakeAction}
       />
     </div>
   )

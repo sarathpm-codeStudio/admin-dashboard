@@ -14,12 +14,13 @@ import { cn } from '@/utils/cn'
 
 const statusVariant: Record<
   FacultyStatus,
-  'active' | 'pending' | 'rejected' | 'suspended'
+  'active' | 'pending' | 'rejected' | 'suspended' | 'info'
 > = {
   active: 'active',
   pending: 'pending',
   rejected: 'rejected',
   suspended: 'suspended',
+  resubmitted: 'info',
 }
 
 const statusLabel: Record<FacultyStatus, string> = {
@@ -27,6 +28,7 @@ const statusLabel: Record<FacultyStatus, string> = {
   pending: 'Pending',
   rejected: 'Rejected',
   suspended: 'Suspended',
+  resubmitted: 'Resubmitted',
 }
 
 function resolveFacultyStatus(
@@ -37,6 +39,7 @@ function resolveFacultyStatus(
   if (accountVerified === 'APPROVED') return 'active'
   if (accountVerified === 'PENDING') return 'pending'
   if (accountVerified === 'REJECTED') return 'rejected'
+  if (accountVerified === 'RESUBMITTED') return 'resubmitted'
   return 'pending'
 }
 
@@ -161,6 +164,7 @@ function renderStatusActions(
         </Button>
       )
     case 'pending':
+    case 'resubmitted':
       return (
         <>
           <Button

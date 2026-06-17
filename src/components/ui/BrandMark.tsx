@@ -1,4 +1,4 @@
-import { GiGraduateCap } from 'react-icons/gi'
+import { brand } from '@/config/navigation'
 import { cn } from '@/utils/cn'
 
 type BrandMarkProps = {
@@ -6,17 +6,14 @@ type BrandMarkProps = {
   iconClassName?: string
 }
 
-/** Auth screens — graduate cap in #F2F4F6 tile (Figma sign-in) */
+/** Auth screens — brand logo (Figma sign-in) */
 export function BrandMark({ className, iconClassName }: BrandMarkProps) {
   return (
-    <div
-      className={cn(
-        'flex h-12 w-14 items-center justify-center rounded-xl bg-[#F2F4F6]',
-        className,
-      )}
-    >
-      <GiGraduateCap
-        className={cn('h-7 w-9 text-[#2D5BFF]', iconClassName)}
+    <div className={cn('flex items-center justify-center', className)}>
+      <img
+        src={brand.brandIcon}
+        alt={brand.name}
+        className={cn('h-20 w-auto object-contain', iconClassName)}
         aria-hidden
       />
     </div>

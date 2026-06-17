@@ -87,9 +87,9 @@ export function FacultyRevenueView() {
     <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto bg-surface-page pb-6">
       <Breadcrumbs
         items={[
-          { label: 'Financials', to: '/financial' },
-          { label: 'Faculty Revenue', to: '/financial' },
-          { label: facultyNameParam || faculty.name, className: 'text-[#4F46E5]' },
+          { label: 'Faculty Directory', to: '/users' },
+          { label: facultyNameParam || faculty.name, to: `/userdetails/faculty/${facultyId}` },
+          { label: 'Faculty Revenue', className: 'text-[#4F46E5]' },
         ]}
       />
 

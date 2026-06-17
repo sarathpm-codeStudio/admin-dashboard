@@ -40,6 +40,11 @@ export function getFacultyStatItems(analytics: any, facultyId: string, facultyNa
       to: `${facultyBase}/revenue?tab=faculty&facultyName=${encodeURIComponent(facultyName)}`,
       cornerImage: revenueIcon,
       cornerImageAlt: 'Revenue',
+      footer: (
+        <span className={footerTrendClass}>
+          Pending payout: {analytics.pendingPayout.display}
+        </span>
+      ),
     },
     {
       id: 'avg-rating',

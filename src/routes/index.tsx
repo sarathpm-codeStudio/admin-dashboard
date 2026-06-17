@@ -6,6 +6,7 @@ import { PublicRoute } from '@/routes/PublicRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { AccountPage } from '@/pages/AccountPage'
 import { ChatsPage } from '@/pages/ChatsPage'
+import { CourseAcademicStructurePage } from '@/pages/CourseAcademicStructurePage'
 import { CourseManagementPage } from '@/pages/CourseManagementPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { FinancialManagementPage } from '@/pages/FinancialManagementPage'
@@ -49,6 +50,10 @@ export function AppRoutes() {
           <Route path="userdetails/student/:studentId" element={<StudentDetailPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="courses" element={<CourseManagementPage />} />
+          <Route
+            path="courses/:courseId/structure"
+            element={<CourseAcademicStructurePage />}
+          />
           <Route path="financial" element={<FinancialManagementPage />} />
           <Route path="chats" element={<ChatsPage />} />
           <Route path="reports" element={<ReportsAnalyticsPage />} />

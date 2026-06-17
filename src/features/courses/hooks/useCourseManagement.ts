@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { courseManagementFunctions, CoursesListResponse } from '@/api/courseManagement/courseManagement.api'
+import { courseManagementFunctions, CourseContentItem, CourseDetail, CoursesListResponse } from '@/api/courseManagement/courseManagement.api'
 import { queryClient } from '@/config/queryClient'
 import type { CourseApprovalStatus, CourseFilterOptions, CoursesAnalytics } from '@/features/courses/types'
 
@@ -38,6 +38,22 @@ export const useGetAllCourses = (
         price,
         status,
       }),
+  })
+}
+
+export const useGetCourseDetail = (courseId: string | null) => {
+  return useQuery<CourseDetail>({
+    queryKey: ['course-detail', courseId],
+    queryFn: () => courseManagementFunctions.getCourseDetail(courseId as string),
+    enabled: !!courseId,
+  })
+}
+
+export const useGetCourseContent = (courseId: string | null, parentId: string | null) => {
+  return useQuery<CourseContentItem[]>({
+    queryKey: ['course-content', courseId, parentId],
+    queryFn: () => courseManagementFunctions.getCourseContent(courseId as string, parentId),
+    enabled: !!courseId,
   })
 }
 

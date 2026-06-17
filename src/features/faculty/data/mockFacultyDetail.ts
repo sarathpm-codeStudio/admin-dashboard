@@ -5,7 +5,7 @@ import activityOverlayImage from '@/asset/image/Overlay.png'
 import facultyProfileAvatar from '@/asset/image/John Smith Profile.png'
 import { ACTIVITY_EDIT_ICON_COLOR } from '@/features/faculty/data/activityIconColors'
 
-export type FacultyStatus = 'active' | 'pending' | 'rejected' | 'suspended'
+export type FacultyStatus = 'active' | 'pending' | 'rejected' | 'suspended' | 'resubmitted'
 
 export type FacultyCertificate = {
   id: string
@@ -32,6 +32,7 @@ export type FacultyDetail = {
     totalStudents: number
     studentsGrowthPercent: number
     totalRevenue: string
+    pendingPayout: string
     avgRating: number
     reviewCount: number
   }
@@ -106,6 +107,7 @@ export const mockFacultyJohnSmith: FacultyDetail = {
     totalStudents: 2450,
     studentsGrowthPercent: 12,
     totalRevenue: '₹8.5 L',
+    pendingPayout: '₹1.2 L',
     avgRating: 4.6,
     reviewCount: 98,
   },

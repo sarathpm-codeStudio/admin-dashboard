@@ -4,6 +4,7 @@ import type { CourseApprovalStatus, CoursesAnalytics } from '@/features/courses/
 export type CourseListRow = {
   id: string
   title: string
+  coverImage: string | null
   facultyId: string
   facultyName: string
   category: string
@@ -13,6 +14,46 @@ export type CourseListRow = {
   isDraft: boolean
   studentsCount: number
   revenueDisplay: string
+}
+
+export type CourseDetail = {
+  id: string
+  title: string
+  facultyName: string
+  category: string
+  description: string
+  priceDisplay: string
+  finalPriceDisplay: string
+  hasDiscount: boolean
+  status: CourseApprovalStatus
+  postedOnDisplay: string
+  coverImage: string | null
+  introVideoAssetId: string | null
+  videoCount: number
+  pdfCount: number
+  testCount: number
+}
+
+export type CourseContentItem = {
+  id: string
+  item_type: 'folder' | 'material'
+  title: string
+  sort_order: number
+  // Folder-only
+  total_video?: number
+  total_test?: number
+  total_notes?: number
+  duration?: number | null
+  // Material-only
+  type?: 'VIDEO' | 'PDF' | 'IMAGE' | 'NOTES' | 'LINK' | 'TEST'
+  file_url?: string | null
+  external_url?: string | null
+  file_size?: number | null
+  duration_sec?: number | null
+  video_asset_id?: string | null
+  video_cover_img?: string | null
+  video_uploading_status?: string | null
+  material_status?: string | null
 }
 
 export type CoursesListPagination = {
@@ -191,6 +232,7 @@ export const courseManagementFunctions = {
           `
           id,
           title,
+          cover_image,
           category,
           status,
           is_draft,
@@ -267,6 +309,7 @@ export const courseManagementFunctions = {
         return {
           id: course.id,
           title: course.title ?? '',
+          coverImage: course.cover_image ?? null,
           facultyId: course.faculty_id,
           facultyName,
           category: course.category ?? '',
@@ -292,6 +335,128 @@ export const courseManagementFunctions = {
           has_prev: page > 1,
         },
       }
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  },
+
+  getCourseDetail: async (courseId: string): Promise<CourseDetail> => {
+    try {
+      const { data: course, error } = await supabase
+        .from('courses')
+        .select(
+          `
+          id,
+          title,
+          description,
+          category,
+          status,
+          price,
+          final_price,
+          cover_image,
+          video_asset_id,
+          created_at,
+          faculty:profiles!courses_faculty_id_fkey (
+            first_name,
+            last_name
+          )
+        `,
+        )
+        .eq('id', courseId)
+        .single()
+
+      if (error) throw new Error(error.message)
+
+      // Material counts (video / pdf / test) — derived from course_materials by type.
+      const { data: materials, error: materialsError } = await supabase
+        .from('course_materials')
+        .select('type')
+        .eq('course_id', courseId)
+        .eq('is_deleted', false)
+
+      if (materialsError) throw new Error(materialsError.message)
+
+      const videoCount = (materials ?? []).filter((m) => m.type === 'VIDEO').length
+      const pdfCount = (materials ?? []).filter((m) => m.type === 'PDF').length
+      const testCount = (materials ?? []).filter((m) => m.type === 'TEST').length
+
+      const facultyRaw = course.faculty
+      const facultyProfile = Array.isArray(facultyRaw) ? facultyRaw[0] : facultyRaw
+      const facultyName =
+        [facultyProfile?.first_name, facultyProfile?.last_name].filter(Boolean).join(' ') ||
+        'Unknown'
+      const originalPrice = course.price ?? 0
+      const finalPrice = course.final_price ?? originalPrice
+      const postedOnDisplay = course.created_at
+        ? new Date(course.created_at).toLocaleDateString('en-GB')
+        : '—'
+
+      return {
+        id: course.id,
+        title: course.title ?? '',
+        facultyName,
+        category: course.category ?? '',
+        description: course.description ?? '',
+        priceDisplay: formatCurrency(originalPrice),
+        finalPriceDisplay: formatCurrency(finalPrice),
+        hasDiscount: finalPrice < originalPrice,
+        status: fromDbCourseStatus(course.status as string | null),
+        postedOnDisplay,
+        coverImage: course.cover_image ?? null,
+        introVideoAssetId: course.video_asset_id ?? null,
+        videoCount,
+        pdfCount,
+        testCount,
+      }
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  },
+
+  // Read-only academic structure: folders + materials at a given level.
+  getCourseContent: async (
+    courseId: string,
+    parentId: string | null = null,
+  ): Promise<CourseContentItem[]> => {
+    try {
+      let folderQuery = supabase
+        .from('course_folders')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('is_deleted', false)
+        .order('sort_order', { ascending: true })
+
+      let materialQuery = supabase
+        .from('course_materials')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('is_deleted', false)
+        .order('sort_order', { ascending: true })
+
+      if (parentId === null) {
+        folderQuery = folderQuery.is('parent_id', null)
+        materialQuery = materialQuery.is('folder_id', null)
+      } else {
+        folderQuery = folderQuery.eq('parent_id', parentId)
+        materialQuery = materialQuery.eq('folder_id', parentId)
+      }
+
+      const [{ data: folders, error: folderError }, { data: materials, error: matError }] =
+        await Promise.all([folderQuery, materialQuery])
+
+      if (folderError) throw new Error(folderError.message)
+      if (matError) throw new Error(matError.message)
+
+      const taggedFolders = (folders ?? []).map(
+        (f): CourseContentItem => ({ ...f, item_type: 'folder' }),
+      )
+      const taggedMaterials = (materials ?? []).map(
+        (m): CourseContentItem => ({ ...m, item_type: 'material' }),
+      )
+
+      return [...taggedFolders, ...taggedMaterials].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+      )
     } catch (error: any) {
       throw new Error(error.message)
     }

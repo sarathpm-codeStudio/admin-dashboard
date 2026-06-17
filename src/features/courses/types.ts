@@ -14,6 +14,7 @@ export type CoursesAnalytics = {
 export type CourseRecord = {
   id: string
   title: string
+  coverImage: string | null
   facultyId: string
   facultyName: string
   category: string

@@ -79,7 +79,7 @@ export function FacultyDetailView() {
   const { mutateAsync: updateStatus } = useUpdateUserStatus(facultyId ?? '')
 
   if (!facultyId) {
-    return <Navigate to="/users" replace /> 
+    return <Navigate to="/users" replace />
   }
   if (isLoading) {
     return <FacultyDetailSkeleton />
@@ -107,6 +107,7 @@ export function FacultyDetailView() {
       totalStudents: analytics.totalStudents.total,
       studentsGrowthPercent: analytics.totalStudents.growth,
       totalRevenue: analytics.totalRevenue.display,
+      pendingPayout: analytics.pendingPayout.display,
       avgRating: analytics.avgRating.rating,
       reviewCount: analytics.avgRating.totalReviews,
     },
@@ -119,7 +120,10 @@ export function FacultyDetailView() {
         ? 'active'
         : profile.account_verified === 'REJECTED'
           ? 'rejected'
-          : 'pending',
+          : profile.account_verified === 'RESUBMITTED'
+            ? 'resubmitted'
+
+            : 'pending',
     initials: '',
     documentType: profile?.document?.document_type,
     documentUrl: profile?.document?.document_url,

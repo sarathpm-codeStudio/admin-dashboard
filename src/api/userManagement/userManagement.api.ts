@@ -307,6 +307,8 @@ export const userManagementFunctions = {
                 if (status === "REJECTED") {
                     updates.acc_reject_reason = options?.rejectReason || null;
                     updates.admin_note = options?.adminNote || null;
+                } else if (status === "APPROVED") {
+                    updates.acc_reject_reason = null;
                 }
 
                 const { error } = await supabase
