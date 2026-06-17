@@ -16,7 +16,7 @@ const statusLabel: Record<CourseApprovalStatus, string> = {
   APPROVED: 'Approved',
   PENDING: 'Pending',
   REJECTED: 'Rejected',
-  RESUBMIT: 'Resubmit',
+  RESUBMIT: 'Resubmitted',
 }
 
 const statusVariant: Record<CourseApprovalStatus, StatusBadgeVariant> = {
