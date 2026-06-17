@@ -39,6 +39,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 0,
+    coverImage: null,
     revenueDisplay: '₹0.00',
   },
   {
@@ -52,6 +53,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 428,
+    coverImage: null,
     revenueDisplay: '₹12,450.00',
   },
   {
@@ -65,6 +67,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 192,
+    coverImage: null,
     revenueDisplay: '₹8,900.00',
   },
   {
@@ -78,6 +81,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'REJECTED',
     isDraft: false,
     studentsCount: 0,
+    coverImage: null,
     revenueDisplay: '₹0.00',
   },
   {
@@ -91,6 +95,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 56,
+    coverImage: null,
     revenueDisplay: '₹3,400.00',
   },
   {
@@ -104,6 +109,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 305,
+    coverImage: null,
     revenueDisplay: '₹11,200.00',
   },
   {
@@ -117,6 +123,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 112,
+    coverImage: null,
     revenueDisplay: '₹2,800.00',
   },
   {
@@ -130,6 +137,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: true,
     studentsCount: 0,
+    coverImage: null,
     revenueDisplay: '₹0.00',
   },
   {
@@ -143,6 +151,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'REJECTED',
     isDraft: false,
     studentsCount: 18,
+    coverImage: null,
     revenueDisplay: '₹81,000.00',
   },
   {
@@ -156,6 +165,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 88,
+    coverImage: null,
     revenueDisplay: '₹4,100.00',
   },
   {
@@ -169,6 +179,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 24,
+    coverImage: null,
     revenueDisplay: '₹1,68,000.00',
   },
   {
@@ -182,6 +193,7 @@ export const mockCourses: CourseRecord[] = [
     status: 'APPROVED',
     isDraft: false,
     studentsCount: 156,
+    coverImage: null,
     revenueDisplay: '₹5,148.00',
   },
 ]

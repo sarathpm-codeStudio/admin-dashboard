@@ -1,4 +1,3 @@
-import { TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Card, CardBody } from '@/components/ui/Card'
 import {
@@ -37,14 +36,6 @@ function getPeakPoint(data: RevenueTrendPoint[]) {
 }
 
 /** Period-over-period growth %, comparing the last bucket to the previous one. */
-function getGrowthPercent(data: RevenueTrendPoint[]) {
-  if (data.length < 2) return 0
-  const last = data[data.length - 1]?.revenue ?? 0
-  const prev = data[data.length - 2]?.revenue ?? 0
-  if (prev > 0) return parseFloat((((last - prev) / prev) * 100).toFixed(1))
-  return last > 0 ? 100 : 0
-}
-
 function RevenueChartSkeleton() {
   const barHeights = ['40%', '60%', '50%', '85%', '70%', '45%']
 
@@ -67,11 +58,6 @@ export function RevenueTrendsChart({ className }: RevenueTrendsChartProps) {
     [trends],
   )
   const peak = useMemo(() => getPeakPoint(trends), [trends])
-  const growthPercent = useMemo(() => getGrowthPercent(trends), [trends])
-
-  const growthLabel =
-    period === 'week' ? 'from last week' : period === 'month' ? 'from last month' : 'from last year'
-
   return (
     <Card className={cn('w-full p-6', className)}>
       <CardBody className="gap-5">

@@ -14,7 +14,7 @@ export const studentManagementFunctions = {
         try {
 
             // Add this to your function temporarily
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            const { data: { user } } = await supabase.auth.getUser();
             console.log('current user:', user);
             console.log('user metadata:', user?.user_metadata);
             console.log('role:', user?.user_metadata?.role);

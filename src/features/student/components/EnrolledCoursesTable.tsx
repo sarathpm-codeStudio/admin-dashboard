@@ -1,4 +1,3 @@
-import { MoreVertical } from 'lucide-react'
 import { useMemo } from 'react'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
