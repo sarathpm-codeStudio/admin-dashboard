@@ -63,6 +63,7 @@ export const useUpdateCoursesStatus = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] })
       queryClient.invalidateQueries({ queryKey: ['course-management-analytics'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-actions'] })
     },
   })
 }

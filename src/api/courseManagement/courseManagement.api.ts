@@ -315,9 +315,56 @@ export const courseManagementFunctions = {
         updates.rejection_reason = null
       }
 
-      const { error } = await supabase.from('courses').update(updates).in('id', courseIds)
+      const { data: updatedCourses, error } = await supabase
+        .from('courses')
+        .update(updates)
+        .in('id', courseIds)
+        .select('id, title, faculty_id')
 
       if (error) throw new Error(error.message)
+
+      // Notify each course's faculty about the status change.
+      const notifications = (updatedCourses ?? [])
+        .filter((course) => course.faculty_id)
+        .map((course) => {
+          const courseTitle = course.title ?? 'your course'
+          let title: string
+          let body: string
+
+          switch (status) {
+            case 'APPROVED':
+              title = 'Course approved'
+              body = `Your course "${courseTitle}" has been approved and is now live.`
+              break
+            case 'REJECTED':
+              title = 'Course rejected'
+              body = options?.rejectReason
+                ? `Your course "${courseTitle}" was rejected. Reason: ${options.rejectReason}`
+                : `Your course "${courseTitle}" was rejected.`
+              break
+            case 'RESUBMIT':
+              title = 'Course needs changes'
+              body = `Your course "${courseTitle}" requires changes before it can be approved.`
+              break
+            default:
+              title = 'Course status updated'
+              body = `The status of your course "${courseTitle}" has been updated.`
+          }
+
+          return {
+            user_id: course.faculty_id,
+            type: 'COURSE' as const,
+            title,
+            body,
+            data: { course_id: course.id, status },
+            is_admin: false,
+          }
+        })
+
+      if (notifications.length > 0) {
+        const { error: notifyError } = await supabase.from('notifications').insert(notifications)
+        if (notifyError) throw new Error(notifyError.message)
+      }
 
       return { success: true }
     } catch (error: any) {

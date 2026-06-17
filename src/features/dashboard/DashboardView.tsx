@@ -24,8 +24,6 @@ import {
 
   liveActivities,
 
-  pendingActions,
-
   platformHealth,
 
   quickActions,
@@ -33,7 +31,7 @@ import {
   systemAlerts,
 
 } from '@/features/dashboard/data/mockData'
-import { useGetDashboardAnalytics } from './hooks/useDashboardmanagement'
+import { useGetDashboardAnalytics, useGetPendingActions } from './hooks/useDashboardmanagement'
 
 
 
@@ -48,6 +46,8 @@ export function DashboardView() {
   // query
 
   const { data: dashboardData, isLoading: isDashboardLoading } = useGetDashboardAnalytics()
+
+  const { data: pendingActions, isLoading: isPendingActionsLoading } = useGetPendingActions()
 
   const statItems = dashboardStatItems(dashboardData)
 
@@ -78,7 +78,10 @@ export function DashboardView() {
 
           <RevenueTrendsChart />
 
-          <PendingActionsList actions={pendingActions} />
+          <PendingActionsList
+            actions={pendingActions ?? []}
+            isLoading={isPendingActionsLoading}
+          />
 
         </div>
 

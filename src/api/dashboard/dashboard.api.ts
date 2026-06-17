@@ -3,7 +3,110 @@
 import { supabase } from "@/config/supabase"
 import type { EnrollmentTrendPoint, RevenueTrendPoint, TrendPeriod } from "@/features/dashboard/data/chartTrends"
 
+/** Where a pending action's "Take Action" button should navigate. */
+export type PendingActionTarget =
+    | { kind: 'faculty'; facultyId: string }
+    | { kind: 'course'; courseId: string }
+
+export type DashboardPendingAction = {
+    /** Stable key, prefixed by type so faculty/course ids never collide. */
+    id: string
+    type: 'FACULTY' | 'COURSE'
+    title: string
+    subtitle: string
+    /** Raw timestamp used for sorting (most recent first). */
+    createdAt: string | null
+    target: PendingActionTarget
+}
+
+/** "2h ago", "5d ago", "just now" — coarse relative time for action subtitles. */
+const timeAgo = (iso: string | null | undefined): string => {
+    if (!iso) return ''
+    const then = new Date(iso).getTime()
+    if (Number.isNaN(then)) return ''
+    const diffMs = Date.now() - then
+    const mins = Math.floor(diffMs / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+}
+
+const fullName = (first?: string | null, last?: string | null): string =>
+    [first, last].filter(Boolean).join(' ') || 'Unknown'
+
 export const dashboardManagementFunctions = {
+
+    /**
+     * Pending actions for the dashboard:
+     *  - Faculty whose account verification is PENDING or RESUBMITTED
+     *  - Courses that have been RESUBMITTED for review
+     * Newest first. Each item carries a `target` describing where the
+     * "Take Action" button should navigate.
+     */
+    getPendingActions: async (): Promise<DashboardPendingAction[]> => {
+        try {
+            const [
+                { data: faculty, error: facultyError },
+                { data: courses, error: coursesError },
+            ] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('id, first_name, last_name, account_verified, created_at')
+                    .eq('role', 'FACULTY')
+                    .in('account_verified', ['PENDING', 'RESUBMITTED'])
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('courses')
+                    .select('id, title, status, created_at, updated_at')
+                    .eq('is_deleted', false)
+                    .eq('is_draft', false)
+                    .in('status', ['PENDING', 'RESUBMIT'])
+                    .order('updated_at', { ascending: false }),
+            ])
+
+            if (facultyError) throw new Error(facultyError.message)
+            if (coursesError) throw new Error(coursesError.message)
+
+            const facultyActions: DashboardPendingAction[] = (faculty ?? []).map((f) => {
+                const resubmitted = f.account_verified === 'RESUBMITTED'
+                const when = timeAgo(f.created_at)
+                const label = resubmitted ? 'Faculty Resubmitted' : 'Faculty Waiting for Approval'
+                return {
+                    id: `faculty-${f.id}`,
+                    type: 'FACULTY',
+                    title: fullName(f.first_name, f.last_name),
+                    subtitle: `${label}${when ? ` • ${when}` : ''}`,
+                    createdAt: f.created_at,
+                    target: { kind: 'faculty', facultyId: f.id },
+                }
+            })
+
+            const courseActions: DashboardPendingAction[] = (courses ?? []).map((c) => {
+                const resubmitted = c.status === 'RESUBMIT'
+                const when = timeAgo(c.updated_at ?? c.created_at)
+                const label = resubmitted ? 'Course Resubmitted' : 'Course Waiting for Approval'
+                return {
+                    id: `course-${c.id}`,
+                    type: 'COURSE',
+                    title: c.title ?? 'Untitled course',
+                    subtitle: `${label}${when ? ` • ${when}` : ''}`,
+                    createdAt: c.updated_at ?? c.created_at,
+                    target: { kind: 'course', courseId: c.id },
+                }
+            })
+
+            return [...facultyActions, ...courseActions].sort((a, b) => {
+                const at = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                return bt - at
+            })
+        } catch (error: any) {
+            throw new Error(error.message)
+        }
+    },
 
     getDashboardAnalytics: async () => {
         try {

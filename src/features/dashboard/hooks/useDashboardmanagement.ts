@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { dashboardManagementFunctions } from "@/api/dashboard/dashboard.api"
+import type { DashboardPendingAction } from "@/api/dashboard/dashboard.api"
 import type { DashboardAnalytics } from "@/features/dashboard/data/dashboardStatItems"
 import { EnrollmentTrendPoint, RevenueTrendPoint } from "../data/chartTrends"
 
@@ -11,6 +12,14 @@ export const useGetDashboardAnalytics = () => {
     return useQuery<DashboardAnalytics>({
         queryKey: ['dashboard-analytics'],
         queryFn: () => dashboardManagementFunctions.getDashboardAnalytics(),
+    })
+}
+
+
+export const useGetPendingActions = () => {
+    return useQuery<DashboardPendingAction[]>({
+        queryKey: ['dashboard-pending-actions'],
+        queryFn: () => dashboardManagementFunctions.getPendingActions(),
     })
 }
 

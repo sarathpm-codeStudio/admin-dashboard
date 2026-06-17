@@ -8,10 +8,10 @@ import { Toast } from '@/components/ui/Toast'
 
 
 export const useGetAllUsersAnalytics = () => {
-    return useQuery({
-        queryKey: ['users-analytics'],
-        queryFn: userManagementFunctions.getAllUsersAnalytics,
-    })
+  return useQuery({
+    queryKey: ['users-analytics'],
+    queryFn: userManagementFunctions.getAllUsersAnalytics,
+  })
 }
 
 
@@ -49,6 +49,7 @@ export const useUpdateUserStatus = (userId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['faculty', userId] })
       queryClient.invalidateQueries({ queryKey: ['student', userId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-actions'] })
 
     },
   })
