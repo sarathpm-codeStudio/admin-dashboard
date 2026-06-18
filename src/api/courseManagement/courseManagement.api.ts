@@ -14,6 +14,8 @@ export type CourseListRow = {
   isDraft: boolean
   studentsCount: number
   revenueDisplay: string
+  validity: string
+  validityDisplay: string
 }
 
 export type CourseDetail = {
@@ -81,6 +83,15 @@ const formatCurrency = (amount: number): string =>
 const formatRevenue = (amount: number): string => {
   if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`
   return formatCurrency(amount)
+}
+
+const formatValidity = (raw: string | null | undefined): string => {
+  const value = (raw ?? '').trim()
+  if (!value) return '—'
+  if (value.toLowerCase() === 'lifetime') return 'Lifetime'
+  const months = Number(value)
+  if (Number.isFinite(months)) return `${months} ${months === 1 ? 'month' : 'months'}`
+  return value
 }
 
 const growthDisplay = (percent: number): string => {
@@ -238,6 +249,7 @@ export const courseManagementFunctions = {
           is_draft,
           price,
           final_price,
+          validity,
           faculty_id,
           faculty:profiles!courses_faculty_id_fkey (
             id,
@@ -319,6 +331,8 @@ export const courseManagementFunctions = {
           isDraft: course.is_draft === true,
           studentsCount,
           revenueDisplay: formatRevenue(revenue),
+          validity: (course.validity as string | null) ?? '',
+          validityDisplay: formatValidity(course.validity as string | null),
         }
       })
 

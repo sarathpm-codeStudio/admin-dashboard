@@ -24,6 +24,8 @@ export type CourseRecord = {
   isDraft: boolean
   studentsCount: number
   revenueDisplay: string
+  validity: string
+  validityDisplay: string
 }
 
 export type CourseFilterOptions = {

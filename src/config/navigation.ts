@@ -1,11 +1,13 @@
 import {
+  Coins,
   FileSearch,
   GraduationCap,
   HelpCircle,
   LayoutDashboard,
   MessageSquare,
   Package,
-  User,
+  Percent,
+  Settings,
   Users,
   Wallet,
   type LucideIcon,
@@ -18,6 +20,7 @@ export type NavItem = {
   path: string
   icon: LucideIcon
   showChevron?: boolean
+  children?: NavItem[]
 }
 
 export const mainNavItems: NavItem[] = [
@@ -27,7 +30,16 @@ export const mainNavItems: NavItem[] = [
   { label: 'Financial Management', path: '/financial', icon: Wallet },
   { label: 'Chats', path: '/chats', icon: MessageSquare },
   { label: 'Reports & Analytics', path: '/reports', icon: FileSearch },
-  { label: 'Account', path: '/account', icon: User, showChevron: true },
+  {
+    label: 'Settings',
+    path: '/platform-settings',
+    icon: Settings,
+    showChevron: true,
+    children: [
+      { label: 'Coin', path: '/platform-settings/coin', icon: Coins },
+      { label: 'Commission', path: '/platform-settings/commission', icon: Percent },
+    ],
+  },
 ]
 
 export const bottomNavItems: NavItem[] = [

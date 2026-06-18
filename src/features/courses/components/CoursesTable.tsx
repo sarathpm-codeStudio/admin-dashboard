@@ -33,7 +33,7 @@ const statusDotClass: Record<CourseApprovalStatus, string> = {
   RESUBMIT: 'bg-blue-500',
 }
 
-const COL_WIDTH = `${100 / 6}%`
+const COL_WIDTH = `${100 / 7}%`
 const tableTextClass = 'font-bold text-[#44474E]'
 
 type CoursesTableProps = {
@@ -204,6 +204,19 @@ export function CoursesTable({
           <div className="flex justify-center">
             <Paragraph variant="emphasis" className={tableTextClass}>
               {course.priceDisplay}
+            </Paragraph>
+          </div>
+        ),
+      },
+      {
+        id: 'validity',
+        header: 'Validity',
+        width: COL_WIDTH,
+        align: 'center',
+        cell: (course) => (
+          <div className="flex justify-center">
+            <Paragraph variant="emphasis" className={tableTextClass}>
+              {course.validityDisplay}
             </Paragraph>
           </div>
         ),

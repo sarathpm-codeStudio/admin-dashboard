@@ -41,6 +41,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 0,
     coverImage: null,
     revenueDisplay: '₹0.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-2',
@@ -55,6 +57,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 428,
     coverImage: null,
     revenueDisplay: '₹12,450.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-3',
@@ -69,6 +73,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 192,
     coverImage: null,
     revenueDisplay: '₹8,900.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-4',
@@ -83,6 +89,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 0,
     coverImage: null,
     revenueDisplay: '₹0.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-5',
@@ -97,6 +105,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 56,
     coverImage: null,
     revenueDisplay: '₹3,400.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-6',
@@ -111,6 +121,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 305,
     coverImage: null,
     revenueDisplay: '₹11,200.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-7',
@@ -125,6 +137,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 112,
     coverImage: null,
     revenueDisplay: '₹2,800.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-8',
@@ -139,6 +153,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 0,
     coverImage: null,
     revenueDisplay: '₹0.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-9',
@@ -153,6 +169,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 18,
     coverImage: null,
     revenueDisplay: '₹81,000.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-10',
@@ -167,6 +185,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 88,
     coverImage: null,
     revenueDisplay: '₹4,100.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-11',
@@ -181,6 +201,8 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 24,
     coverImage: null,
     revenueDisplay: '₹1,68,000.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
   {
     id: 'course-12',
@@ -195,5 +217,7 @@ export const mockCourses: CourseRecord[] = [
     studentsCount: 156,
     coverImage: null,
     revenueDisplay: '₹5,148.00',
+    validity: '6',
+    validityDisplay: '6 months',
   },
 ]

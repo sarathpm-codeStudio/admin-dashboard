@@ -57,7 +57,8 @@ export function AppRoutes() {
           <Route path="financial" element={<FinancialManagementPage />} />
           <Route path="chats" element={<ChatsPage />} />
           <Route path="reports" element={<ReportsAnalyticsPage />} />
-          <Route path="account" element={<AccountPage />} />
+          <Route path="platform-settings/coin" element={<AccountPage />} />
+          <Route path="platform-settings/commission" element={<AccountPage />} />
           <Route path="help" element={<HelpCenterPage />} />
         </Route>
       </Route>
