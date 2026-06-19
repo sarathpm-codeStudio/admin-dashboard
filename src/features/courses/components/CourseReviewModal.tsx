@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { StarRating } from '@/components/ui/StarRating'
 import { StatusBadge, type StatusBadgeVariant } from '@/components/ui/StatusBadge'
 import { Paragraph } from '@/components/ui/Typography'
 import { VideoPlayer } from '@/components/ui/VideoPlayer'
@@ -182,15 +183,32 @@ export function CourseReviewModal({
           {/* Title, instructor, status, posted date */}
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              {detail.category ? (
-                <Paragraph
-                  variant="small"
-                  className="font-bold uppercase tracking-wide text-primary"
-                >
-                  {detail.category}
-                </Paragraph>
-              ) : null}
-              <Paragraph variant="emphasis" className="line-clamp-2 text-base">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {detail.category ? (
+                  <Paragraph
+                    variant="small"
+                    className="font-bold uppercase tracking-wide text-primary"
+                  >
+                    {detail.category}
+                  </Paragraph>
+                ) : null}
+                {/* Average rating — stars fill proportionally to avg_rating */}
+                <span className="flex items-center gap-1.5">
+                  <StarRating
+                    value={detail.avgRating}
+                    starSizeClass="size-4"
+                    activeClassName="text-[#F59E0B]"
+                    inactiveClassName="text-[#E2E8F0]"
+                  />
+                  <span className="text-sm font-bold text-ink-heading">
+                    {detail.avgRating.toFixed(1)}
+                  </span>
+                  <Paragraph variant="caption" className="text-nav">
+                    ({detail.totalReviews.toLocaleString('en-IN')})
+                  </Paragraph>
+                </span>
+              </div>
+              <Paragraph variant="emphasis" className="mt-1 line-clamp-2 text-base">
                 {detail.title}
               </Paragraph>
               <Paragraph variant="muted">Instructor: {detail.facultyName}</Paragraph>

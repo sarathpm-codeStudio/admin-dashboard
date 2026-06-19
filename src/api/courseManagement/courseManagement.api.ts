@@ -34,6 +34,10 @@ export type CourseDetail = {
   videoCount: number
   pdfCount: number
   testCount: number
+  /** Average learner rating, 0–5 (courses.avg_rating) */
+  avgRating: number
+  /** Number of reviews the average is based on (courses.total_reviews) */
+  totalReviews: number
 }
 
 export type CourseContentItem = {
@@ -369,6 +373,8 @@ export const courseManagementFunctions = {
           final_price,
           cover_image,
           video_asset_id,
+          avg_rating,
+          total_reviews,
           created_at,
           faculty:profiles!courses_faculty_id_fkey (
             first_name,
@@ -421,6 +427,8 @@ export const courseManagementFunctions = {
         videoCount,
         pdfCount,
         testCount,
+        avgRating: Number(course.avg_rating ?? 0),
+        totalReviews: course.total_reviews ?? 0,
       }
     } catch (error: any) {
       throw new Error(error.message)

@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/ui/PlaceholderPage'
+import { FinancialManagementView } from '@/features/financial/FinancialManagementView'
 
 export function FinancialManagementPage() {
-  return <PlaceholderPage title="Financial Management" />
+  return <FinancialManagementView />
 }
