@@ -3,6 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import userAvatar from '@/asset/image/user1.png'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { useSignOut } from '@/features/auth/hooks/useSignOut'
+import { NotificationDrawer } from '@/features/notifications/components/NotificationDrawer'
+import {
+  useGetNotifications,
+  useNotificationRealtime,
+} from '@/features/notifications/hooks/useNotifications'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/utils/cn'
 
@@ -10,7 +15,12 @@ export function TopBar() {
   const user = useAuthStore((state) => state.user)
   const signOutMutation = useSignOut()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  useNotificationRealtime()
+  const { data: notifications = [] } = useGetNotifications()
+  const unreadCount = notifications.filter((n) => !n.isRead).length
 
   useEffect(() => {
     if (!menuOpen) return
@@ -48,11 +58,17 @@ export function TopBar() {
       />
       <div className="flex items-center gap-6">
         <button
-          type="button"          aria-label="Notifications"
+          type="button"
+          aria-label="Notifications"
+          onClick={() => setNotificationsOpen(true)}
           className="relative rounded-full p-2 text-nav transition-colors hover:text-ink"
         >
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 size-2 rounded-full border-2 border-white bg-[#ba1a1a]" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full border-2 border-white bg-[#ba1a1a] px-1 text-[10px] font-bold leading-none text-white">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
 
         <div className="h-8 w-px bg-[#e2e8f0]" />
@@ -103,6 +119,11 @@ export function TopBar() {
           </div>
         </div>
       </div>
+
+      <NotificationDrawer
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </header>
   )
 }

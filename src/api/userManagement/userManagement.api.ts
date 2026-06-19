@@ -1,5 +1,68 @@
 import { supabase } from '@/config/supabase'
 
+type UserStatusAction =
+    | 'APPROVED'
+    | 'PENDING'
+    | 'REJECTED'
+    | 'SUSPENDED'
+    | 'ACTIVATE'
+
+/**
+ * Inserts an `ACCOUNT` notification for the user an admin just acted on, so the
+ * faculty/student is told about the change in their app. Mirrors the
+ * course-status notification flow in courseManagement.api.ts. Best-effort: a
+ * failure here must not fail the status update itself.
+ */
+async function notifyUserStatusChange(
+    userId: string,
+    status: UserStatusAction,
+    options?: { rejectReason?: string; adminNote?: string },
+): Promise<void> {
+    let title: string
+    let body: string
+
+    switch (status) {
+        case 'APPROVED':
+            title = 'Account approved'
+            body = 'Your account has been verified and approved. You now have full access.'
+            break
+        case 'REJECTED':
+            title = 'Account rejected'
+            body = options?.rejectReason
+                ? `Your account verification was rejected. Reason: ${options.rejectReason}`
+                : 'Your account verification was rejected.'
+            break
+        case 'SUSPENDED':
+            title = 'Account suspended'
+            body = options?.adminNote
+                ? `Your account has been suspended. ${options.adminNote}`
+                : 'Your account has been suspended. Please contact support for more details.'
+            break
+        case 'ACTIVATE':
+            title = 'Account reactivated'
+            body = 'Your account has been reactivated. Welcome back!'
+            break
+        case 'PENDING':
+            title = 'Account under review'
+            body = 'Your account is under review. We will notify you once it has been processed.'
+            break
+    }
+
+    const { error } = await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'ACCOUNT',
+        title,
+        body,
+        data: { status, action: 'ACCOUNT_STATUS' },
+        is_admin: false,
+    })
+
+    if (error) {
+        // Don't surface — the status change already succeeded.
+        console.error('Failed to create account notification:', error.message)
+    }
+}
+
 export type UserListRow = {
   id: string
   name: string
@@ -320,6 +383,9 @@ export const userManagementFunctions = {
 
 
             }
+
+            // Notify the affected user about the action taken on their account.
+            await notifyUserStatusChange(userId, status, options);
 
             return { success: true };
 

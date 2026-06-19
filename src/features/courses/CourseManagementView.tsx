@@ -1,5 +1,6 @@
 import { Check, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { TableSelectionBar } from '@/components/ui/TableSelectionBar'
 import {
   CourseBulkActionModals,
@@ -40,6 +41,7 @@ export function CourseManagementView() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [pendingAction, setPendingAction] = useState<CourseBulkAction | null>(null)
   const [reviewCourseId, setReviewCourseId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { mutateAsync: updateCoursesStatus } = useUpdateCoursesStatus()
   const { mutateAsync: deleteCourses } = useDeleteCourses()
@@ -48,6 +50,17 @@ export function CourseManagementView() {
     const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim()), 300)
     return () => window.clearTimeout(timer)
   }, [filters.search])
+
+  // Open the review modal when arrived via `?review=<courseId>` (e.g. from a
+  // notification), then strip the param so it doesn't reopen on refresh.
+  useEffect(() => {
+    const reviewId = searchParams.get('review')
+    if (!reviewId) return
+    setReviewCourseId(reviewId)
+    const next = new URLSearchParams(searchParams)
+    next.delete('review')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const apiStatus = mapStatusFilterToApi(filters.status)
   const apiPrice = mapPriceFilterToApi(filters.price)
