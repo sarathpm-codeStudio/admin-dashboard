@@ -81,6 +81,11 @@ export type CourseFilterOptions = {
   faculty: { id: string; name: string }[]
 }
 
+export type CourseSelectOption = {
+  id: string
+  name: string
+}
+
 const formatCurrency = (amount: number): string =>
   `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -215,6 +220,28 @@ export const courseManagementFunctions = {
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : 'Failed to load course filter options'
+      throw new Error(message)
+    }
+  },
+
+  getCourseSelectOptions: async (): Promise<CourseSelectOption[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, title')
+        .eq('is_deleted', false)
+        .eq('is_draft', false)
+        .order('title', { ascending: true })
+
+      if (error) throw new Error(error.message)
+
+      return (data ?? []).map((row) => ({
+        id: row.id,
+        name: row.title?.trim() || 'Untitled course',
+      }))
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to load courses'
       throw new Error(message)
     }
   },

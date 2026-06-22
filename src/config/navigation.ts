@@ -4,6 +4,7 @@ import {
   GraduationCap,
   HelpCircle,
   LayoutDashboard,
+  Megaphone,
   MessageSquare,
   Package,
   Percent,
@@ -29,6 +30,7 @@ export const mainNavItems: NavItem[] = [
   { label: 'Course Management', path: '/courses', icon: Package },
   { label: 'Financial Management', path: '/financial', icon: Wallet },
   { label: 'Chats', path: '/chats', icon: MessageSquare },
+  { label: 'Announcements', path: '/announcements', icon: Megaphone },
   { label: 'Reports & Analytics', path: '/reports', icon: FileSearch },
   {
     label: 'Settings',

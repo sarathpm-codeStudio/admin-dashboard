@@ -16,6 +16,7 @@ const statusVariant: Record<UserStatus, StatusBadgeVariant> = {
   pending: 'pending',
   rejected: 'rejected',
   suspended: 'suspended',
+  resubmitted: 'info',
 }
 
 const statusLabel: Record<UserStatus, string> = {
@@ -23,6 +24,7 @@ const statusLabel: Record<UserStatus, string> = {
   pending: 'Pending',
   rejected: 'Rejected',
   suspended: 'Suspended',
+  resubmitted: 'Resubmitted',
 }
 
 /** Equal column width so spacing between headers and cells is uniform */

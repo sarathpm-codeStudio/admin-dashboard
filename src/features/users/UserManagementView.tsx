@@ -42,14 +42,14 @@ export function UserManagementView() {
     debouncedSearch,
     apiRole,
     apiStatus,
+    filters.joinedDateFrom,
+    filters.joinedDateTo,
   )
 
   const tableUsers = useMemo(
     () => (data?.data ?? []).map(mapUserListRowToRecord),
     [data?.data],
   )
-
-  console.log("tableUsers", tableUsers)
 
   const pagination = data?.pagination
   const totalCount = pagination?.total ?? 0

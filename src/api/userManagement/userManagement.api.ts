@@ -208,26 +208,34 @@ export const userManagementFunctions = {
         search = '',
         role,
         status,
+        joinedDateFrom = '',
+        joinedDateTo = '',
     }: {
         page?: number;
         limit?: number;
         search?: string;
         role?: 'STUDENT' | 'FACULTY' | 'all';
-        status?: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'all';
+        status?: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'RESUBMITTED' | 'all';
+        joinedDateFrom?: string;
+        joinedDateTo?: string;
     }): Promise<UsersListResponse> => {
         try {
             const from = (page - 1) * limit;
             const to = from + limit - 1;
 
+            let dateFrom = joinedDateFrom.trim();
+            let dateTo = joinedDateTo.trim();
+            if (dateFrom && dateTo && dateFrom > dateTo) {
+                [dateFrom, dateTo] = [dateTo, dateFrom];
+            }
+
             // 1. Base query — exclude ADMIN
             let query = supabase
                 .from('profiles')
                 .select('id, first_name, last_name, email, role, account_verified, is_suspended, created_at, avatar_url', { count: 'exact' })
-                .neq('role', 'ADMIN')
-                .order('created_at', { ascending: false })
-                .range(from, to);
+                .neq('role', 'ADMIN');
 
-            // 2. Filters — skip if 'all'
+            // 2. Filters — before range so count + pagination are correct
             if (role && role !== 'all') query = query.eq('role', role);
             if (status && status !== 'all') {
                 if (status === 'SUSPENDED') {
@@ -237,10 +245,22 @@ export const userManagementFunctions = {
                 }
             }
 
+            if (dateFrom) {
+                query = query.gte('created_at', `${dateFrom}T00:00:00`);
+            }
+            if (dateTo) {
+                query = query.lte('created_at', `${dateTo}T23:59:59.999`);
+            }
+
             // 3. Search
             if (search.trim()) {
                 query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
             }
+
+            const sortJoinedDateAscending = Boolean(dateFrom || dateTo);
+            query = query
+                .order('created_at', { ascending: sortJoinedDateAscending })
+                .range(from, to);
 
             const { data: users, error, count } = await query;
             if (error) throw new Error(error.message);

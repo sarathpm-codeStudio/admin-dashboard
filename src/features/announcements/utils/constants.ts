@@ -1,0 +1,3 @@
+export const ANNOUNCEMENTS_PAGE_SIZE = 10
+
+export const ANNOUNCEMENTS_TABLE_SCROLL_MAX_HEIGHT = 'max-h-[26rem]'

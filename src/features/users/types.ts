@@ -1,6 +1,6 @@
 export type UserRole = 'Student' | 'Faculty' | 'Admin'
 
-export type UserStatus = 'active' | 'pending' | 'rejected' | 'suspended'
+export type UserStatus = 'active' | 'pending' | 'rejected' | 'suspended' | 'resubmitted'
 
 export type UserRecord = {
   id: string

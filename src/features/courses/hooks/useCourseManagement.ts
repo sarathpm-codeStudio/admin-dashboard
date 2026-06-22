@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { courseManagementFunctions, CourseContentItem, CourseDetail, CoursesListResponse } from '@/api/courseManagement/courseManagement.api'
+import {
+  courseManagementFunctions,
+  CourseContentItem,
+  CourseDetail,
+  CourseSelectOption,
+  CoursesListResponse,
+} from '@/api/courseManagement/courseManagement.api'
 import { queryClient } from '@/config/queryClient'
 import type { CourseApprovalStatus, CourseFilterOptions, CoursesAnalytics } from '@/features/courses/types'
 
@@ -17,6 +23,14 @@ export const useGetCourseFilterOptions = () => {
   })
 }
 
+export const useGetCourseSelectOptions = (enabled = true) => {
+  return useQuery<CourseSelectOption[]>({
+    queryKey: ['course-select-options'],
+    queryFn: () => courseManagementFunctions.getCourseSelectOptions(),
+    enabled,
+  })
+}
+
 export const useGetAllCourses = (
   page: number,
   limit: number,
@@ -25,6 +39,7 @@ export const useGetAllCourses = (
   facultyId: string,
   price: 'any' | 'free' | 'paid',
   status: CourseApprovalStatus | 'all',
+  enabled = true,
 ) => {
   return useQuery<CoursesListResponse>({
     queryKey: ['courses', page, limit, search, category, facultyId, price, status],
@@ -38,6 +53,7 @@ export const useGetAllCourses = (
         price,
         status,
       }),
+    enabled,
   })
 }
 

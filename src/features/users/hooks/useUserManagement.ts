@@ -19,12 +19,22 @@ export const useGetAllUsers = (
   limit: number,
   search: string,
   role: 'all' | 'STUDENT' | 'FACULTY',
-  status: 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED',
+  status: 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'RESUBMITTED',
+  joinedDateFrom = '',
+  joinedDateTo = '',
 ) => {
   return useQuery({
-    queryKey: ['users', page, limit, search, role, status,],
+    queryKey: ['users', page, limit, search, role, status, joinedDateFrom, joinedDateTo],
     queryFn: () =>
-      userManagementFunctions.getAllUsers({ page, limit, search, role, status }),
+      userManagementFunctions.getAllUsers({
+        page,
+        limit,
+        search,
+        role,
+        status,
+        joinedDateFrom,
+        joinedDateTo,
+      }),
   })
 }
 

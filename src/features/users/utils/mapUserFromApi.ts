@@ -49,6 +49,7 @@ export function resolveUserStatus(
   if (accountVerified === 'APPROVED') return 'active'
   if (accountVerified === 'PENDING') return 'pending'
   if (accountVerified === 'REJECTED') return 'rejected'
+  if (accountVerified === 'RESUBMITTED') return 'resubmitted'
   return 'pending'
 }
 
@@ -79,10 +80,11 @@ export function mapUserTypeFilterToRole(
 
 export function mapStatusFilterToApi(
   status: UserFilterValues['status'],
-): 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' {
+): 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED' | 'RESUBMITTED' {
   if (status === 'active') return 'APPROVED'
   if (status === 'pending') return 'PENDING'
   if (status === 'rejected') return 'REJECTED'
   if (status === 'suspended') return 'SUSPENDED'
+  if (status === 'resubmitted') return 'RESUBMITTED'
   return 'all'
 }

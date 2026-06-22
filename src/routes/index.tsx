@@ -5,7 +5,10 @@ import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { PublicRoute } from '@/routes/PublicRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { AccountPage } from '@/pages/AccountPage'
+import { CreateAnnouncementPage } from '@/pages/CreateAnnouncementPage'
+import { EditAnnouncementPage } from '@/pages/EditAnnouncementPage'
 import { ChatsPage } from '@/pages/ChatsPage'
+import { AnnouncementsPage } from '@/pages/AnnouncementsPage'
 import { CourseAcademicStructurePage } from '@/pages/CourseAcademicStructurePage'
 import { CourseManagementPage } from '@/pages/CourseManagementPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -56,6 +59,9 @@ export function AppRoutes() {
           />
           <Route path="financial" element={<FinancialManagementPage />} />
           <Route path="chats" element={<ChatsPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="announcements/create" element={<CreateAnnouncementPage />} />
+          <Route path="announcements/:announcementId/edit" element={<EditAnnouncementPage />} />
           <Route path="reports" element={<ReportsAnalyticsPage />} />
           <Route path="platform-settings/coin" element={<AccountPage />} />
           <Route path="platform-settings/commission" element={<AccountPage />} />

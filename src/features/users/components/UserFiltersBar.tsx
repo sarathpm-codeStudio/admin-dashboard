@@ -88,6 +88,7 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
         <option value="all">Status</option>
         <option value="active">Active</option>
         <option value="pending">Pending</option>
+        <option value="resubmitted">Resubmitted</option>
         <option value="rejected">Reject</option>
         <option value="suspended">Suspended</option>
       </Select>
