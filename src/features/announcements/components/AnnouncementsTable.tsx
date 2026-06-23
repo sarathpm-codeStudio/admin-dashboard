@@ -192,6 +192,8 @@ export function AnnouncementsTable({
       footerClassName="[&_p]:font-bold [&_p]:text-[#44474E]"
       rowAnimationKey={`${page}-${announcements.length}-${announcements[0]?.id ?? 'empty'}`}
       tableClassName="table-fixed"
+      showTotalCount
+      paginationVariant="icon"
     />
   )
 }

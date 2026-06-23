@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { announcementApi } from '@/api/announcement/announcement.api'
 import { CreateAnnouncementForm, type CreateAnnouncementFormValues } from '@/features/announcements/components/CreateAnnouncementForm'
 import { CreateAnnouncementHeader } from '@/features/announcements/components/CreateAnnouncementHeader'
 import { CreateAnnouncementSidebar } from '@/features/announcements/components/CreateAnnouncementSidebar'
+import { useCreateAnnouncement } from '@/features/announcements/hooks/useAnnouncement'
 import {
   announcementToFormValues,
   getAnnouncementById,
 } from '@/features/announcements/utils/announcementForm'
+import { mapFormValuesToCreatePayload } from '@/features/announcements/utils/mapFormValuesToCreatePayload'
 import { useToast } from '@/hooks/useToast'
 
 const defaultValues: CreateAnnouncementFormValues = {
@@ -32,9 +35,11 @@ export function CreateAnnouncementView({ mode = 'create' }: CreateAnnouncementVi
   const [values, setValues] = useState<CreateAnnouncementFormValues>(() =>
     announcement ? announcementToFormValues(announcement) : defaultValues,
   )
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const createAnnouncement = useCreateAnnouncement()
 
   useEffect(() => {
     if (!isEdit) return
@@ -44,22 +49,37 @@ export function CreateAnnouncementView({ mode = 'create' }: CreateAnnouncementVi
     }
   }, [announcement, announcementId, isEdit, navigate, toast])
 
-  const handleBannerChange = (_file: File | null, previewUrl: string | null) => {
+  const handleBannerChange = (file: File | null, previewUrl: string | null) => {
+    setBannerFile(file)
     setBannerPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return previewUrl
     })
   }
 
+  const submitAnnouncement = async (isDraft: boolean) => {
+    let imageUrl: string | null = null
+
+    if (bannerFile) {
+      imageUrl = await announcementApi.uploadAnnouncementBanner(bannerFile)
+    }
+
+    const payload = mapFormValuesToCreatePayload(values, { isDraft, imageUrl })
+    await createAnnouncement.mutateAsync(payload)
+  }
+
   const handleSaveDraft = async () => {
     setIsSaving(true)
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 400))
+      await submitAnnouncement(true)
       toast.success(
         isEdit ? 'Announcement updated and saved as draft.' : 'Announcement saved as draft.',
         { title: 'Draft saved' },
       )
       navigate('/announcements')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save draft. Please try again.'
+      toast.error(message, { title: 'Save failed' })
     } finally {
       setIsSaving(false)
     }
@@ -81,12 +101,16 @@ export function CreateAnnouncementView({ mode = 'create' }: CreateAnnouncementVi
 
     setIsPublishing(true)
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 400))
+      await submitAnnouncement(false)
       toast.success(
         isEdit ? 'Announcement updated successfully.' : 'Announcement published successfully.',
         { title: isEdit ? 'Updated' : 'Published' },
       )
       navigate('/announcements')
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not publish announcement. Please try again.'
+      toast.error(message, { title: 'Publish failed' })
     } finally {
       setIsPublishing(false)
     }

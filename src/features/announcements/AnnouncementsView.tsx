@@ -4,35 +4,34 @@ import { AnnouncementDeleteModal } from '@/features/announcements/components/Ann
 import { AnnouncementsFiltersBar } from '@/features/announcements/components/AnnouncementsFiltersBar'
 import { AnnouncementsHeader } from '@/features/announcements/components/AnnouncementsHeader'
 import { AnnouncementsTable } from '@/features/announcements/components/AnnouncementsTable'
-import { mockAnnouncements } from '@/features/announcements/data/mockAnnouncements'
+import {
+  useDeleteAnnouncement,
+  useGetAnnouncements,
+} from '@/features/announcements/hooks/useAnnouncement'
 import type { AnnouncementRecord, AnnouncementSort, AnnouncementTab } from '@/features/announcements/types'
 import { ANNOUNCEMENTS_PAGE_SIZE } from '@/features/announcements/utils/constants'
-import {
-  filterAnnouncements,
-  paginateAnnouncements,
-  sortAnnouncements,
-} from '@/features/announcements/utils/filterAnnouncements'
+import { mapAnnouncementListRowToRecord } from '@/features/announcements/utils/mapAnnouncementFromApi'
 import { useToast } from '@/hooks/useToast'
 
 export function AnnouncementsView() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [announcements, setAnnouncements] = useState(mockAnnouncements)
   const [tab, setTab] = useState<AnnouncementTab>('all')
   const [sort, setSort] = useState<AnnouncementSort>('date-desc')
   const [page, setPage] = useState(1)
   const [pendingDelete, setPendingDelete] = useState<AnnouncementRecord | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
 
-  const filteredAnnouncements = useMemo(
-    () => sortAnnouncements(filterAnnouncements(announcements, tab), sort),
-    [announcements, tab, sort],
+  const { data, isLoading } = useGetAnnouncements(page, ANNOUNCEMENTS_PAGE_SIZE, tab, sort)
+  const deleteAnnouncement = useDeleteAnnouncement()
+
+  const tableAnnouncements = useMemo(
+    () => (data?.data ?? []).map(mapAnnouncementListRowToRecord),
+    [data?.data],
   )
 
-  const { data: tableAnnouncements, total, totalPages, page: safePage } = useMemo(
-    () => paginateAnnouncements(filteredAnnouncements, page, ANNOUNCEMENTS_PAGE_SIZE),
-    [filteredAnnouncements, page],
-  )
+  const pagination = data?.pagination
+  const totalCount = pagination?.total ?? 0
+  const totalPages = Math.max(1, pagination?.total_pages ?? 1)
 
   const handleTabChange = (nextTab: AnnouncementTab) => {
     setTab(nextTab)
@@ -51,14 +50,12 @@ export function AnnouncementsView() {
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return
 
-    setIsDeleting(true)
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 300))
-      setAnnouncements((prev) => prev.filter((item) => item.id !== pendingDelete.id))
+      await deleteAnnouncement.mutateAsync(pendingDelete.id)
       toast.success('Announcement deleted successfully.', { title: 'Deleted' })
       setPendingDelete(null)
-    } finally {
-      setIsDeleting(false)
+    } catch {
+      toast.error('Could not delete announcement. Please try again.', { title: 'Delete failed' })
     }
   }
 
@@ -70,20 +67,21 @@ export function AnnouncementsView() {
         sort={sort}
         onTabChange={handleTabChange}
         onSortChange={handleSortChange}
-      />
+      /> 
       <AnnouncementsTable
         announcements={tableAnnouncements}
-        totalCount={total}
-        page={safePage}
+        totalCount={totalCount}
+        page={pagination?.current_page ?? page}
         totalPages={totalPages}
         onPageChange={setPage}
         onEdit={handleEdit}
         onDelete={setPendingDelete}
+        isLoading={isLoading}
       />
 
       <AnnouncementDeleteModal
         announcement={pendingDelete}
-        isDeleting={isDeleting}
+        isDeleting={deleteAnnouncement.isPending}
         onClose={() => setPendingDelete(null)}
         onConfirm={handleConfirmDelete}
       />
