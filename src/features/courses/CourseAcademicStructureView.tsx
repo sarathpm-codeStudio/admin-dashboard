@@ -4,7 +4,7 @@ import {
   Download,
   FileText,
   Folder,
-  Home,
+  // Home,
   Image as ImageIcon,
   Link as LinkIcon,
   Loader2,
