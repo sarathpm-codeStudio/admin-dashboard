@@ -28,7 +28,7 @@ function formatShortDate(iso: string): string {
   })
 }
 
-function parseTimePeriod(
+export function parseTimePeriod(
   timePeriod: AnnouncementListRow['time_period'],
 ): { start_date?: string; end_date?: string } | null {
   if (!timePeriod) return null

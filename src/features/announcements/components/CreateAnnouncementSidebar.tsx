@@ -6,6 +6,7 @@ import { Header2, Paragraph } from '@/components/ui/Typography'
 import { cn } from '@/utils/cn'
 
 type CreateAnnouncementSidebarProps = {
+  mode?: 'create' | 'edit'
   bannerPreview: string | null
   onBannerChange: (file: File | null, previewUrl: string | null) => void
   onPublish: () => void
@@ -13,16 +14,21 @@ type CreateAnnouncementSidebarProps = {
 }
 
 export function CreateAnnouncementSidebar({
+  mode = 'create',
   bannerPreview,
   onBannerChange,
   onPublish,
   isPublishing = false,
 }: CreateAnnouncementSidebarProps) {
+  const isEdit = mode === 'edit'
+  const publishLabel = isEdit ? 'Update Announcement' : 'Publish Now'
+  const publishingLabel = isEdit ? 'Updating...' : 'Publishing...'
+
   return (
     <div className="space-y-6">
       <Card className={cn(cardPaddingClass, 'border-0 bg-primary-gradient-r text-white shadow-md')}>
         <Header2 size="card" className="text-white">
-          Ready to Send?
+          {isEdit ? 'Ready to Update?' : 'Ready to Send?'}
         </Header2>
         <Button
           type="button"
@@ -32,7 +38,7 @@ export function CreateAnnouncementSidebar({
           disabled={isPublishing}
         >
           <Send className="size-4" aria-hidden />
-          {isPublishing ? 'Publishing...' : 'Publish Now'}
+          {isPublishing ? publishingLabel : publishLabel}
         </Button>
       </Card>
 

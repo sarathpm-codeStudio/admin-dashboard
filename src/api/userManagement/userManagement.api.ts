@@ -64,15 +64,15 @@ async function notifyUserStatusChange(
 }
 
 export type UserListRow = {
-  id: string
-  name: string
-  email: string | null
-  role: string
-  accountVerified: string
-  isSuspended: boolean
-  courseCount: number
-  joinedDate: string
-  avatarUrl: string | null
+    id: string
+    name: string
+    email: string | null
+    role: string
+    accountVerified: string
+    isSuspended: boolean
+    courseCount: number
+    joinedDate: string
+    avatarUrl: string | null
 }
 
 export type UsersListPagination = {
@@ -391,7 +391,7 @@ export const userManagementFunctions = {
                     updates.acc_reject_reason = options?.rejectReason || null;
                     updates.admin_note = options?.adminNote || null;
                 } else if (status === "APPROVED") {
-                    updates.acc_reject_reason = null;
+                    updates.admin_note = null;
                 }
 
                 const { error } = await supabase

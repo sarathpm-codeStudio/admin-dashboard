@@ -207,4 +207,48 @@ export const announcementApi = {
 
     return data
   },
+
+  getAnnouncementById: async (id: string): Promise<AnnouncementListRow> => {
+    const { data, error } = await supabase
+      .from('announcements')
+      .select(
+        `
+        id,
+        title,
+        audience,
+        course_id,
+        content,
+        created_at,
+        updated_at,
+        time_period,
+        is_draft,
+        is_deleted,
+        published,
+        image_url,
+        courses ( title )
+      `,
+      )
+      .eq('id', id)
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    return data as AnnouncementListRow
+  },
+
+  updateAnnouncement: async (
+    id: string,
+    payload: Partial<CreateAnnouncementPayload>,
+  ) => {
+    const { data, error } = await supabase
+      .from('announcements')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    return data
+  },
 }

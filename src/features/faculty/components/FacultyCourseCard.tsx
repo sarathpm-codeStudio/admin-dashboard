@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Header2 } from '@/components/ui/Typography'
 import type { FacultyCourse } from '@/features/faculty/data/mockFacultyCourses'
 import { cn } from '@/utils/cn'
+import { useNavigate } from 'react-router-dom'
 
 const courseStatusVariant = {
   active: 'courseActive',
@@ -27,6 +28,7 @@ type FacultyCourseCardProps = {
 }
 
 export function FacultyCourseCard({ course, className }: FacultyCourseCardProps) {
+  const navigate = useNavigate()
   return (
     <Card className={cn(cardPaddingClass, 'flex h-full flex-col', className)}>
       <div className="flex items-start justify-between gap-2">
@@ -84,6 +86,7 @@ export function FacultyCourseCard({ course, className }: FacultyCourseCardProps)
         type="button"
         variant="secondary"
         className="mt-auto w-full py-2.5 text-xs font-bold text-[#312E81] hover:text-[#312E81]"
+        onClick={() => navigate(`/courses/${course.id}/structure`)}
       >
         View Details
       </Button>

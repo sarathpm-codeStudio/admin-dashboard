@@ -1,29 +1,23 @@
+import type { AnnouncementListRow } from '@/api/announcement/announcement.api'
 import type { CreateAnnouncementFormValues } from '@/features/announcements/components/CreateAnnouncementForm'
-import { mockAnnouncements } from '@/features/announcements/data/mockAnnouncements'
-import type { AnnouncementRecord } from '@/features/announcements/types'
+import { parseTimePeriod } from '@/features/announcements/utils/mapAnnouncementFromApi'
 
-const audienceToFormValue: Record<string, string> = {
-  'All Users': 'all',
-  Students: 'students',
-  Faculty: 'faculty',
-  'Selected Course': 'course',
+function toDateInputValue(value?: string): string {
+  if (!value) return ''
+  return value.slice(0, 10)
 }
 
-export function getAnnouncementById(id: string): AnnouncementRecord | undefined {
-  return mockAnnouncements.find((item) => item.id === id)
-}
-
-export function announcementToFormValues(
-  announcement: AnnouncementRecord,
+export function mapAnnouncementRowToFormValues(
+  row: AnnouncementListRow,
 ): CreateAnnouncementFormValues {
-  const hasCourse = announcement.course && announcement.course !== '—'
+  const timePeriod = parseTimePeriod(row.time_period)
 
   return {
-    name: announcement.name,
-    audience: hasCourse ? 'course' : (audienceToFormValue[announcement.audience] ?? ''),
-    courseId: '',
-    startDate: announcement.dateSort,
-    endDate: announcement.dateSort,
-    message: '',
+    name: row.title ?? '',
+    audience: row.audience ?? '',
+    courseId: row.course_id ?? '',
+    startDate: toDateInputValue(timePeriod?.start_date),
+    endDate: toDateInputValue(timePeriod?.end_date),
+    message: row.content ?? '',
   }
 }

@@ -134,14 +134,7 @@ export function CourseAcademicStructureView() {
             >
               <MoveLeft size={14} /> Back
             </button>
-            <span className="h-5 w-px bg-[#e2e8f0]" />
-            <button
-              type="button"
-              onClick={() => setNavPath([])}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-nav transition-colors hover:bg-white hover:text-primary"
-            >
-              <Home size={12} /> Root
-            </button>
+
             {navPath.map((crumb, idx) => {
               const isLast = idx === navPath.length - 1
               return (
@@ -300,7 +293,7 @@ function MaterialPreviewModal({
     <ConfirmModal
       open={item !== null}
       onClose={onClose}
-      onConfirm={() => {}}
+      onConfirm={() => { }}
       title={item?.title || meta?.label || 'Preview'}
       message=""
       className="max-w-3xl"

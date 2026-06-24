@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { announcementApi } from '@/api/announcement/announcement.api'
+import {
+  announcementApi,
+  type CreateAnnouncementPayload,
+} from '@/api/announcement/announcement.api'
 import { queryClient } from '@/config/queryClient'
 import type { AnnouncementSort, AnnouncementTab } from '@/features/announcements/types'
 
@@ -12,6 +15,14 @@ export const useGetAnnouncements = (
   return useQuery({
     queryKey: ['announcements', page, limit, tab, sort],
     queryFn: () => announcementApi.getAnnouncements({ page, limit, tab, sort }),
+  })
+}
+
+export const useGetAnnouncement = (id?: string) => {
+  return useQuery({
+    queryKey: ['announcement', id],
+    queryFn: () => announcementApi.getAnnouncementById(id as string),
+    enabled: Boolean(id),
   })
 }
 
@@ -35,6 +46,25 @@ export const useCreateAnnouncement = () => {
       queryClient.invalidateQueries({
         queryKey: ['announcements'],
       })
+    },
+  })
+}
+
+export const useUpdateAnnouncement = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: Partial<CreateAnnouncementPayload>
+    }) => announcementApi.updateAnnouncement(id, payload),
+
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['announcements'] })
+      queryClient.invalidateQueries({ queryKey: ['announcement', id] })
     },
   })
 }
