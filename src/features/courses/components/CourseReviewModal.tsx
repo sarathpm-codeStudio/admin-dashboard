@@ -97,7 +97,7 @@ export function CourseReviewModal({
         setDescExpanded(false)
         onClose()
       }}
-      onConfirm={() => {}}
+      onConfirm={() => { }}
       title="Review Course"
       message=""
       className="max-w-4xl"
@@ -167,11 +167,11 @@ export function CourseReviewModal({
               </Paragraph>
               <div className="mt-0.5 flex items-baseline gap-2">
                 <Paragraph variant="emphasis" className="text-lg">
-                  {detail.finalPriceDisplay}
+                  {detail.isFree ? 'Free' : detail.finalPriceDisplay}
                 </Paragraph>
                 {detail.hasDiscount ? (
                   <Paragraph variant="muted" className="text-sm line-through">
-                    {detail.priceDisplay}
+                    {detail?.isFree ? "" : detail.priceDisplay}
                   </Paragraph>
                 ) : null}
               </div>
@@ -180,114 +180,114 @@ export function CourseReviewModal({
 
           {/* Right column — details */}
           <div className="space-y-4">
-          {/* Title, instructor, status, posted date */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                {detail.category ? (
-                  <Paragraph
-                    variant="small"
-                    className="font-bold uppercase tracking-wide text-primary"
-                  >
-                    {detail.category}
-                  </Paragraph>
-                ) : null}
-                {/* Average rating — stars fill proportionally to avg_rating */}
-                <span className="flex items-center gap-1.5">
-                  <StarRating
-                    value={detail.avgRating}
-                    starSizeClass="size-4"
-                    activeClassName="text-[#F59E0B]"
-                    inactiveClassName="text-[#E2E8F0]"
-                  />
-                  <span className="text-sm font-bold text-ink-heading">
-                    {detail.avgRating.toFixed(1)}
+            {/* Title, instructor, status, posted date */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {detail.category ? (
+                    <Paragraph
+                      variant="small"
+                      className="font-bold uppercase tracking-wide text-primary"
+                    >
+                      {detail.category}
+                    </Paragraph>
+                  ) : null}
+                  {/* Average rating — stars fill proportionally to avg_rating */}
+                  <span className="flex items-center gap-1.5">
+                    <StarRating
+                      value={detail.avgRating}
+                      starSizeClass="size-4"
+                      activeClassName="text-[#F59E0B]"
+                      inactiveClassName="text-[#E2E8F0]"
+                    />
+                    <span className="text-sm font-bold text-ink-heading">
+                      {detail.avgRating.toFixed(1)}
+                    </span>
+                    <Paragraph variant="caption" className="text-nav">
+                      ({detail.totalReviews.toLocaleString('en-IN')})
+                    </Paragraph>
                   </span>
-                  <Paragraph variant="caption" className="text-nav">
-                    ({detail.totalReviews.toLocaleString('en-IN')})
-                  </Paragraph>
-                </span>
+                </div>
+                <Paragraph variant="emphasis" className="mt-1 line-clamp-2 text-base">
+                  {detail.title}
+                </Paragraph>
+                <Paragraph variant="muted">Instructor: {detail.facultyName}</Paragraph>
               </div>
-              <Paragraph variant="emphasis" className="mt-1 line-clamp-2 text-base">
-                {detail.title}
-              </Paragraph>
-              <Paragraph variant="muted">Instructor: {detail.facultyName}</Paragraph>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <Paragraph variant="small" className="text-nav">
+                  Post on: {detail.postedOnDisplay}
+                </Paragraph>
+                <StatusBadge
+                  label={statusLabel[detail.status]}
+                  variant={statusVariant[detail.status]}
+                  appearance="filled"
+                  className="font-bold"
+                />
+              </div>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <Paragraph variant="small" className="text-nav">
-                Post on: {detail.postedOnDisplay}
-              </Paragraph>
-              <StatusBadge
-                label={statusLabel[detail.status]}
-                variant={statusVariant[detail.status]}
-                appearance="filled"
-                className="font-bold"
-              />
-            </div>
-          </div>
 
-          {/* Description */}
-          {detail.description ? (
+            {/* Description */}
+            {detail.description ? (
+              <div>
+                <Paragraph
+                  variant="small"
+                  className="mb-1.5 font-semibold uppercase tracking-wide text-nav"
+                >
+                  Description Preview
+                </Paragraph>
+                <Paragraph
+                  variant="muted"
+                  className={descExpanded ? undefined : 'line-clamp-3'}
+                >
+                  {detail.description}
+                </Paragraph>
+                {isLongDescription ? (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded((prev) => !prev)}
+                    className="mt-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    {descExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Content breakdown — video / pdf / test counts only */}
             <div>
-              <Paragraph
-                variant="small"
-                className="mb-1.5 font-semibold uppercase tracking-wide text-nav"
-              >
-                Description Preview
-              </Paragraph>
-              <Paragraph
-                variant="muted"
-                className={descExpanded ? undefined : 'line-clamp-3'}
-              >
-                {detail.description}
-              </Paragraph>
-              {isLongDescription ? (
+              <div className="mb-2 flex items-center justify-between">
+                <Paragraph
+                  variant="small"
+                  className="font-semibold uppercase tracking-wide text-nav"
+                >
+                  Content Breakdown
+                </Paragraph>
                 <button
                   type="button"
-                  onClick={() => setDescExpanded((prev) => !prev)}
-                  className="mt-1 text-xs font-semibold text-primary hover:underline"
+                  onClick={() => {
+                    onClose()
+                    navigate(`/courses/${detail.id}/structure`)
+                  }}
+                  className="text-xs font-semibold text-primary hover:underline"
                 >
-                  {descExpanded ? 'Read less' : 'Read more'}
+                  View Academic Structure
                 </button>
-              ) : null}
+              </div>
+              <div className="space-y-2">
+                <MaterialRow
+                  icon={<Video className="size-4" aria-hidden />}
+                  label={`${detail.videoCount} Video Lectures`}
+                />
+                <MaterialRow
+                  icon={<FileText className="size-4" aria-hidden />}
+                  label={`${detail.pdfCount} PDF`}
+                />
+                <MaterialRow
+                  icon={<ClipboardList className="size-4" aria-hidden />}
+                  label={`${detail.testCount} Practice Sets`}
+                />
+              </div>
             </div>
-          ) : null}
-
-          {/* Content breakdown — video / pdf / test counts only */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <Paragraph
-                variant="small"
-                className="font-semibold uppercase tracking-wide text-nav"
-              >
-                Content Breakdown
-              </Paragraph>
-              <button
-                type="button"
-                onClick={() => {
-                  onClose()
-                  navigate(`/courses/${detail.id}/structure`)
-                }}
-                className="text-xs font-semibold text-primary hover:underline"
-              >
-                View Academic Structure
-              </button>
-            </div>
-            <div className="space-y-2">
-              <MaterialRow
-                icon={<Video className="size-4" aria-hidden />}
-                label={`${detail.videoCount} Video Lectures`}
-              />
-              <MaterialRow
-                icon={<FileText className="size-4" aria-hidden />}
-                label={`${detail.pdfCount} PDF`}
-              />
-              <MaterialRow
-                icon={<ClipboardList className="size-4" aria-hidden />}
-                label={`${detail.testCount} Practice Sets`}
-              />
-            </div>
-          </div>
           </div>
         </div>
       )}

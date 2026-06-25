@@ -108,6 +108,8 @@ export function CoursesTable({
   const allSelected = courses.length > 0 && courses.every((course) => selectedIds.has(course.id))
   const someSelected = courses.some((course) => selectedIds.has(course.id))
 
+  console.log("courses>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", courses)
+
   const columns = useMemo<DataTableColumn<CourseRecord>[]>(
     () => [
       {
@@ -203,7 +205,9 @@ export function CoursesTable({
         cell: (course) => (
           <div className="flex justify-center">
             <Paragraph variant="emphasis" className={tableTextClass}>
-              {course.priceDisplay}
+              {
+                course.isFree ? 'Free' : course.priceDisplay
+              }
             </Paragraph>
           </div>
         ),

@@ -25,6 +25,7 @@ export type CourseDetail = {
   category: string
   description: string
   priceDisplay: string
+  isFree: boolean
   finalPriceDisplay: string
   hasDiscount: boolean
   status: CourseApprovalStatus
@@ -279,6 +280,7 @@ export const courseManagementFunctions = {
           status,
           is_draft,
           price,
+          is_free,
           final_price,
           validity,
           faculty_id,
@@ -298,8 +300,8 @@ export const courseManagementFunctions = {
       if (facultyId && facultyId !== 'all') query = query.eq('faculty_id', facultyId)
       if (status && status !== 'all') query = query.eq('status', status)
       if (price && price !== 'any') {
-        if (price === 'free') query = query.or('final_price.eq.0,price.eq.0')
-        else if (price === 'paid') query = query.gt('final_price', 0)
+        if (price === 'free') query = query.eq('is_free', true)
+        else if (price === 'paid') query = query.eq('is_free', false)
       }
 
       // 3. Search
@@ -357,6 +359,7 @@ export const courseManagementFunctions = {
           facultyName,
           category: course.category ?? '',
           price: priceAmount,
+          isFree: course.is_free,
           priceDisplay: formatCurrency(priceAmount),
           status: fromDbCourseStatus(rawStatus),
           isDraft: course.is_draft === true,
@@ -398,6 +401,7 @@ export const courseManagementFunctions = {
           status,
           price,
           final_price,
+          is_free,
           cover_image,
           video_asset_id,
           avg_rating,
@@ -445,6 +449,7 @@ export const courseManagementFunctions = {
         category: course.category ?? '',
         description: course.description ?? '',
         priceDisplay: formatCurrency(originalPrice),
+        isFree: course.is_free,
         finalPriceDisplay: formatCurrency(finalPrice),
         hasDiscount: finalPrice < originalPrice,
         status: fromDbCourseStatus(course.status as string | null),
