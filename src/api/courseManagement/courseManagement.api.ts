@@ -9,6 +9,7 @@ export type CourseListRow = {
   facultyName: string
   category: string
   price: number
+  isFree: boolean
   priceDisplay: string
   status: CourseApprovalStatus
   isDraft: boolean
