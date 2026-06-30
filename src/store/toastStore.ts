@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ToastVariant = 'success' | 'error' | 'warning' | 'info'
+export type ToastVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral'
 
 export type ToastItem = {
   id: string

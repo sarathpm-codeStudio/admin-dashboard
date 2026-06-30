@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info, MessageCircle, X, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useToastStore, type ToastItem, type ToastVariant } from '@/store/toastStore'
 import { cn } from '@/utils/cn'
@@ -31,6 +31,11 @@ const variantStyles: Record<
     container: 'border-blue-200 bg-blue-50 text-blue-900',
     icon: 'text-blue-600',
     Icon: Info,
+  },
+  neutral: {
+    container: 'border-gray-200 bg-white text-ink',
+    icon: 'text-primary',
+    Icon: MessageCircle,
   },
 }
 

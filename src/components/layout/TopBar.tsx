@@ -8,6 +8,7 @@ import {
   useGetNotifications,
   useNotificationRealtime,
 } from '@/features/notifications/hooks/useNotifications'
+import { useChatRoomsRealtime } from '@/features/chat/hooks/useChat'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/utils/cn'
 
@@ -19,6 +20,7 @@ export function TopBar() {
   const menuRef = useRef<HTMLDivElement>(null)
 
   useNotificationRealtime()
+  useChatRoomsRealtime()
   const { data: notifications = [] } = useGetNotifications()
   const unreadCount = notifications.filter((n) => !n.isRead).length
 

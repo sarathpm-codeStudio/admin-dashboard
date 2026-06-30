@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Header1, Paragraph } from '@/components/ui/Typography'
+import { useOpenChat } from '@/features/chat/hooks/useChat'
 import type { StudentDetail } from '@/features/student/data/mockStudentDetail'
 import { useToast } from '@/hooks/useToast'
 import { cn } from '@/utils/cn'
@@ -96,9 +97,16 @@ export function StudentProfileHeader({
   onUnblock,
 }: StudentProfileHeaderProps) {
   const toast = useToast()
+  const { openChat, isPending: isOpeningChat } = useOpenChat()
   const metaColumns = getMetaColumns(student)
   const [confirmAction, setConfirmAction] = useState<StudentBlockAction | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+
+  const handleMessage = () => {
+    openChat(student.id, {
+      onError: (error) => toast.error(error.message || 'Could not open chat'),
+    })
+  }
 
   const confirmConfig = confirmAction
     ? getConfirmConfig(confirmAction, student.name)
@@ -182,11 +190,12 @@ export function StudentProfileHeader({
         <div className="flex w-[13rem] shrink-0 flex-col gap-2 self-end lg:self-auto">
           <Button
             type="button"
+            onClick={handleMessage}
             className="w-full justify-center gap-2 py-2.5 text-xs font-semibold"
-            disabled={isUpdating}
+            disabled={isUpdating || isOpeningChat}
           >
             <MessageSquare className="size-3.5 shrink-0" aria-hidden />
-            Message Student
+            {isOpeningChat ? 'Opening…' : 'Message Student'}
           </Button>
           {isSuspended ? (
             <button

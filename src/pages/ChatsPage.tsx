@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/ui/PlaceholderPage'
+import { ChatView } from '@/features/chat/ChatView'
 
 export function ChatsPage() {
-  return <PlaceholderPage title="Chats" />
+  return <ChatView />
 }

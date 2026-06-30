@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import type { FacultyDetail, FacultyStatus } from '@/features/faculty/data/mockFacultyDetail'
 import { useToast } from '@/hooks/useToast'
+import { useOpenChat } from '@/features/chat/hooks/useChat'
 import { cn } from '@/utils/cn'
 
 const statusVariant: Record<
@@ -231,10 +232,17 @@ export function FacultyProfileHeader({
       : resolveFacultyStatus(isSuspended, accountVerified)
 
   const toast = useToast()
+  const { openChat, isPending: isOpeningChat } = useOpenChat()
   const [confirmAction, setConfirmAction] = useState<FacultyConfirmAction | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [rejectReasons, setRejectReasons] = useState<string[]>([])
   const [rejectNote, setRejectNote] = useState('')
+
+  const handleMessage = () => {
+    openChat(faculty.id, {
+      onError: (error) => toast.error(error.message || 'Could not open chat'),
+    })
+  }
 
   const toggleRejectReason = (reason: string) => {
     setRejectReasons((current) =>
@@ -363,11 +371,12 @@ export function FacultyProfileHeader({
             {renderStatusActions(profileStatus, actionHandlers, isUpdating)}
             <Button
               type="button"
+              onClick={handleMessage}
               className={cn(headerButtonClass, 'min-w-[7.5rem]')}
-              disabled={isUpdating}
+              disabled={isUpdating || isOpeningChat}
             >
               <MessageSquare className="size-4" aria-hidden />
-              Message
+              {isOpeningChat ? 'Opening…' : 'Message'}
             </Button>
           </div>
         </div>
