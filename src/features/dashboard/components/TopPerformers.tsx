@@ -5,7 +5,10 @@ import { Carousel } from '@/components/ui/Carousel'
 import { cn } from '@/utils/cn'
 import { topPerformers } from '@/features/dashboard/data/mockData'
 
-type TopPerformersProps = { className?: string }
+type TopPerformersProps = {
+  className?: string
+  fillHeight?: boolean
+}
 
 type PerformerRowProps = {
   leading: ReactNode
@@ -27,19 +30,22 @@ function PerformerRow({ leading, name, subtitle, trailing }: PerformerRowProps) 
   )
 }
 
-export function TopPerformers({ className }: TopPerformersProps) {
+export function TopPerformers({ className, fillHeight = false }: TopPerformersProps) {
   const { faculty, course } = topPerformers
 
   return (
     <Card
       className={cn(
         'w-full rounded-[12px] border border-[#e2e8f0]/60 p-6 shadow-sm',
+        fillHeight && 'flex min-h-0 flex-col',
         className,
       )}
     >
       <h2 className="mb-4 text-base font-bold text-[#111827]">Top Performers</h2>
 
       <Carousel
+        className={cn(fillHeight && 'min-h-0 flex-1')}
+        viewportClassName={cn(fillHeight && 'h-full')}
         autoPlayInterval={4000}
         slides={[
           <PerformerRow

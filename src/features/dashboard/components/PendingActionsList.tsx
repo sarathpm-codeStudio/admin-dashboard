@@ -1,14 +1,32 @@
-import { CirclePlay, UserPlus, type LucideIcon } from 'lucide-react'
+import { CirclePlay, ListTodo, UserPlus, type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import type { DashboardPendingAction } from '@/api/dashboard/dashboard.api'
+import type { DashboardPendingAction, PendingActionTarget } from '@/api/dashboard/dashboard.api'
 import { Card } from '@/components/ui/Card'
 import { cn } from '@/utils/cn'
 
+function resolvePendingActionPath(target: PendingActionTarget): string {
+  if (target.kind === 'faculty') {
+    return `/userdetails/faculty/${target.facultyId}`
+  }
+  return '/courses'
+}
 type PendingActionVisual = {
   icon: LucideIcon
   iconTileClassName: string
   iconClassName: string
 }
+
+const PENDING_ACTION_VISIBLE_ROWS = 5
+/** 5 rows × 78px + 4 gaps × 12px — two rows taller than the original 5-row area */
+const pendingActionsListHeightClass = 'min-h-[450px]'
+const pendingActionsListScrollClass = 'max-h-[450px] overflow-y-auto pr-1'
+
+const pendingActionsListClass = (scrollable: boolean) =>
+  cn(
+    'm-0 list-none space-y-3 p-0',
+    pendingActionsListHeightClass,
+    scrollable && pendingActionsListScrollClass,
+  )
 
 const visualByType: Record<DashboardPendingAction['type'], PendingActionVisual> = {
   FACULTY: {
@@ -37,7 +55,11 @@ export function PendingActionItem({
   onAction,
 }: PendingActionItemProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[#F2F4F6] px-4 py-3.5">
+    <button
+      type="button"
+      onClick={onAction}
+      className="flex w-full flex-wrap items-center justify-between gap-3 rounded-[16px] bg-[#F2F4F6] px-4 py-3.5 text-left transition-colors hover:bg-[#E8EAED] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-50"
+    >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div
           className={cn(
@@ -52,19 +74,9 @@ export function PendingActionItem({
           <p className="truncate text-sm text-[#5F5E5E]">{subtitle}</p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-4">
-        <button
-          type="button"
-          onClick={onAction}
-          className="rounded-[10px] bg-[#2c1452] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-        >
-          Take Action
-        </button>
-      </div>
-    </div>
+    </button>
   )
 }
-
 type PendingActionsListProps = {
   actions: DashboardPendingAction[]
   isLoading?: boolean
@@ -75,11 +87,7 @@ export function PendingActionsList({ actions, isLoading, className }: PendingAct
   const navigate = useNavigate()
 
   const handleAction = (action: DashboardPendingAction) => {
-    if (action.target.kind === 'faculty') {
-      navigate(`/userdetails/faculty/${action.target.facultyId}`)
-    } else {
-      navigate('/courses')
-    }
+    navigate(resolvePendingActionPath(action.target))
   }
 
   return (
@@ -91,7 +99,22 @@ export function PendingActionsList({ actions, isLoading, className }: PendingAct
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-[#191c1e]">Pending Actions</h2>
+          <div className="flex min-w-0 items-center gap-2">
+            {isLoading ? (
+              <span
+                className="inline-block h-6 w-8 animate-pulse rounded-full bg-[#F2F4F6]"
+                aria-hidden
+              />
+            ) : (
+              <span
+                className="inline-flex min-w-7 shrink-0 items-center justify-center rounded-full bg-[#2c1452] px-2 py-0.5 text-xs font-bold tabular-nums text-white"
+                aria-label={`${actions.length} pending actions`}
+              >
+                {actions.length}
+              </span>
+            )}
+            <h2 className="text-base font-bold text-[#191c1e]">Pending Actions</h2>
+          </div>
           {/* <button
             type="button"
             className="shrink-0 text-sm font-medium text-[#2c1452] transition-colors hover:text-[#1d0d38]"
@@ -101,8 +124,8 @@ export function PendingActionsList({ actions, isLoading, className }: PendingAct
         </div>
 
         {isLoading ? (
-          <ul className="m-0 list-none space-y-3 p-0">
-            {Array.from({ length: 3 }).map((_, index) => (
+          <ul className={pendingActionsListClass(false)}>
+            {Array.from({ length: PENDING_ACTION_VISIBLE_ROWS }).map((_, index) => (
               <li
                 key={index}
                 className="h-[78px] animate-pulse rounded-[16px] bg-[#F2F4F6]"
@@ -110,17 +133,22 @@ export function PendingActionsList({ actions, isLoading, className }: PendingAct
             ))}
           </ul>
         ) : actions.length === 0 ? (
-          <p className="rounded-[16px] bg-[#F2F4F6] px-4 py-6 text-center text-sm text-[#5F5E5E]">
-            No pending actions right now.
-          </p>
-        ) : (
-          <ul
+          <div
             className={cn(
-              'm-0 list-none space-y-3 p-0',
-              // Show ~5 items, then scroll the rest inline.
-              actions.length > 5 && 'max-h-[450px] overflow-y-auto pr-1',
+              'flex flex-col items-center justify-center gap-3 rounded-[16px] bg-[#F2F4F6] px-4',
+              pendingActionsListHeightClass,
             )}
           >
+            <div
+              className="flex size-12 items-center justify-center rounded-[12px] bg-[#E8EAED]"
+              aria-hidden
+            >
+              <ListTodo className="size-5 text-[#5F5E5E]" strokeWidth={2.25} />
+            </div>
+            <p className="text-sm font-medium text-[#5F5E5E]">No pending actions</p>
+          </div>
+        ) : (
+          <ul className={pendingActionsListClass(actions.length > PENDING_ACTION_VISIBLE_ROWS)}>
             {actions.map((action) => (
               <li key={action.id}>
                 <PendingActionItem
