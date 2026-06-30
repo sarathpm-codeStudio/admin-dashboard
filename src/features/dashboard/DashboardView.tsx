@@ -8,36 +8,25 @@ import { EnrollmentTrendsChart } from '@/features/dashboard/components/Enrollmen
 
 import { FinancialPulseCard } from '@/features/dashboard/components/FinancialPulseCard'
 
-import { LiveActivityFeed } from '@/features/dashboard/components/LiveActivityFeed'
-
 import { PendingActionsList } from '@/features/dashboard/components/PendingActionsList'
-
-import { PlatformHealthPanel } from '@/features/dashboard/components/PlatformHealthPanel'
 
 import { RevenueTrendsChart } from '@/features/dashboard/components/RevenueTrendsChart'
 
-import { SystemAlerts } from '@/features/dashboard/components/SystemAlerts'
+// import { SystemAlerts } from '@/features/dashboard/components/SystemAlerts'
+// import { LiveActivityFeed } from '@/features/dashboard/components/LiveActivityFeed'
+// import { PlatformHealthPanel } from '@/features/dashboard/components/PlatformHealthPanel'
 
 import { TopPerformers } from '@/features/dashboard/components/TopPerformers'
 
-import {
-
-  liveActivities,
-
-  platformHealth,
-
-  quickActions,
-
-  systemAlerts,
-
-} from '@/features/dashboard/data/mockData'
 import { useGetDashboardAnalytics, useGetPendingActions } from './hooks/useDashboardmanagement'
 
 
 
 const dashboardColumnsClass =
+  'grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-stretch'
 
-  'grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start'
+const dashboardColumnClass = 'flex h-full min-h-0 flex-col gap-6'
+const dashboardColumnGrowClass = 'min-h-0 flex-1'
 
 
 
@@ -71,33 +60,27 @@ export function DashboardView() {
 
 
       <div className={dashboardColumnsClass}>
-
-        <div className="flex flex-col gap-6">
-
+        <div className={dashboardColumnClass}>
           <EnrollmentTrendsChart />
 
-          <RevenueTrendsChart />
+          <RevenueTrendsChart className={dashboardColumnGrowClass} fillHeight />
+        </div>
+
+        <div className={dashboardColumnClass}>
+          {/* <SystemAlerts alerts={systemAlerts} /> */}
 
           <PendingActionsList
             actions={pendingActions ?? []}
             isLoading={isPendingActionsLoading}
           />
 
-        </div>
-
-
-
-        <div className="flex flex-col gap-6">
-
-          <SystemAlerts alerts={systemAlerts} />
-
           <FinancialPulseCard />
 
-          <TopPerformers />
+          <TopPerformers className={dashboardColumnGrowClass} fillHeight />
 
-          <LiveActivityFeed activities={liveActivities} />
+          {/* <LiveActivityFeed activities={liveActivities} /> */}
 
-          <PlatformHealthPanel
+          {/* <PlatformHealthPanel
 
             activeCourses={platformHealth.activeCourses}
 
@@ -105,7 +88,7 @@ export function DashboardView() {
 
             actions={quickActions}
 
-          />
+          /> */}
 
         </div>
 

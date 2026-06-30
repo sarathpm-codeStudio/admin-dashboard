@@ -16,7 +16,10 @@ import { DASHBOARD_TRENDS_CHART_HEIGHT_CLASS } from '@/features/dashboard/consta
 import { useGetRevenueTrends } from '@/features/dashboard/hooks/useDashboardmanagement'
 import { cn } from '@/utils/cn'
 
-type RevenueTrendsChartProps = { className?: string }
+type RevenueTrendsChartProps = {
+  className?: string
+  fillHeight?: boolean
+}
 
 const EMPTY_TRENDS: RevenueTrendPoint[] = []
 
@@ -48,7 +51,7 @@ function RevenueChartSkeleton() {
   )
 }
 
-export function RevenueTrendsChart({ className }: RevenueTrendsChartProps) {
+export function RevenueTrendsChart({ className, fillHeight = false }: RevenueTrendsChartProps) {
   const [period, setPeriod] = useState<TrendPeriod>('month')
   const { data: trends = EMPTY_TRENDS, isLoading, isError } = useGetRevenueTrends(period)
   const subtitle = periodSubtitles[period]
@@ -59,8 +62,8 @@ export function RevenueTrendsChart({ className }: RevenueTrendsChartProps) {
   )
   const peak = useMemo(() => getPeakPoint(trends), [trends])
   return (
-    <Card className={cn('w-full p-6', className)}>
-      <CardBody className="gap-5">
+    <Card className={cn('w-full p-6', fillHeight && 'flex min-h-0 flex-col', className)}>
+      <CardBody className={cn('gap-5', fillHeight && 'min-h-0 flex-1')}>
         <div className="flex flex-col gap-0.5">
           <SectionHeader
             title="Revenue Trends"
@@ -76,7 +79,13 @@ export function RevenueTrendsChart({ className }: RevenueTrendsChartProps) {
           </div>
         </div>
 
-        <div className={cn('shrink-0', DASHBOARD_TRENDS_CHART_HEIGHT_CLASS)}>
+        <div
+          className={cn(
+            fillHeight
+              ? 'min-h-[300px] flex-1 sm:min-h-[340px]'
+              : cn('shrink-0', DASHBOARD_TRENDS_CHART_HEIGHT_CLASS),
+          )}
+        >
           {isLoading ? (
             <RevenueChartSkeleton />
           ) : isError ? (
