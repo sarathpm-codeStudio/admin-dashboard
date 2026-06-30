@@ -240,10 +240,16 @@ export const chatFunctions = {
     opts?: { name?: string },
   ): Promise<{ roomId: string; isNew: boolean }> => {
     try {
-      const userId = getCurrentUserId()
+      const me = useAuthStore.getState().user
+      const userId = me?.id
       if (!userId) throw new Error('Not authenticated')
       if (otherUserId === userId)
         throw new Error('Cannot start a conversation with yourself')
+
+      // Label the room with the admin's name so the receiver (whose peer is the
+      // admin) has something to show — the admin profile often has no name. On
+      // the admin's own side the peer (user) name takes priority over this.
+      const roomLabel = opts?.name ?? me?.fullName ?? 'Admin'
 
       // My existing DIRECT rooms.
       const { data: myRooms, error: myErr } = await supabase
@@ -276,7 +282,7 @@ export const chatFunctions = {
       // None exists → create the room and add both participants.
       const { data: room, error: roomErr } = await supabase
         .from('chat_rooms')
-        .insert({ type: 'DIRECT', created_by: userId, name: opts?.name ?? null })
+        .insert({ type: 'DIRECT', created_by: userId, name: roomLabel })
         .select('id')
         .single()
 

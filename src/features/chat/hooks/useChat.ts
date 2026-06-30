@@ -131,6 +131,18 @@ export const useChatRoomsRealtime = () => {
 
           void queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })
 
+          // Mark that room's thread stale (without refetching now) so it
+          // refetches with the new message next time it's opened — otherwise
+          // the cached thread stays "fresh" and the message only shows after a
+          // reload. The currently-open room is updated live by useChatRealtime,
+          // so we don't force a refetch here.
+          if (incoming.room_id) {
+            void queryClient.invalidateQueries({
+              queryKey: chatMessagesQueryKey(incoming.room_id),
+              refetchType: 'none',
+            })
+          }
+
           // Only react to messages from the other side, not our own echoes.
           if (!incoming.room_id || incoming.sender_id === myId) return
 
