@@ -8,6 +8,10 @@ export type DateRangeFieldProps = {
   fromLabel?: string
   toLabel?: string
   className?: string
+  /** Earliest selectable date (YYYY-MM-DD); dates before this are disabled. */
+  min?: string
+  /** Latest selectable date (YYYY-MM-DD); dates after this are disabled. */
+  max?: string
 }
 
 const dateInputClass =
@@ -20,6 +24,8 @@ export function DateRangeField({
   fromLabel = 'Start date',
   toLabel = 'End date',
   className,
+  min,
+  max,
 }: DateRangeFieldProps) {
   return (
     <div className={cn('grid gap-3 sm:grid-cols-2', className)}>
@@ -32,6 +38,8 @@ export function DateRangeField({
           type="date"
           aria-label={fromLabel}
           value={from}
+          min={min}
+          max={max}
           onChange={(event) => onChange(event.target.value, to)}
           className={dateInputClass}
         />
@@ -45,6 +53,8 @@ export function DateRangeField({
           type="date"
           aria-label={toLabel}
           value={to}
+          min={from || min}
+          max={max}
           onChange={(event) => onChange(from, event.target.value)}
           className={dateInputClass}
         />

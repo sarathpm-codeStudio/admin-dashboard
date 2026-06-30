@@ -106,8 +106,8 @@ export function AnnouncementsTable({
         ),
       },
       {
-        id: 'date',
-        header: 'Date',
+        id: 'createdDate',
+        header: 'Created',
         width: COL_WIDTH,
         align: 'center',
         cell: (row) => (

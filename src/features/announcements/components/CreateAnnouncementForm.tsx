@@ -29,6 +29,8 @@ export function CreateAnnouncementForm({ formik }: CreateAnnouncementFormProps) 
   const errorFor = (field: keyof CreateAnnouncementFormValues) =>
     touched[field] && errors[field] ? errors[field] : undefined
 
+  const todayDateString = new Date().toISOString().slice(0, 10)
+
   const handleAudienceChange = (audience: string) => {
     setFieldValue('audience', audience)
     if (audience !== 'course') {
@@ -100,6 +102,7 @@ export function CreateAnnouncementForm({ formik }: CreateAnnouncementFormProps) 
           <DateRangeField
             from={values.startDate}
             to={values.endDate}
+            min={todayDateString}
             onChange={(startDate, endDate) => {
               setFieldValue('startDate', startDate)
               setFieldValue('endDate', endDate)
