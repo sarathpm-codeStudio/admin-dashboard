@@ -8,10 +8,10 @@ export function DashboardHeader() {
       <Header1>
         Welcome Back, Super Admin <span aria-hidden>⭐</span>
       </Header1>
-      <Button variant="primary" className="shrink-0">
+      {/* <Button variant="primary" className="shrink-0">
         <Download className="size-4" aria-hidden />
         Export CSV
-      </Button>
+      </Button> */}
     </div>
   )
 }

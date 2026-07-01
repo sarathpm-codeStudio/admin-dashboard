@@ -21,6 +21,8 @@ type StudentCourseRow = {
   progressPercent?: number
   test_score?: number | undefined
   status: string
+  enrolled_at?: string | null
+  expired_at?: string | null
 }
 
 const courseStatusClass: Record<string, string> = {
@@ -70,6 +72,15 @@ function progressPercentTextClass(percent: number) {
   return 'text-sm font-bold text-[#2c1452]'
 }
 
+function formatEnrollmentDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return '—'
+  return new Date(isoDate).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
 export function EnrolledCoursesTable({
   courses,
   totalCount,
@@ -84,7 +95,7 @@ export function EnrolledCoursesTable({
         id: 'course',
         header: 'Course details',
         headerClassName: enrolledCourseHeaderClass,
-        width: '32%',
+        width: '24%',
         cell: (course) => (
           <div className="min-w-0">
             <Paragraph variant="emphasis" className="text-ink-heading">
@@ -97,10 +108,34 @@ export function EnrolledCoursesTable({
         ),
       },
       {
+        id: 'enrolled',
+        header: 'Enrolled',
+        headerClassName: enrolledCourseHeaderClass,
+        width: '11%',
+        align: 'center',
+        cell: (course) => (
+          <Paragraph className="text-sm font-normal leading-normal text-[#64748B]">
+            {formatEnrollmentDate(course.enrolled_at)}
+          </Paragraph>
+        ),
+      },
+      {
+        id: 'expired',
+        header: 'Expired',
+        headerClassName: enrolledCourseHeaderClass,
+        width: '11%',
+        align: 'center',
+        cell: (course) => (
+          <Paragraph className="text-sm font-normal leading-normal text-[#64748B]">
+            {formatEnrollmentDate(course.expired_at)}
+          </Paragraph>
+        ),
+      },
+      {
         id: 'progress',
         header: 'Current progress',
         headerClassName: enrolledCourseHeaderClass,
-        width: '28%',
+        width: '22%',
         cell: (course) => {
           const pct = getProgressPercent(course)
           return (
@@ -121,7 +156,7 @@ export function EnrolledCoursesTable({
         id: 'score',
         header: 'Avg test score',
         headerClassName: enrolledCourseHeaderClass,
-        width: '14%',
+        width: '12%',
         align: 'center',
         cell: (course) => (
           <Paragraph className="text-sm font-normal leading-normal text-[#94A3B8]">
@@ -134,7 +169,7 @@ export function EnrolledCoursesTable({
         id: 'status',
         header: 'Status',
         headerClassName: enrolledCourseHeaderClass,
-        width: '14%',
+        width: '12%',
         align: 'center',
         cell: (course) => (
           <span className={cn('text-sm', courseStatusClass[course.status])}>

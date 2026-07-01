@@ -149,23 +149,23 @@ export function UsersTable({
           </div>
         ),
       },
-      {
-        id: 'actions',
-        header: 'Actions',
-        width: COL_WIDTH,
-        align: 'center',
-        cell: () => (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              className="inline-flex size-8 items-center justify-center rounded-nav text-nav transition-colors hover:bg-surface-input hover:text-ink-heading"
-              aria-label="Row actions"
-            >
-              <MoreVertical className="size-4" />
-            </button>
-          </div>
-        ),
-      },
+      // {
+      //   id: 'actions',
+      //   header: 'Actions',
+      //   width: COL_WIDTH,
+      //   align: 'center',
+      //   cell: () => (
+      //     <div className="flex justify-center">
+      //       <button
+      //         type="button"
+      //         className="inline-flex size-8 items-center justify-center rounded-nav text-nav transition-colors hover:bg-surface-input hover:text-ink-heading"
+      //         aria-label="Row actions"
+      //       >
+      //         <MoreVertical className="size-4" />
+      //       </button>
+      //     </div>
+      //   ),
+      // },
     ],
     [],
   )

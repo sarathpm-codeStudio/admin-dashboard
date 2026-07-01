@@ -11,7 +11,6 @@ import { Header1, Paragraph } from '@/components/ui/Typography'
 import type { FacultyDetail, FacultyStatus } from '@/features/faculty/data/mockFacultyDetail'
 import { useToast } from '@/hooks/useToast'
 import { useOpenChat } from '@/features/chat/hooks/useChat'
-import { cn } from '@/utils/cn'
 
 const statusVariant: Record<
   FacultyStatus,
@@ -90,9 +89,6 @@ type FacultyProfileHeaderProps = {
   onSuspend?: () => void | Promise<void>
   onActivate?: () => void | Promise<void>
 }
-const headerButtonClass =
-  'outline-none ring-0 ring-offset-0 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 active:outline-none'
-
 type FacultyConfirmAction = 'approve' | 'reject' | 'suspend' | 'activate'
 
 type ConfirmModalConfig = {
@@ -157,7 +153,7 @@ function renderStatusActions(
         <Button
           variant="secondary"
           type="button"
-          className={cn(headerButtonClass, 'text-red-600 !w-[120px] hover:bg-red-50')}
+          className="text-red-600 !w-[120px] hover:bg-red-50"
           onClick={handlers.onSuspend}
           disabled={disabled}
         >
@@ -171,7 +167,7 @@ function renderStatusActions(
           <Button
             variant="secondary"
             type="button"
-            className={cn(headerButtonClass, 'text-primary hover:bg-primary-50')}
+            className="text-primary hover:bg-primary-50"
             onClick={handlers.onApprove}
             disabled={disabled}
           >
@@ -180,7 +176,7 @@ function renderStatusActions(
           <Button
             variant="secondary"
             type="button"
-            className={cn(headerButtonClass, 'text-red-600 hover:bg-red-50')}
+            className="text-red-600 hover:bg-red-50"
             onClick={handlers.onReject}
             disabled={disabled}
           >
@@ -193,7 +189,7 @@ function renderStatusActions(
         <Button
           variant="secondary"
           type="button"
-          className={cn(headerButtonClass, 'text-primary hover:bg-primary-50')}
+          className="text-primary hover:bg-primary-50"
           onClick={handlers.onApprove}
           disabled={disabled}
         >
@@ -205,7 +201,7 @@ function renderStatusActions(
         <Button
           variant="secondary"
           type="button"
-          className={cn(headerButtonClass, 'text-primary hover:bg-primary-50')}
+          className="text-primary hover:bg-primary-50"
           onClick={handlers.onActivate}
           disabled={disabled}
         >
@@ -372,7 +368,7 @@ export function FacultyProfileHeader({
             <Button
               type="button"
               onClick={handleMessage}
-              className={cn(headerButtonClass, 'min-w-[7.5rem]')}
+              className="min-w-[7.5rem]"
               disabled={isUpdating || isOpeningChat}
             >
               <MessageSquare className="size-4" aria-hidden />

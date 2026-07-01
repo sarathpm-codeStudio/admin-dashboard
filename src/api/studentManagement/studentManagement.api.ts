@@ -170,6 +170,8 @@ export const studentManagementFunctions = {
                 .from("enrollments")
                 .select(
                     `
+        enrolled_at,
+        expires_at,
         course:courses!enrollments_course_id_fkey (
           id,
           title,
@@ -309,6 +311,8 @@ export const studentManagementFunctions = {
             const courses = enrollments.map((item: any) => {
                 const course = item.course;
                 const courseProgress = progressByCourseId[course.id];
+                const enrolledAt = item.enrolled_at ?? null;
+                const expiredAt = item.expires_at ?? null;
 
                 const total_materials = courseProgress?.total_materials ?? 0;
                 const completed_materials =
@@ -341,6 +345,8 @@ export const studentManagementFunctions = {
                     status,
                     test_score,
                     faculty: item.faculty,
+                    enrolled_at: enrolledAt,
+                    expired_at: expiredAt,
                 };
             });
 

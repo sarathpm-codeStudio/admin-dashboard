@@ -200,7 +200,7 @@ export function FacultyDetailView() {
           </div>
           <FacultyIdVerificationCard document={profile?.document ?? null} />
 
-          <FacultyRecentActivityCard items={faculty.recentActivity} />
+          {/* <FacultyRecentActivityCard items={faculty.recentActivity} /> */}
 
         </AnimatedSection>
 
