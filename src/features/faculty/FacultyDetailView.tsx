@@ -12,7 +12,6 @@ import { FacultyIdVerificationCard } from '@/features/faculty/components/Faculty
 import { FacultyProfileHeader } from '@/features/faculty/components/FacultyProfileHeader'
 import { FacultyRejectionWidget } from '@/features/faculty/components/FacultyRejectionWidget'
 import { FacultyQualificationsCard } from '@/features/faculty/components/FacultyQualificationsCard'
-import { FacultyRecentActivityCard } from '@/features/faculty/components/FacultyRecentActivityCard'
 import { getFacultyStatItems } from '@/features/faculty/data/facultyStatItems'
 import {
   FacultyDetail,

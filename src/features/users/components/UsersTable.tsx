@@ -1,4 +1,3 @@
-import { MoreVertical } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { DataTableColumn } from '@/components/ui/DataTable'

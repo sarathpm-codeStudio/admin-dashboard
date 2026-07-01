@@ -1,5 +1,3 @@
-import { Download } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 import { Header1 } from '@/components/ui/Typography'
 
 export function DashboardHeader() {
