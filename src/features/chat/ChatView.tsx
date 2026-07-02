@@ -16,7 +16,22 @@ import {
   useMarkRoomRead,
   useChatRealtime,
 } from '@/features/chat/hooks/useChat'
+import { usePresenceHeartbeat, usePeerPresence } from '@/features/chat/hooks/usePresence'
 import type { ChatRoomSummary, ChatMessage } from '@/api/chat/chat.api'
+
+// "last seen" label for an offline peer, e.g. "last seen 5m ago" / "yesterday".
+const formatLastSeen = (iso: string): string => {
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (secs < 60) return 'just now'
+  const mins = Math.floor(secs / 60)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
 
 // Display name for a room: the peer for DIRECT chats, falling back to the
 // room's own name then a generic label.
@@ -124,6 +139,10 @@ export function ChatView() {
 
   useChatRealtime(activeId)
 
+  // Broadcast my own presence while I'm on the chat page (online + heartbeat
+  // now, offline on leave); live presence of the open peer for the header.
+  usePresenceHeartbeat(!!myId)
+
   // Flatten the paged history (newest page first) into one ascending list.
   const messages = useMemo(
     () =>
@@ -139,6 +158,7 @@ export function ChatView() {
   )
 
   const active = rooms.find((r) => r.id === activeId) ?? null
+  const peerPresence = usePeerPresence(active?.peer?.id)
 
   // Open a specific room when navigated here from a "Message" button (the
   // room id is passed in the router location state).
@@ -360,10 +380,19 @@ export function ChatView() {
                     <Paragraph className="text-sm font-bold text-primary">
                       {roomName(active)}
                     </Paragraph>
-                    <Paragraph className="flex items-center gap-1 !text-[10px] font-semibold text-green-500">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                      ACTIVE
-                    </Paragraph>
+                    {peerPresence.isOnline ? (
+                      <Paragraph className="flex items-center gap-1 !text-[10px] font-semibold text-green-500">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                        Active now
+                      </Paragraph>
+                    ) : (
+                      <Paragraph className="flex items-center gap-1 !text-[10px] font-semibold text-gray-400">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-300" />
+                        {peerPresence.lastSeen
+                          ? `last seen ${formatLastSeen(peerPresence.lastSeen)}`
+                          : 'Offline'}
+                      </Paragraph>
+                    )}
                   </div>
                 </div>
                 <button className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
