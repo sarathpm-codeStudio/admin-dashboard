@@ -23,6 +23,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import { VideoPlayer } from '@/components/ui/VideoPlayer'
+import { CourseEnrollmentSection } from '@/features/courses/components/CourseEnrollmentSection'
 import {
   useGetCourseContent,
   useGetCourseDetail,
@@ -71,6 +72,7 @@ export function CourseAcademicStructureView() {
   const { courseId = null } = useParams<{ courseId: string }>()
   const navigate = useNavigate()
 
+  const [activeTab, setActiveTab] = useState<'structure' | 'enrollment'>('structure')
   const [navPath, setNavPath] = useState<{ id: string; title: string }[]>([])
   const [previewItem, setPreviewItem] = useState<CourseContentItem | null>(null)
 
@@ -105,12 +107,12 @@ export function CourseAcademicStructureView() {
           items={[
             { label: 'Courses', to: '/courses' },
             { label: detail?.title ?? 'Course' },
-            { label: 'Academic Structure' },
+            { label: 'Course Details' },
           ]}
         />
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <Header1>Academic Structure</Header1>
+            <Header1>Course Details</Header1>
             {detail?.title ? (
               <Paragraph variant="muted" className="mt-1 truncate">
                 {detail.title}
@@ -121,8 +123,37 @@ export function CourseAcademicStructureView() {
             <MoveLeft size={16} /> Back to Courses
           </Button>
         </div>
+
+        {/* Section tabs */}
+        <div className="flex items-center gap-1 rounded-nav bg-surface-input p-1">
+          {(
+            [
+              { key: 'structure', label: 'Academic Structure' },
+              { key: 'enrollment', label: 'Enrollment' },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'rounded-md px-4 py-2 text-sm font-semibold transition-colors',
+                activeTab === tab.key
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-nav hover:text-primary',
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {activeTab === 'enrollment' ? (
+        <Card className="p-5">
+          <CourseEnrollmentSection courseId={courseId} courseTitle={detail?.title} />
+        </Card>
+      ) : (
       <Card className="space-y-3 p-5">
         {/* Folder breadcrumb / back */}
         {navPath.length > 0 ? (
@@ -217,6 +248,7 @@ export function CourseAcademicStructureView() {
           )}
         </div>
       </Card>
+      )}
 
       <MaterialPreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
     </div>

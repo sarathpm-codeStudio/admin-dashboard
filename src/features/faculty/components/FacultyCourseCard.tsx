@@ -86,7 +86,7 @@ export function FacultyCourseCard({ course, className }: FacultyCourseCardProps)
         type="button"
         variant="secondary"
         className="mt-auto w-full py-2.5 text-xs font-bold text-[#312E81] hover:text-[#312E81]"
-        onClick={() => navigate(`/courses/${course.id}/structure`)}
+        onClick={() => navigate(`/courses/${course.id}/course-details`)}
       >
         View Details
       </Button>

@@ -3,6 +3,7 @@ import {
   courseManagementFunctions,
   CourseContentItem,
   CourseDetail,
+  CourseEnrollmentRow,
   CourseSelectOption,
   CoursesListResponse,
 } from '@/api/courseManagement/courseManagement.api'
@@ -70,6 +71,22 @@ export const useGetCourseContent = (courseId: string | null, parentId: string | 
     queryKey: ['course-content', courseId, parentId],
     queryFn: () => courseManagementFunctions.getCourseContent(courseId as string, parentId),
     enabled: !!courseId,
+  })
+}
+
+export const useGetCourseEnrollments = (courseId: string | null) => {
+  return useQuery<CourseEnrollmentRow[]>({
+    queryKey: ['course-enrollments', courseId],
+    queryFn: () => courseManagementFunctions.getCourseEnrollments(courseId as string),
+    enabled: !!courseId,
+  })
+}
+
+export const useExportCourseEnrollments = () => {
+  return useMutation({
+    mutationKey: ['export-course-enrollments'],
+    mutationFn: ({ courseId, courseTitle }: { courseId: string; courseTitle?: string }) =>
+      courseManagementFunctions.exportCourseEnrollments(courseId, courseTitle),
   })
 }
 

@@ -1,5 +1,5 @@
-import { PlaceholderPage } from '@/components/ui/PlaceholderPage'
+import { ReportsAnalyticsView } from '@/features/reports/ReportsAnalyticsView'
 
 export function ReportsAnalyticsPage() {
-  return <PlaceholderPage title="Reports & Analytics" />
+  return <ReportsAnalyticsView />
 }

@@ -78,17 +78,35 @@ export function CourseReviewModal({
     onClose()
   }
 
+  const handleView = () => {
+    if (!detail) return
+    onClose()
+    navigate(`/courses/${detail.id}/course-details`)
+  }
+
   const footer =
     detail && !isLoading ? (
-      <Button
-        type="button"
-        variant="primary"
-        className="w-full"
-        onClick={handleTakeAction}
-      >
-        Take Action
-      </Button>
-    ) : null
+      <div className="flex w-full flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={handleView}
+        >
+          View
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          className="w-full"
+          onClick={handleTakeAction}
+        >
+          Take Action
+        </Button>
+      </div>
+    ) : (
+      <></>
+    )
 
   return (
     <ConfirmModal
@@ -262,16 +280,6 @@ export function CourseReviewModal({
                 >
                   Content Breakdown
                 </Paragraph>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose()
-                    navigate(`/courses/${detail.id}/structure`)
-                  }}
-                  className="text-xs font-semibold text-primary hover:underline"
-                >
-                  View Academic Structure
-                </button>
               </div>
               <div className="space-y-2">
                 <MaterialRow

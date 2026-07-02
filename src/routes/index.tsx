@@ -54,7 +54,7 @@ export function AppRoutes() {
           <Route path="users" element={<UserManagementPage />} />
           <Route path="courses" element={<CourseManagementPage />} />
           <Route
-            path="courses/:courseId/structure"
+            path="courses/:courseId/course-details"
             element={<CourseAcademicStructurePage />}
           />
           <Route path="financial" element={<FinancialManagementPage />} />

@@ -1,6 +1,8 @@
 import { supabase } from '@/config/supabase'
 import type { CourseApprovalStatus, CoursesAnalytics } from '@/features/courses/types'
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+
 export type CourseListRow = {
   id: string
   title: string
@@ -62,6 +64,21 @@ export type CourseContentItem = {
   video_cover_img?: string | null
   video_uploading_status?: string | null
   material_status?: string | null
+}
+
+export type CourseEnrollmentRow = {
+  id: string
+  studentId: string
+  account_id: string
+  name: string
+  initials: string
+  avatarUrl?: string
+  email: string
+  phoneNumber: string
+  amountPaid: number
+  amountPaidDisplay: string
+  enrolledAtDisplay: string
+  expiresAtDisplay: string
 }
 
 export type CoursesListPagination = {
@@ -514,6 +531,135 @@ export const courseManagementFunctions = {
       )
     } catch (error: any) {
       throw new Error(error.message)
+    }
+  },
+
+  // All students enrolled in a single course, with amount paid + enrolment dates.
+  getCourseEnrollments: async (courseId: string): Promise<CourseEnrollmentRow[]> => {
+    try {
+      const { data: enrollments, error } = await supabase
+        .from('enrollments')
+        .select('id, student_id, amount_paid, enrolled_at, expires_at')
+        .eq('course_id', courseId)
+        .order('enrolled_at', { ascending: false })
+
+      if (error) throw new Error(error.message)
+
+      const rows = enrollments ?? []
+      const studentIds = Array.from(
+        new Set(rows.map((e) => e.student_id).filter(Boolean) as string[]),
+      )
+
+      if (studentIds.length === 0) return []
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone, avatar_url, account_id')
+        .in('id', studentIds)
+
+      if (profilesError) throw new Error(profilesError.message)
+
+      const profileById = new Map((profiles ?? []).map((p) => [p.id, p]))
+
+      const formatDate = (raw: string | null | undefined): string =>
+        raw ? new Date(raw).toLocaleDateString('en-GB') : '—'
+
+      return rows.map((e) => {
+        const p = e.student_id ? profileById.get(e.student_id) : undefined
+        const name = [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim()
+        const initials =
+          (name || 'NA')
+            .split(/\s+/)
+            .map((part) => part[0]?.toUpperCase() ?? '')
+            .slice(0, 2)
+            .join('') || 'NA'
+        const amountPaid = e.amount_paid ?? 0
+
+        return {
+          id: e.id ?? `${e.student_id}`,
+          studentId: e.student_id ?? '',
+          account_id: p?.account_id ?? '',
+          name: name || 'Unknown',
+          initials,
+          avatarUrl: p?.avatar_url ?? undefined,
+          email: p?.email ?? '',
+          phoneNumber: p?.phone ?? '',
+          amountPaid,
+          amountPaidDisplay: amountPaid > 0 ? formatCurrency(amountPaid) : 'Free',
+          enrolledAtDisplay: formatDate(e.enrolled_at),
+          expiresAtDisplay: formatDate(e.expires_at),
+        }
+      })
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  },
+
+  // Download the enrolled-students list for a course as an XLSX file.
+  // Hits the backend export endpoint (VITE_API_BASE_URL) with the current
+  // Supabase session token and triggers a browser download.
+  exportCourseEnrollments: async (
+    courseId: string,
+    courseTitle?: string,
+  ): Promise<void> => {
+    try {
+      if (!API_BASE_URL) {
+        throw new Error('Export API is not configured (VITE_API_BASE_URL is missing).')
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error('You must be signed in to export enrollments.')
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/admin/courses/${courseId}/enrollments/export`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          },
+        },
+      )
+
+      if (!response.ok) {
+        let message = `Export failed (${response.status})`
+        try {
+          const body = await response.json()
+          if (body?.message) message = body.message
+        } catch {
+          // response was not JSON — keep the generic message
+        }
+        throw new Error(message)
+      }
+
+      const blob = await response.blob()
+
+      // Prefer the server-supplied filename, fall back to a course-based name.
+      const disposition = response.headers.get('Content-Disposition') ?? ''
+      const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)
+      const safeTitle = (courseTitle ?? 'course')
+        .trim()
+        .replace(/[^\w-]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+      const fileName = match?.[1]
+        ? decodeURIComponent(match[1])
+        : `${safeTitle || 'course'}_enrollments.xlsx`
+
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (error: any) {
+      throw new Error(error?.message ?? 'Failed to export enrollments')
     }
   },
 
