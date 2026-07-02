@@ -1,5 +1,6 @@
 import { supabase } from '@/config/supabase'
 import { useAuthStore } from '@/store/authStore'
+import { encryptMessage, decryptMessageSafe } from '@/utils/chatEncryption'
 
 // Read the user id on every call so it reflects the current admin.
 const getCurrentUserId = () => useAuthStore.getState().user?.id
@@ -90,6 +91,12 @@ export const chatFunctions = {
       if (error) throw new Error(error.message)
 
       const batch = (data ?? []) as ChatMessage[]
+      // Decrypt each message's content back to plaintext for rendering.
+      await Promise.all(
+        batch.map(async row => {
+          row.content = await decryptMessageSafe(row.content)
+        }),
+      )
       // A full page means there may be more history behind it; the cursor is
       // the oldest row in this batch (last one, since the batch is newest-first).
       const nextCursor =
@@ -167,7 +174,8 @@ export const chatFunctions = {
         for (const m of msgs ?? []) {
           lastByRoom.set((m as any).room_id, {
             id: (m as any).id,
-            content: (m as any).content,
+            // Decrypt the preview text so the room list is readable.
+            content: await decryptMessageSafe((m as any).content),
             message_type: (m as any).message_type,
             sender_id: (m as any).sender_id,
             created_at: (m as any).created_at,
@@ -316,13 +324,16 @@ export const chatFunctions = {
       const body = content.trim()
       if (!body) throw new Error('Cannot send an empty message')
 
+      // Store ciphertext only — the DB never sees the plaintext message.
+      const encryptedBody = await encryptMessage(body)
+
       const { data: message, error: msgErr } = await supabase
         .from('chat_messages')
         .insert({
           room_id: roomId,
           sender_id: userId,
           message_type: 'TEXT',
-          content: body,
+          content: encryptedBody,
           status: 'sent',
         })
         .select(
@@ -331,6 +342,9 @@ export const chatFunctions = {
         .single()
 
       if (msgErr) throw new Error(msgErr.message)
+
+      // Hand the caller back the readable text (the row itself holds ciphertext).
+      ;(message as ChatMessage).content = body
 
       const { error: roomErr } = await supabase
         .from('chat_rooms')

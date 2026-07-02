@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/config/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
+import { decryptMessageSafe } from '@/utils/chatEncryption'
 
 type MessagesInfiniteData = {
   pages: ChatMessagePage[]
@@ -220,27 +221,31 @@ export const useChatRealtime = (activeRoomId?: string | null) => {
 
           if (roomId !== activeRef.current) return
 
-          // Append to the newest page of the open thread, skipping duplicates
-          // already present in any loaded page.
-          queryClient.setQueryData<MessagesInfiniteData>(
-            chatMessagesQueryKey(roomId),
-            (old) => {
-              if (!old || old.pages.length === 0) return old
-              const exists = old.pages.some((p) =>
-                p.messages.some((m) => m.id === incoming.id),
-              )
-              if (exists) return old
-              const [first, ...rest] = old.pages
-              if (!first) return old
-              return {
-                ...old,
-                pages: [
-                  { ...first, messages: [...first.messages, incoming] },
-                  ...rest,
-                ],
-              }
-            },
-          )
+          // The realtime payload carries encrypted `content`; decrypt it before
+          // it lands in the cache, then append to the newest page of the open
+          // thread, skipping duplicates already present in any loaded page.
+          void decryptMessageSafe(incoming.content).then((plainContent) => {
+            const decrypted: ChatMessage = { ...incoming, content: plainContent }
+            queryClient.setQueryData<MessagesInfiniteData>(
+              chatMessagesQueryKey(roomId),
+              (old) => {
+                if (!old || old.pages.length === 0) return old
+                const exists = old.pages.some((p) =>
+                  p.messages.some((m) => m.id === decrypted.id),
+                )
+                if (exists) return old
+                const [first, ...rest] = old.pages
+                if (!first) return old
+                return {
+                  ...old,
+                  pages: [
+                    { ...first, messages: [...first.messages, decrypted] },
+                    ...rest,
+                  ],
+                }
+              },
+            )
+          })
         },
       )
       .on(
@@ -263,8 +268,12 @@ export const useChatRealtime = (activeRoomId?: string | null) => {
                     ...old,
                     pages: old.pages.map((p) => ({
                       ...p,
+                      // Keep the already-decrypted `content`; `updated` carries
+                      // ciphertext and only status/tick fields matter here.
                       messages: p.messages.map((m) =>
-                        m.id === updated.id ? { ...m, ...updated } : m,
+                        m.id === updated.id
+                          ? { ...m, ...updated, content: m.content }
+                          : m,
                       ),
                     })),
                   }
