@@ -58,7 +58,7 @@ const getKey = (): Promise<CryptoKey> => {
 
 const toBase64 = (bytes: Uint8Array): string => {
     let binary = ''
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!)
     return btoa(binary)
 }
 
@@ -102,9 +102,9 @@ export const decryptMessage = async (encryptedText: string): Promise<string> => 
     sealed.set(authTag, cipherText.length)
 
     const plain = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv, tagLength: TAG_BYTES * 8 },
+        { name: 'AES-GCM', iv: iv as BufferSource, tagLength: TAG_BYTES * 8 },
         key,
-        sealed,
+        sealed as BufferSource,
     )
     return dec.decode(plain)
 }
