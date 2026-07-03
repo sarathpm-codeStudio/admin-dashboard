@@ -1,6 +1,7 @@
 
 
 import { supabase } from "@/config/supabase"
+import { getFacultyCommissionPercent } from "@/api/platformSettings/platformSettings.api"
 import type { RevenueTrendPoint, TrendPeriod } from "@/features/dashboard/data/chartTrends"
 
 export type FacultyPayoutStatus = 'PENDING' | 'SUCCESS' | 'FAILED'
@@ -18,25 +19,12 @@ export type FacultyPayoutTransaction = {
     dateDisplay: string
 }
 
-const DEFAULT_COMMISSION_PERCENT = 20;
-
 /**
  * Platform commission rate (%) used to derive a faculty's net share of an
- * enrollment. Read from platform_settings; falls back to the default when the
- * setting is missing or unparseable. Mirrors the payout calc in
- * enrollment-payout-workflow.md §3.
+ * enrollment. Uses per-faculty override when set, otherwise platform default.
  */
-const getCommissionPercent = async (db: typeof supabase): Promise<number> => {
-    const { data, error } = await db
-        .from("platform_settings")
-        .select("value")
-        .eq("key", "default_commission_percent")
-        .maybeSingle();
-
-    if (error) throw new Error(error.message);
-
-    const percent = Number(data?.value);
-    return Number.isFinite(percent) ? percent : DEFAULT_COMMISSION_PERCENT;
+const getCommissionPercentForFaculty = async (facultyId: string): Promise<number> => {
+    return getFacultyCommissionPercent(facultyId);
 };
 
 
@@ -153,7 +141,7 @@ export const facultyManagementFunctions = {
 
             // 6. Pending payout — faculty share of enrollments not yet paid out.
             //    Mirrors the calc in getFacultyRevenueStats / enrollment-payout-workflow.md §3.
-            const commissionPercent = await getCommissionPercent(supabase);
+            const commissionPercent = await getCommissionPercentForFaculty(facultyId);
 
             const { data: singleEnrollments, error: singleEnrollError } = await supabase
                 .from('enrollments')
@@ -595,15 +583,7 @@ export const facultyManagementFunctions = {
 
     getFacultyRevenueStats: async (facultyId: string) => {
 
-        // ── 1. Get commission from platform_settings ──────────────
-        const { data: setting, error: settingError } = await supabase
-            .from("platform_settings")
-            .select("value")
-            .eq("key", "default_commission_percent")
-            .single();
-
-        if (settingError) throw settingError;
-        const commissionPercent = parseFloat(setting.value); // e.g. 20
+        const commissionPercent = await getCommissionPercentForFaculty(facultyId);
 
         // ── 2. All single course enrollments ─────────────────────
         const { data: singleEnrollments, error: e1 } = await supabase
@@ -759,7 +739,7 @@ export const facultyManagementFunctions = {
 
             // Faculty net revenue = (amount_paid - GST) after the platform commission.
             // Mirrors the payout calc in enrollment-payout-workflow.md §3.
-            const commissionPercent = await getCommissionPercent(db);
+            const commissionPercent = await getCommissionPercentForFaculty(facultyId);
             const facultyShareRatio = 1 - commissionPercent / 100;
             const facultyNet = (e: { amount_paid?: number; gst_amount?: number }) => {
                 const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
@@ -870,7 +850,7 @@ export const facultyManagementFunctions = {
 
             // Faculty net revenue = (amount_paid - GST) after the platform commission.
             // Mirrors getFacultyRevenueTrends / enrollment-payout-workflow.md §3.
-            const commissionPercent = await getCommissionPercent(db);
+            const commissionPercent = await getCommissionPercentForFaculty(facultyId);
             const facultyShareRatio = 1 - commissionPercent / 100;
             const facultyNet = (e: { amount_paid?: number; gst_amount?: number }) => {
                 const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
