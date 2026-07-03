@@ -1,10 +1,10 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { NotFoundRedirect } from '@/routes/NotFoundRedirect'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { PublicRoute } from '@/routes/PublicRoute'
 import { LoginPage } from '@/pages/LoginPage'
-import { AccountPage } from '@/pages/AccountPage'
+import { PlatformSettingsPage } from '@/pages/PlatformSettingsPage'
 import { CreateAnnouncementPage } from '@/pages/CreateAnnouncementPage'
 import { EditAnnouncementPage } from '@/pages/EditAnnouncementPage'
 import { ChatsPage } from '@/pages/ChatsPage'
@@ -63,8 +63,15 @@ export function AppRoutes() {
           <Route path="announcements/create" element={<CreateAnnouncementPage />} />
           <Route path="announcements/:announcementId/edit" element={<EditAnnouncementPage />} />
           <Route path="reports" element={<ReportsAnalyticsPage />} />
-          <Route path="platform-settings/coin" element={<AccountPage />} />
-          <Route path="platform-settings/commission" element={<AccountPage />} />
+          <Route path="platform-settings" element={<PlatformSettingsPage />} />
+          <Route
+            path="platform-settings/coin"
+            element={<Navigate to="/platform-settings" replace />}
+          />
+          <Route
+            path="platform-settings/commission"
+            element={<Navigate to="/platform-settings" replace />}
+          />
           <Route path="help" element={<HelpCenterPage />} />
         </Route>
       </Route>

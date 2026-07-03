@@ -1,13 +1,10 @@
 import {
-  Coins,
-  FileSearch,
   GraduationCap,
   HelpCircle,
   LayoutDashboard,
   Megaphone,
   MessageSquare,
   Package,
-  Percent,
   Settings,
   Users,
   Wallet,
@@ -31,17 +28,8 @@ export const mainNavItems: NavItem[] = [
   { label: 'Financial Management', path: '/financial', icon: Wallet },
   { label: 'Chats', path: '/chats', icon: MessageSquare },
   { label: 'Announcements', path: '/announcements', icon: Megaphone },
-  { label: 'Reports & Analytics', path: '/reports', icon: FileSearch },
-  {
-    label: 'Settings',
-    path: '/platform-settings',
-    icon: Settings,
-    showChevron: true,
-    children: [
-      { label: 'Coin', path: '/platform-settings/coin', icon: Coins },
-      { label: 'Commission', path: '/platform-settings/commission', icon: Percent },
-    ],
-  },
+  // { label: 'Reports & Analytics', path: '/reports', icon: FileSearch },
+  { label: 'Settings', path: '/platform-settings', icon: Settings },
 ]
 
 export const bottomNavItems: NavItem[] = [
