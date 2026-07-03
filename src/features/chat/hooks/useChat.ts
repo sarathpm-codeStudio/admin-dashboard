@@ -79,6 +79,61 @@ export const useGetRoomMessages = (roomId?: string | null) =>
   })
 
 /**
+ * Catch-up sync for the open thread: quietly fetches the newest page and merges
+ * any messages the cache is missing — in place, deduped, sorted; no refetch and
+ * no visible reload (when nothing is new, the cache object is returned as-is so
+ * nothing re-renders). Runs when the room opens and whenever the window regains
+ * focus, so the thread self-heals even if a realtime event was missed (dropped
+ * socket, sleeping tab, etc.).
+ */
+export const useThreadCatchUp = (roomId?: string | null) => {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!roomId) return
+    let cancelled = false
+
+    const catchUp = async () => {
+      try {
+        const page = await chatFunctions.getMessagesPage(roomId, {
+          limit: MESSAGES_PAGE_SIZE,
+        })
+        if (cancelled) return
+        queryClient.setQueryData<MessagesInfiniteData>(
+          chatMessagesQueryKey(roomId),
+          (old) => {
+            if (!old || old.pages.length === 0) return old
+            const known = new Set(
+              old.pages.flatMap((p) => p.messages.map((m) => m.id)),
+            )
+            const fresh = page.messages.filter((m) => !known.has(m.id))
+            if (!fresh.length) return old
+            const [first, ...rest] = old.pages
+            if (!first) return old
+            // Newest page holds messages oldest→newest; merge the missing ones
+            // in and re-sort so mid-stream gaps land in the right place too.
+            const merged = [...first.messages, ...fresh].sort((a, b) =>
+              (a.created_at ?? '').localeCompare(b.created_at ?? ''),
+            )
+            return { ...old, pages: [{ ...first, messages: merged }, ...rest] }
+          },
+        )
+      } catch {
+        /* best-effort sync — ignore failures */
+      }
+    }
+
+    void catchUp()
+    const onFocus = () => void catchUp()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [roomId, queryClient])
+}
+
+/**
  * Ephemeral typing indicator over a Supabase Realtime broadcast channel
  * (`chat-typing:<roomId>`, event `typing`, payload `{ user_id, typing }`). No
  * DB writes — typing is transient. `self: false` means we never receive our own
@@ -246,22 +301,23 @@ export const useSendMessage = () => {
   })
 }
 
-// Send an attachment (image / PDF), then drop it straight into the thread
-// cache — same no-refetch contract as text and voice sends.
-export const useSendFileMessage = () => {
+// Send one or more attachments (image / PDF album) as a single message, then
+// drop it straight into the thread cache — same no-refetch contract as text and
+// voice sends.
+export const useSendFilesMessage = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({
       roomId,
-      file,
+      files,
       kind,
       replyToMessageId,
     }: {
       roomId: string
-      file: File
+      files: File[]
       kind: 'IMAGE' | 'PDF'
       replyToMessageId?: string | null
-    }) => chatFunctions.sendFileMessage(roomId, file, kind, replyToMessageId),
+    }) => chatFunctions.sendFilesMessage(roomId, files, kind, replyToMessageId),
     onSuccess: (message, { roomId }) => {
       appendMessageToThread(queryClient, roomId, message)
       queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })

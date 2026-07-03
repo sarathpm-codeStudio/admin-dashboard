@@ -118,6 +118,14 @@ export const MESSAGES_PAGE_SIZE = 25
 // Max attachment size for chat uploads (5 MB).
 export const CHAT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024
 
+// One file inside an attachment message (image / PDF). A message can carry
+// several of these — an album — stored (encrypted) as JSON in `content`.
+export interface ChatAttachment {
+  url: string
+  name: string
+  size: number
+}
+
 export const chatFunctions = {
   // A page of a room's messages, newest-first under the hood. Pass the previous
   // page's `nextCursor` as `before` to walk further back in time. Returned
@@ -443,11 +451,15 @@ export const chatFunctions = {
       const userId = getCurrentUserId()
       if (!userId) throw new Error('Not authenticated')
 
-      const ext = opts.mimeType.includes('ogg')
-        ? 'ogg'
+      // Cross-platform naming: .mp3 (in-browser encode) / .m4a (Safari AAC);
+      // ogg/webm only remain as last-resort fallbacks for ancient browsers.
+      const ext = opts.mimeType.includes('mpeg')
+        ? 'mp3'
         : opts.mimeType.includes('mp4')
           ? 'm4a'
-          : 'webm'
+          : opts.mimeType.includes('ogg')
+            ? 'ogg'
+            : 'webm'
       const path = `voice/${roomId}/${crypto.randomUUID()}.${ext}`
 
       const { error: upErr } = await supabase.storage
@@ -503,44 +515,59 @@ export const chatFunctions = {
     }
   },
 
-  // Send an attachment (image or PDF): upload the file to the public
-  // `chat-media` bucket, then store an IMAGE/DOCUMENT message pointing at it.
-  // Size and type are validated here as the last line of defence (the UI
-  // validates before uploading too).
-  sendFileMessage: async (
+  // Send one or more attachments (all images, or all PDFs) as a SINGLE message
+  // — WhatsApp-style albums. Every file is uploaded to the public `chat-media`
+  // bucket; the full list is stored (encrypted) in `content` as JSON, and the
+  // first file also fills file_url/name/size for the list preview & legacy
+  // single-file readers. Size/type are validated here as a last line of
+  // defence (the UI validates before uploading too).
+  sendFilesMessage: async (
     roomId: string,
-    file: File,
+    files: File[],
     kind: 'IMAGE' | 'PDF',
     replyToMessageId?: string | null,
   ): Promise<ChatMessage> => {
     try {
       const userId = getCurrentUserId()
       if (!userId) throw new Error('Not authenticated')
+      if (!files.length) throw new Error('No files selected')
 
-      if (file.size > CHAT_ATTACHMENT_MAX_BYTES)
-        throw new Error('Attachment is too large (max 5 MB)')
-      const validType =
-        kind === 'IMAGE'
-          ? file.type.startsWith('image/')
-          : file.type === 'application/pdf'
-      if (!validType)
-        throw new Error(
+      for (const file of files) {
+        if (file.size > CHAT_ATTACHMENT_MAX_BYTES)
+          throw new Error(`"${file.name}" is too large (max 5 MB)`)
+        const validType =
           kind === 'IMAGE'
-            ? 'Only images can be attached'
-            : 'Only PDF documents can be attached',
-        )
+            ? file.type.startsWith('image/')
+            : file.type === 'application/pdf'
+        if (!validType)
+          throw new Error(
+            kind === 'IMAGE'
+              ? 'Only images can be attached'
+              : 'Only PDF documents can be attached',
+          )
+      }
 
-      const ext =
-        file.name.split('.').pop()?.toLowerCase() ||
-        (kind === 'IMAGE' ? 'jpg' : 'pdf')
-      const path = `files/${roomId}/${crypto.randomUUID()}.${ext}`
+      // Upload every file, then collect its public URL + metadata.
+      const uploaded: ChatAttachment[] = await Promise.all(
+        files.map(async (file) => {
+          const ext =
+            file.name.split('.').pop()?.toLowerCase() ||
+            (kind === 'IMAGE' ? 'jpg' : 'pdf')
+          const path = `files/${roomId}/${crypto.randomUUID()}.${ext}`
+          const { error: upErr } = await supabase.storage
+            .from('chat-media')
+            .upload(path, file, { contentType: file.type, upsert: false })
+          if (upErr) throw new Error(upErr.message)
+          const { data: pub } = supabase.storage
+            .from('chat-media')
+            .getPublicUrl(path)
+          return { url: pub.publicUrl, name: file.name, size: file.size }
+        }),
+      )
 
-      const { error: upErr } = await supabase.storage
-        .from('chat-media')
-        .upload(path, file, { contentType: file.type, upsert: false })
-      if (upErr) throw new Error(upErr.message)
-
-      const { data: pub } = supabase.storage.from('chat-media').getPublicUrl(path)
+      const first = uploaded[0]!
+      const meta = JSON.stringify({ files: uploaded })
+      const encryptedMeta = await encryptMessage(meta)
 
       const { data: message, error: msgErr } = await supabase
         .from('chat_messages')
@@ -548,10 +575,10 @@ export const chatFunctions = {
           room_id: roomId,
           sender_id: userId,
           message_type: kind,
-          content: null,
-          file_url: pub.publicUrl,
-          file_name: file.name,
-          file_size: file.size,
+          content: encryptedMeta,
+          file_url: first.url,
+          file_name: first.name,
+          file_size: first.size,
           status: 'sent',
           reply_to_message_id: replyToMessageId ?? null,
         })
@@ -562,6 +589,8 @@ export const chatFunctions = {
 
       if (msgErr) throw new Error(msgErr.message)
 
+      // Hand back the readable attachment list (the row holds ciphertext).
+      ;(message as ChatMessage).content = meta
       await attachReplyPreviews([message as ChatMessage])
 
       const { error: roomErr } = await supabase
