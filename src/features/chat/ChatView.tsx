@@ -10,7 +10,6 @@ import { EmojiPicker } from '@/components/ui/EmojiPicker'
 import { AudioPlayer } from '@/components/ui/AudioPlayer'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { formatDuration, pseudoPeaks } from '@/utils/audio'
-import avatarFallback from '@/asset/image/user1.png'
 import { useAuthStore } from '@/store/authStore'
 import { useToast } from '@/hooks/useToast'
 import {
@@ -48,9 +47,15 @@ const formatLastSeen = (iso: string): string => {
 const roomName = (room: ChatRoomSummary): string =>
   (room.type === 'DIRECT' ? room.peer?.name || room.name : room.name) || 'Conversation'
 
-// Avatar for a room (falls back to a placeholder when the peer has none).
-const roomAvatar = (room: ChatRoomSummary): string =>
-  room.peer?.avatar_url || avatarFallback
+// Initials avatar for a peer with no profile photo: first letter of the name on
+// a deterministic background colour (same name → same colour every render).
+const AVATAR_COLORS = ['#F97316', '#0EA5E9', '#8B5CF6', '#EC4899', '#10B981', '#6366F1', '#EF4444', '#F59E0B']
+const colorForName = (name: string): string => {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]!
+}
+const initialOf = (name: string): string => name.trim().charAt(0).toUpperCase() || '?'
 
 // Pretty, capitalised role label for the peer, e.g. "Faculty" / "Student".
 const roleLabel = (role: string | null | undefined): string =>
@@ -825,11 +830,21 @@ export function ChatView() {
                         : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                     >
-                      <img
-                        src={roomAvatar(conv)}
-                        alt={roomName(conv)}
-                        className="mt-0.5 h-[60px] w-[60px] shrink-0 rounded-xl object-cover"
-                      />
+                      {conv.peer?.avatar_url ? (
+                        <img
+                          src={conv.peer.avatar_url}
+                          alt={roomName(conv)}
+                          className="mt-0.5 h-[60px] w-[60px] shrink-0 rounded-xl object-cover"
+                        />
+                      ) : (
+                        // No profile photo → initials on a per-name colour.
+                        <div
+                          className="mt-0.5 flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-xl text-2xl font-bold text-white"
+                          style={{ backgroundColor: colorForName(roomName(conv)) }}
+                        >
+                          {initialOf(roomName(conv))}
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="mb-0.5 flex items-center justify-between gap-2">
                           <div className="flex min-w-0 items-center gap-1.5">
@@ -898,11 +913,21 @@ export function ChatView() {
                 transition={{ duration: 0.3, ease: 'easeOut' }}
               >
                 <div className="flex items-center gap-3">
-                  <img
-                    src={roomAvatar(active)}
-                    alt={roomName(active)}
-                    className="h-10 w-10 rounded-lg object-cover"
-                  />
+                  {active.peer?.avatar_url ? (
+                    <img
+                      src={active.peer.avatar_url}
+                      alt={roomName(active)}
+                      className="h-10 w-10 rounded-lg object-cover"
+                    />
+                  ) : (
+                    // No profile photo → initials avatar, same as the list.
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold text-white"
+                      style={{ backgroundColor: colorForName(roomName(active)) }}
+                    >
+                      {initialOf(roomName(active))}
+                    </div>
+                  )}
                   <div>
                     {/* Clicking the name opens the peer's profile page
                         (faculty or student, depending on their role). */}
