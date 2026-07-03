@@ -4,9 +4,10 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  attachReplyPreviews,
   chatFunctions,
   MESSAGES_PAGE_SIZE,
   type ChatMessage,
@@ -26,6 +27,27 @@ type MessagesInfiniteData = {
 export const CHAT_ROOMS_QUERY_KEY = ['chat-rooms'] as const
 export const chatMessagesQueryKey = (roomId?: string | null) =>
   ['chat-messages', roomId] as const
+
+// Append a message to the newest page of a room's thread cache, in place and
+// idempotently (deduped by id). Used so a just-sent message lands instantly
+// without a refetch — and so the later realtime echo is a no-op.
+const appendMessageToThread = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  roomId: string,
+  message: ChatMessage,
+) => {
+  queryClient.setQueryData<MessagesInfiniteData>(
+    chatMessagesQueryKey(roomId),
+    (old) => {
+      if (!old || old.pages.length === 0) return old
+      const exists = old.pages.some((p) => p.messages.some((m) => m.id === message.id))
+      if (exists) return old
+      const [first, ...rest] = old.pages
+      if (!first) return old
+      return { ...old, pages: [{ ...first, messages: [...first.messages, message] }, ...rest] }
+    },
+  )
+}
 
 // All chat rooms the signed-in admin belongs to, ready for the messages list.
 export const useGetMyChatRooms = (enabled: boolean = true) =>
@@ -49,7 +71,123 @@ export const useGetRoomMessages = (roomId?: string | null) =>
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: !!roomId,
+    // The open thread is kept live in place by realtime patches; without this,
+    // react-query refetches every loaded page on each window focus, visibly
+    // reloading the conversation (e.g. when testing two apps side by side).
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
   })
+
+/**
+ * Ephemeral typing indicator over a Supabase Realtime broadcast channel
+ * (`chat-typing:<roomId>`, event `typing`, payload `{ user_id, typing }`). No
+ * DB writes — typing is transient. `self: false` means we never receive our own
+ * events. Returns whether the peer is typing, plus `notifyTyping` (call on each
+ * keystroke) and `stopTyping` (call on send / when the field clears).
+ */
+export const useTyping = (roomId?: string | null, myId?: string) => {
+  const [peerTyping, setPeerTyping] = useState(false)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const subscribedRef = useRef(false)
+  // Whether I'm currently broadcasting "typing".
+  const activeRef = useRef(false)
+  // Last time we broadcast "typing: true", to throttle re-sends.
+  const lastTrueRef = useRef(0)
+  const stopTimer = useRef<number | undefined>(undefined)
+  const clearTimer = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    if (!roomId) {
+      setPeerTyping(false)
+      return
+    }
+
+    const channel = supabase.channel(`chat-typing:${roomId}`, {
+      config: { broadcast: { self: false } },
+    })
+
+    channel.on('broadcast', { event: 'typing' }, ({ payload }) => {
+      if (!payload || payload.user_id === myId) return
+      if (payload.typing) {
+        setPeerTyping(true)
+        // Auto-clear if we miss the peer's "stopped" event.
+        window.clearTimeout(clearTimer.current)
+        clearTimer.current = window.setTimeout(() => setPeerTyping(false), 4000)
+      } else {
+        window.clearTimeout(clearTimer.current)
+        setPeerTyping(false)
+      }
+    })
+
+    channel.subscribe((status) => {
+      subscribedRef.current = status === 'SUBSCRIBED'
+    })
+    channelRef.current = channel
+
+    return () => {
+      // Best-effort "stopped typing" before tearing the channel down.
+      if (activeRef.current && subscribedRef.current) {
+        void channel.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: { user_id: myId, typing: false },
+        })
+      }
+      activeRef.current = false
+      subscribedRef.current = false
+      window.clearTimeout(stopTimer.current)
+      window.clearTimeout(clearTimer.current)
+      setPeerTyping(false)
+      void supabase.removeChannel(channel)
+      channelRef.current = null
+    }
+  }, [roomId, myId])
+
+  // Announce that I'm typing, then auto-stop after a short pause. Re-broadcast
+  // "typing" at most every ~1.2s while typing so a peer that just subscribed
+  // (or missed the first packet) still picks it up mid-burst.
+  const notifyTyping = useCallback(() => {
+    const channel = channelRef.current
+    if (!channel || !myId || !subscribedRef.current) return
+    const now = Date.now()
+    if (now - lastTrueRef.current > 1200) {
+      lastTrueRef.current = now
+      activeRef.current = true
+      void channel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { user_id: myId, typing: true },
+      })
+    }
+    window.clearTimeout(stopTimer.current)
+    stopTimer.current = window.setTimeout(() => {
+      activeRef.current = false
+      lastTrueRef.current = 0
+      void channel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { user_id: myId, typing: false },
+      })
+    }, 2500)
+  }, [myId])
+
+  // Stop immediately (e.g. right after sending a message).
+  const stopTyping = useCallback(() => {
+    const channel = channelRef.current
+    window.clearTimeout(stopTimer.current)
+    lastTrueRef.current = 0
+    if (channel && myId && activeRef.current && subscribedRef.current) {
+      activeRef.current = false
+      void channel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { user_id: myId, typing: false },
+      })
+    }
+  }, [myId])
+
+  return { peerTyping, notifyTyping, stopTyping }
+}
 
 // Start (or reopen) a 1:1 conversation with another user, then refresh the list.
 export const useStartConversation = () => {
@@ -89,11 +227,101 @@ export const useOpenChat = () => {
 export const useSendMessage = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ roomId, content }: { roomId: string; content: string }) =>
-      chatFunctions.sendMessage(roomId, content),
-    // The message lands in the open thread via the realtime INSERT event, so we
-    // only refresh the room list here (preview + ordering).
-    onSuccess: () => {
+    mutationFn: ({
+      roomId,
+      content,
+      replyToMessageId,
+    }: {
+      roomId: string
+      content: string
+      replyToMessageId?: string | null
+    }) => chatFunctions.sendMessage(roomId, content, replyToMessageId),
+    // Drop the just-sent message straight into the thread cache (no refetch), so
+    // it replaces the optimistic bubble with no flicker; the later realtime echo
+    // is deduped. Only the room list is refreshed.
+    onSuccess: (message, { roomId }) => {
+      appendMessageToThread(queryClient, roomId, message)
+      queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })
+    },
+  })
+}
+
+// Send an attachment (image / PDF), then drop it straight into the thread
+// cache — same no-refetch contract as text and voice sends.
+export const useSendFileMessage = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      roomId,
+      file,
+      kind,
+      replyToMessageId,
+    }: {
+      roomId: string
+      file: File
+      kind: 'IMAGE' | 'PDF'
+      replyToMessageId?: string | null
+    }) => chatFunctions.sendFileMessage(roomId, file, kind, replyToMessageId),
+    onSuccess: (message, { roomId }) => {
+      appendMessageToThread(queryClient, roomId, message)
+      queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })
+    },
+  })
+}
+
+// Soft-delete my own message, then refresh that thread and the room list so the
+// tombstone (and any updated last-message preview) shows everywhere.
+export const useDeleteMessage = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ messageId }: { messageId: string; roomId: string }) =>
+      chatFunctions.deleteMessage(messageId),
+    onSuccess: (_data, { roomId }) => {
+      queryClient.invalidateQueries({ queryKey: chatMessagesQueryKey(roomId) })
+      queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })
+    },
+  })
+}
+
+// Send a voice message (record → upload → store), then refresh the room list.
+// The thread updates live via the realtime INSERT, same as text messages.
+export const useSendAudioMessage = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      roomId,
+      blob,
+      meta,
+      replyToMessageId,
+    }: {
+      roomId: string
+      blob: Blob
+      meta: { duration: number; peaks: number[]; mimeType: string }
+      replyToMessageId?: string | null
+    }) => chatFunctions.sendAudioMessage(roomId, blob, meta, replyToMessageId),
+    // Drop the returned (render-ready) message straight into the open thread so
+    // the voice bubble becomes playable the instant the upload finishes, without
+    // waiting on the realtime echo. Deduped by id in case realtime beat us here.
+    onSuccess: (message, { roomId }) => {
+      queryClient.setQueryData<MessagesInfiniteData>(
+        chatMessagesQueryKey(roomId),
+        (old) => {
+          if (!old || old.pages.length === 0) return old
+          const exists = old.pages.some((p) =>
+            p.messages.some((m) => m.id === message.id),
+          )
+          if (exists) return old
+          const [first, ...rest] = old.pages
+          if (!first) return old
+          return {
+            ...old,
+            pages: [
+              { ...first, messages: [...first.messages, message] },
+              ...rest,
+            ],
+          }
+        },
+      )
       queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })
     },
   })
@@ -167,8 +395,17 @@ export const useChatRoomsRealtime = () => {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'chat_messages' },
-        () => {
+        (payload) => {
           void queryClient.invalidateQueries({ queryKey: CHAT_ROOMS_QUERY_KEY })
+          // Same stale-marking as INSERT: keeps a closed room's ticks and
+          // deletions fresh for its next open, without refetching now.
+          const roomId = (payload.new as { room_id?: string })?.room_id
+          if (roomId) {
+            void queryClient.invalidateQueries({
+              queryKey: chatMessagesQueryKey(roomId),
+              refetchType: 'none',
+            })
+          }
         },
       )
       .subscribe()
@@ -221,11 +458,20 @@ export const useChatRealtime = (activeRoomId?: string | null) => {
 
           if (roomId !== activeRef.current) return
 
-          // The realtime payload carries encrypted `content`; decrypt it before
-          // it lands in the cache, then append to the newest page of the open
-          // thread, skipping duplicates already present in any loaded page.
-          void decryptMessageSafe(incoming.content).then((plainContent) => {
+          // My own sends enter the thread via the mutation's onSuccess swap
+          // (which replaces the optimistic clock bubble in one render).
+          // Appending the echo here too would land BEFORE the request resolves,
+          // briefly duplicating the bubble — the "chat reloads on send" flicker.
+          if (incoming.sender_id === myId) return
+
+          // The realtime payload carries encrypted `content`; decrypt it and
+          // resolve any quoted-reply preview before it lands in the cache, then
+          // append to the newest page of the open thread, skipping duplicates
+          // already present in any loaded page.
+          void (async () => {
+            const plainContent = await decryptMessageSafe(incoming.content)
             const decrypted: ChatMessage = { ...incoming, content: plainContent }
+            await attachReplyPreviews([decrypted])
             queryClient.setQueryData<MessagesInfiniteData>(
               chatMessagesQueryKey(roomId),
               (old) => {
@@ -245,7 +491,7 @@ export const useChatRealtime = (activeRoomId?: string | null) => {
                 }
               },
             )
-          })
+          })()
         },
       )
       .on(

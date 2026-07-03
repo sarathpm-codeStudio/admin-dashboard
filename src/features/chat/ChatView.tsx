@@ -1,11 +1,16 @@
-import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Search, Send, FileText, Download, Check, MessageCircle } from 'lucide-react'
+import { Search, Send, FileText, Download, Check, MessageCircle, Reply, X, Trash2, Mic, Clock, Paperclip, Image as ImageIcon } from 'lucide-react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { RiAccountCircleLine } from 'react-icons/ri'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import { Input } from '@/components/ui/Input'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { EmojiPicker } from '@/components/ui/EmojiPicker'
+import { AudioPlayer } from '@/components/ui/AudioPlayer'
+import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { formatDuration, pseudoPeaks } from '@/utils/audio'
 import avatarFallback from '@/asset/image/user1.png'
 import { useAuthStore } from '@/store/authStore'
 import { useToast } from '@/hooks/useToast'
@@ -13,11 +18,15 @@ import {
   useGetMyChatRooms,
   useGetRoomMessages,
   useSendMessage,
+  useDeleteMessage,
+  useSendAudioMessage,
+  useSendFileMessage,
   useMarkRoomRead,
   useChatRealtime,
+  useTyping,
 } from '@/features/chat/hooks/useChat'
 import { usePresenceHeartbeat, usePeerPresence } from '@/features/chat/hooks/usePresence'
-import type { ChatRoomSummary, ChatMessage } from '@/api/chat/chat.api'
+import { CHAT_ATTACHMENT_MAX_BYTES, type ChatRoomSummary, type ChatMessage, type ChatReplyPreview } from '@/api/chat/chat.api'
 
 // "last seen" label for an offline peer, e.g. "last seen 5m ago" / "yesterday".
 const formatLastSeen = (iso: string): string => {
@@ -50,8 +59,12 @@ const roleLabel = (role: string | null | undefined): string =>
 const lastMessagePreview = (room: ChatRoomSummary): string => {
   const m = room.last_message
   if (!m) return 'No messages yet'
+  if (m.is_deleted) return 'This message was deleted'
   if (m.message_type !== 'TEXT') {
-    const label = m.message_type.charAt(0) + m.message_type.slice(1).toLowerCase()
+    const label =
+      m.message_type === 'PDF'
+        ? 'PDF'
+        : m.message_type.charAt(0) + m.message_type.slice(1).toLowerCase()
     return `📎 ${label}`
   }
   return m.content ?? ''
@@ -76,6 +89,39 @@ const formatListTime = (iso: string | null): string => {
 const formatMessageTime = (iso: string | null): string =>
   iso ? new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''
 
+// Midnight timestamp for a date, used to compare calendar days.
+const startOfDay = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+// Whether two ISO timestamps fall on the same calendar day.
+const sameDay = (a: string | null, b: string | null): boolean =>
+  !!a && !!b && startOfDay(new Date(a)) === startOfDay(new Date(b))
+
+// Label for a day-separator: "Today", "Yesterday", a weekday within the last
+// week, else a full date.
+const dateSeparatorLabel = (iso: string | null): string => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const days = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86_400_000)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return d.toLocaleDateString([], { weekday: 'long' })
+  return d.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+// One-line text for a quoted (replied-to) message; non-text shows its kind.
+const replyPreviewText = (r: ChatReplyPreview): string => {
+  if (r.is_deleted) return 'This message was deleted'
+  if (r.message_type !== 'TEXT') {
+    const label =
+      r.message_type === 'PDF'
+        ? 'PDF'
+        : r.message_type.charAt(0) + r.message_type.slice(1).toLowerCase()
+    return `📎 ${label}`
+  }
+  return r.content ?? ''
+}
+
 // Human-readable attachment size + type, e.g. "2.4 MB • PDF Document".
 const formatAttachment = (msg: ChatMessage): string => {
   const units = ['B', 'KB', 'MB', 'GB']
@@ -86,7 +132,8 @@ const formatAttachment = (msg: ChatMessage): string => {
     u++
   }
   const sizeLabel = `${size.toFixed(u === 0 ? 0 : 1)} ${units[u]}`
-  return `${sizeLabel} • ${msg.message_type} Document`
+  const label = msg.message_type === 'PDF' ? 'PDF Document' : `${msg.message_type} Document`
+  return `${sizeLabel} • ${label}`
 }
 
 const listVariants: Variants = {
@@ -109,10 +156,80 @@ const msgItemVariants: Variants = {
   visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] } },
 }
 
+// An optimistic voice message that shows in the thread the moment you hit send,
+// before its blob has finished uploading. It carries everything needed both to
+// render the bubble locally (object-URL `src`, waveform `peaks`, `duration`)
+// and to retry the upload (`blob`, `meta`, `replyToMessageId`). `status`
+// flips 'uploading' → gone on success, or → 'error' (retryable) on failure.
+interface PendingAudio {
+  id: string
+  roomId: string
+  src: string
+  duration: number
+  peaks: number[]
+  createdAt: string
+  status: 'uploading' | 'error'
+  blob: Blob
+  meta: { duration: number; peaks: number[]; mimeType: string }
+  replyToMessageId?: string | null
+  replyTo: ChatReplyPreview | null
+}
+
+// An optimistic text message shown with a clock (⏱) tick the instant you hit
+// send, until the server confirms it (then the real message replaces it) or the
+// send fails (then it's removed and the text is restored to the input).
+interface PendingText {
+  id: string
+  roomId: string
+  content: string
+  createdAt: string
+  replyTo: ChatReplyPreview | null
+}
+
+// An optimistic attachment (image / PDF) shown while its file uploads. Images
+// preview from a local object URL; documents show their file card. `status`
+// flips 'uploading' → gone on success, or → 'error' (retryable) on failure.
+interface PendingFile {
+  id: string
+  roomId: string
+  kind: 'IMAGE' | 'PDF'
+  file: File
+  // Local preview for images ('' for documents).
+  previewUrl: string
+  createdAt: string
+  status: 'uploading' | 'error'
+  replyToMessageId?: string | null
+  replyTo: ChatReplyPreview | null
+}
+
 export function ChatView() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [text, setText] = useState('')
+  // The message currently being replied to (null when composing a fresh one).
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
+  // The message briefly highlighted after jumping to it from a reply quote.
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const highlightTimer = useRef<number | undefined>(undefined)
+  // The message awaiting delete confirmation (null when the modal is closed).
+  const [pendingDelete, setPendingDelete] = useState<ChatMessage | null>(null)
+  // Voice messages currently uploading (or failed and awaiting retry), rendered
+  // optimistically at the bottom of the open thread until the upload lands.
+  const [pendingAudios, setPendingAudios] = useState<PendingAudio[]>([])
+  // Text messages currently sending, shown optimistically with a clock tick.
+  const [pendingTexts, setPendingTexts] = useState<PendingText[]>([])
+  // Attachments currently uploading (or failed and awaiting retry).
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
+  const pendingFilesRef = useRef<PendingFile[]>([])
+  // Attachment picker popover state + hidden file inputs (image / PDF).
+  const [attachOpen, setAttachOpen] = useState(false)
+  const attachWrapRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const docInputRef = useRef<HTMLInputElement>(null)
+  // Emoji picker open state, plus refs to place/close it and to insert at caret.
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const emojiWrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   // Scroll bookkeeping: height before loading older messages (to restore
   // position), whether the last change was an older-page prepend, whether the
@@ -121,6 +238,8 @@ export function ChatView() {
   const loadingOlderRef = useRef(false)
   const nearBottomRef = useRef(true)
   const roomChangedRef = useRef(false)
+  // Latest pending-audio list, so the unmount cleanup can free object URLs.
+  const pendingAudiosRef = useRef<PendingAudio[]>([])
   const toast = useToast()
   const location = useLocation()
 
@@ -135,9 +254,18 @@ export function ChatView() {
     fetchNextPage,
   } = useGetRoomMessages(activeId)
   const sendMessage = useSendMessage()
+  const sendAudioMessage = useSendAudioMessage()
+  const sendFileMessage = useSendFileMessage()
+  const deleteMessage = useDeleteMessage()
   const markRoomRead = useMarkRoomRead()
 
+  // Voice-message recorder (mic → blob → upload).
+  const recorder = useAudioRecorder()
+
   useChatRealtime(activeId)
+
+  // Ephemeral typing indicator for the open room (broadcast, no DB writes).
+  const { peerTyping, notifyTyping, stopTyping } = useTyping(activeId, myId)
 
   // Broadcast my own presence while I'm on the chat page (online + heartbeat
   // now, offline on leave); live presence of the open peer for the header.
@@ -160,6 +288,17 @@ export function ChatView() {
   const active = rooms.find((r) => r.id === activeId) ?? null
   const peerPresence = usePeerPresence(active?.peer?.id)
 
+  // Optimistic bubbles for the open room only (uploading / sending), merged and
+  // ordered by time so they sit at the bottom in the right sequence.
+  const roomPendingAudios = pendingAudios.filter((p) => p.roomId === activeId)
+  const roomPendingTexts = pendingTexts.filter((p) => p.roomId === activeId)
+  const roomPendingFiles = pendingFiles.filter((p) => p.roomId === activeId)
+  const roomPending = [
+    ...roomPendingAudios.map((p) => ({ kind: 'audio' as const, id: p.id, createdAt: p.createdAt, audio: p })),
+    ...roomPendingTexts.map((p) => ({ kind: 'text' as const, id: p.id, createdAt: p.createdAt, text: p })),
+    ...roomPendingFiles.map((p) => ({ kind: 'file' as const, id: p.id, createdAt: p.createdAt, file: p })),
+  ].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+
   // Open a specific room when navigated here from a "Message" button (the
   // room id is passed in the router location state).
   useEffect(() => {
@@ -175,10 +314,12 @@ export function ChatView() {
     if (activeId && !rooms.some((r) => r.id === activeId)) setActiveId(null)
   }, [rooms, activeId, isFetching])
 
-  // A room switch should land at the bottom (newest) once its messages render.
+  // A room switch should land at the bottom (newest) once its messages render,
+  // and any in-progress reply is dropped.
   useEffect(() => {
     roomChangedRef.current = true
     nearBottomRef.current = true
+    setReplyTo(null)
   }, [activeId])
 
   // Position the scroll after each message change, before the browser paints:
@@ -194,7 +335,9 @@ export function ChatView() {
       el.scrollTop = el.scrollHeight
       roomChangedRef.current = false
     }
-  }, [messages])
+    // These are deps so a new typing indicator or a freshly-sent voice/text/
+    // attachment bubble scrolls into view when pinned to the bottom.
+  }, [messages, peerTyping, pendingAudios, pendingTexts, pendingFiles])
 
   // Track bottom-pinning and pull in older history when scrolled to the top.
   const handleMessagesScroll = () => {
@@ -208,6 +351,84 @@ export function ChatView() {
     }
   }
 
+  // Jump to a quoted message when its reply preview is clicked. If the target
+  // isn't loaded yet, keep pulling older pages (keeping the viewport steady)
+  // until it appears, then smooth-scroll to it and flash a highlight.
+  const scrollToMessage = async (id: string) => {
+    const find = () =>
+      scrollRef.current?.querySelector<HTMLElement>(`[data-msg-id="${id}"]`) ?? null
+
+    let el = find()
+    for (let i = 0; !el && hasNextPage && i < 20; i++) {
+      const c = scrollRef.current
+      if (c) {
+        prevHeightRef.current = c.scrollHeight
+        loadingOlderRef.current = true
+      }
+      await fetchNextPage()
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
+      el = find()
+    }
+    if (!el) return
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setHighlightId(id)
+    window.clearTimeout(highlightTimer.current)
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 1600)
+  }
+
+  // Clear the highlight timer on unmount.
+  useEffect(() => () => window.clearTimeout(highlightTimer.current), [])
+
+  // Keep a ref to the pending audios and free their object URLs on unmount so
+  // in-flight/failed recordings don't leak blob memory when leaving the page.
+  pendingAudiosRef.current = pendingAudios
+  pendingFilesRef.current = pendingFiles
+  useEffect(
+    () => () => {
+      pendingAudiosRef.current.forEach((p) => URL.revokeObjectURL(p.src))
+      pendingFilesRef.current.forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl))
+    },
+    [],
+  )
+
+  // Close the attachment picker on any click outside it.
+  useEffect(() => {
+    if (!attachOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (attachWrapRef.current && !attachWrapRef.current.contains(e.target as Node))
+        setAttachOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [attachOpen])
+
+  // Close the emoji picker on any click outside it (the trigger lives inside the
+  // wrapper too, so tapping it just toggles rather than close-then-reopen).
+  useEffect(() => {
+    if (!emojiOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (emojiWrapRef.current && !emojiWrapRef.current.contains(e.target as Node))
+        setEmojiOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [emojiOpen])
+
+  // Insert a picked emoji at the caret (falling back to the end), keeping focus.
+  const insertEmoji = (emoji: string) => {
+    const el = inputRef.current
+    const start = el?.selectionStart ?? text.length
+    const end = el?.selectionEnd ?? text.length
+    setText(text.slice(0, start) + emoji + text.slice(end))
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      const pos = start + emoji.length
+      el.setSelectionRange(pos, pos)
+    })
+  }
+
   // Clear the unread badge when a room with unread messages is opened.
   useEffect(() => {
     if (active && active.unread_count > 0) {
@@ -216,14 +437,238 @@ export function ChatView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, active?.unread_count])
 
+  // Label for who authored a quoted message ("You" for the current admin).
+  const replyAuthor = (senderId: string): string =>
+    senderId === myId ? 'You' : active ? roomName(active) : ''
+
+  // Start recording a voice message (asks for mic permission).
+  const handleStartRecording = async () => {
+    stopTyping()
+    try {
+      await recorder.start()
+    } catch {
+      toast.error('Microphone access is required to record a voice message')
+    }
+  }
+
+  // Upload (or re-upload) a pending voice message. Flips it back to 'uploading'
+  // while in flight; on success the real message is appended to the thread by
+  // the mutation, so we just drop the placeholder (and free its object URL); on
+  // failure we mark it 'error' so its bubble offers a retry button.
+  const uploadAudio = (pending: PendingAudio) => {
+    setPendingAudios((list) =>
+      list.map((p) => (p.id === pending.id ? { ...p, status: 'uploading' } : p)),
+    )
+    sendAudioMessage.mutate(
+      {
+        roomId: pending.roomId,
+        blob: pending.blob,
+        meta: pending.meta,
+        replyToMessageId: pending.replyToMessageId,
+      },
+      {
+        onSuccess: () => {
+          URL.revokeObjectURL(pending.src)
+          setPendingAudios((list) => list.filter((p) => p.id !== pending.id))
+        },
+        onError: (err: any) => {
+          setPendingAudios((list) =>
+            list.map((p) => (p.id === pending.id ? { ...p, status: 'error' } : p)),
+          )
+          toast.error(err?.message ?? 'Could not send voice message')
+        },
+      },
+    )
+  }
+
+  // Stop recording and show the voice bubble immediately (spinner on play)
+  // while it uploads in the background. The waveform was captured live during
+  // recording, so there's no decode step to delay the bubble — even for a long
+  // clip the sender sees it the instant they hit send.
+  const handleSendAudio = async () => {
+    const result = await recorder.stop()
+    if (!result || !activeId) return
+    const id = `pending-${crypto.randomUUID()}`
+    const peaks = result.peaks.length ? result.peaks : pseudoPeaks(id)
+    const duration = result.duration
+    const replyToMessageId = replyTo?.id
+    const replyTarget = replyTo
+    setReplyTo(null)
+
+    const pending: PendingAudio = {
+      id,
+      roomId: activeId,
+      src: URL.createObjectURL(result.blob),
+      duration,
+      peaks,
+      createdAt: new Date().toISOString(),
+      status: 'uploading',
+      blob: result.blob,
+      meta: {
+        duration,
+        peaks,
+        mimeType: result.mimeType,
+      },
+      replyToMessageId,
+      replyTo: replyTarget
+        ? {
+            id: replyTarget.id,
+            sender_id: replyTarget.sender_id,
+            message_type: replyTarget.message_type,
+            content: replyTarget.content,
+            is_deleted: replyTarget.is_deleted,
+          }
+        : null,
+    }
+    setPendingAudios((list) => [...list, pending])
+    uploadAudio(pending)
+  }
+
+  // Retry a voice message whose upload failed.
+  const retryAudio = (id: string) => {
+    const pending = pendingAudios.find((p) => p.id === id)
+    if (pending) uploadAudio(pending)
+  }
+
+  // Upload (or re-upload) a pending attachment; mirrors uploadAudio.
+  const uploadFile = (pending: PendingFile) => {
+    setPendingFiles((list) =>
+      list.map((p) => (p.id === pending.id ? { ...p, status: 'uploading' } : p)),
+    )
+    sendFileMessage.mutate(
+      {
+        roomId: pending.roomId,
+        file: pending.file,
+        kind: pending.kind,
+        replyToMessageId: pending.replyToMessageId,
+      },
+      {
+        onSuccess: () => {
+          if (pending.previewUrl) URL.revokeObjectURL(pending.previewUrl)
+          setPendingFiles((list) => list.filter((p) => p.id !== pending.id))
+        },
+        onError: (err: any) => {
+          setPendingFiles((list) =>
+            list.map((p) => (p.id === pending.id ? { ...p, status: 'error' } : p)),
+          )
+          toast.error(err?.message ?? 'Could not send attachment')
+        },
+      },
+    )
+  }
+
+  // Retry an attachment whose upload failed.
+  const retryFile = (id: string) => {
+    const pending = pendingFiles.find((p) => p.id === id)
+    if (pending) uploadFile(pending)
+  }
+
+  // Open the hidden file input for the picked attachment kind.
+  const pickAttachment = (kind: 'IMAGE' | 'PDF') => {
+    setAttachOpen(false)
+    ;(kind === 'IMAGE' ? imageInputRef : docInputRef).current?.click()
+  }
+
+  // Validate the chosen file (type + 5 MB cap), then show it optimistically and
+  // upload in the background — same flow as voice messages.
+  const handleFileSelected = (
+    kind: 'IMAGE' | 'PDF',
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0]
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = ''
+    if (!file || !activeId) return
+
+    const validType =
+      kind === 'IMAGE' ? file.type.startsWith('image/') : file.type === 'application/pdf'
+    if (!validType) {
+      toast.error(kind === 'IMAGE' ? 'Only images can be attached' : 'Only PDF documents can be attached')
+      return
+    }
+    if (file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+      toast.error('File is too large — maximum size is 5 MB')
+      return
+    }
+
+    const replyTarget = replyTo
+    setReplyTo(null)
+    const pending: PendingFile = {
+      id: `pending-${crypto.randomUUID()}`,
+      roomId: activeId,
+      kind,
+      file,
+      previewUrl: kind === 'IMAGE' ? URL.createObjectURL(file) : '',
+      createdAt: new Date().toISOString(),
+      status: 'uploading',
+      replyToMessageId: replyTarget?.id,
+      replyTo: replyTarget
+        ? {
+            id: replyTarget.id,
+            sender_id: replyTarget.sender_id,
+            message_type: replyTarget.message_type,
+            content: replyTarget.content,
+            is_deleted: replyTarget.is_deleted,
+          }
+        : null,
+    }
+    setPendingFiles((list) => [...list, pending])
+    uploadFile(pending)
+  }
+
+  // Open the confirm modal for one of my own messages.
+  const handleDelete = (msg: ChatMessage) => setPendingDelete(msg)
+
+  // Confirmed delete: soft-delete the message (leaving a tombstone) and drop it
+  // as the reply target if it was being quoted.
+  const confirmDelete = () => {
+    const msg = pendingDelete
+    if (!msg || !activeId) return
+    if (replyTo?.id === msg.id) setReplyTo(null)
+    deleteMessage.mutate(
+      { messageId: msg.id, roomId: activeId },
+      {
+        onSuccess: () => setPendingDelete(null),
+        onError: (err: any) => {
+          setPendingDelete(null)
+          toast.error(err?.message ?? 'Could not delete message')
+        },
+      },
+    )
+  }
+
   const handleSend = () => {
     const body = text.trim()
     if (!body || !activeId) return
+    const replyToMessageId = replyTo?.id
+    const replyTarget = replyTo
+    // Show the message immediately with a clock tick, then clear the composer.
+    const id = `pending-${crypto.randomUUID()}`
+    const pending: PendingText = {
+      id,
+      roomId: activeId,
+      content: body,
+      createdAt: new Date().toISOString(),
+      replyTo: replyTarget
+        ? {
+            id: replyTarget.id,
+            sender_id: replyTarget.sender_id,
+            message_type: replyTarget.message_type,
+            content: replyTarget.content,
+            is_deleted: replyTarget.is_deleted,
+          }
+        : null,
+    }
+    setPendingTexts((list) => [...list, pending])
     setText('')
+    setReplyTo(null)
+    stopTyping()
     sendMessage.mutate(
-      { roomId: activeId, content: body },
+      { roomId: activeId, content: body, replyToMessageId },
       {
+        onSuccess: () => setPendingTexts((list) => list.filter((p) => p.id !== id)),
         onError: (err: any) => {
+          setPendingTexts((list) => list.filter((p) => p.id !== id))
           setText(body)
           toast.error(err?.message ?? 'Could not send message')
         },
@@ -383,7 +828,7 @@ export function ChatView() {
                     {peerPresence.isOnline ? (
                       <Paragraph className="flex items-center gap-1 !text-[10px] font-semibold text-green-500">
                         <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                        Active now
+                        Online
                       </Paragraph>
                     ) : (
                       <Paragraph className="flex items-center gap-1 !text-[10px] font-semibold text-gray-400">
@@ -414,80 +859,156 @@ export function ChatView() {
                 </div>
               )}
               {chatLoading ? (
-                  <motion.div
-                    key="chat-skeleton"
-                    className="flex flex-1 flex-col gap-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className={`flex ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
-                        <Skeleton className={`h-16 rounded-2xl ${i % 2 === 0 ? 'w-3/5' : 'w-2/3'}`} />
-                      </div>
-                    ))}
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key={`msgs-${activeId}`}
-                    className="flex flex-col gap-4"
-                    variants={msgVariants}
-                    initial="hidden"
-                    animate="visible"
-                  >
-                    {messages.length === 0 ? (
-                      <div className="flex flex-1 items-center justify-center py-10">
-                        <Paragraph variant="muted" className="!text-sm text-gray-400">
-                          No messages yet — say hello 👋
-                        </Paragraph>
-                      </div>
-                    ) : (
-                      messages.map((msg: ChatMessage) => {
-                        const mine = msg.sender_id === myId
-                        return (
+                <motion.div
+                  key="chat-skeleton"
+                  className="flex flex-1 flex-col gap-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className={`flex ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                      <Skeleton className={`h-16 rounded-2xl ${i % 2 === 0 ? 'w-3/5' : 'w-2/3'}`} />
+                    </div>
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`msgs-${activeId}`}
+                  className="flex flex-col gap-4"
+                  variants={msgVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {messages.length === 0 && roomPending.length === 0 ? (
+                    <div className="flex flex-1 items-center justify-center py-10">
+                      <Paragraph variant="muted" className="!text-sm text-gray-400">
+                        No messages yet — say hello 👋
+                      </Paragraph>
+                    </div>
+                  ) : (
+                    messages.map((msg: ChatMessage, i: number) => {
+                      const mine = msg.sender_id === myId
+                      // Messages are oldest→newest here; a day-separator sits
+                      // before the first message of a day.
+                      const prev = messages[i - 1]
+                      const showSeparator = !sameDay(prev?.created_at ?? null, msg.created_at)
+                      return (
+                        <Fragment key={msg.id}>
+                          {showSeparator && (
+                            <div className="flex items-center gap-3 py-1">
+                              <div className="h-px flex-1 bg-gray-200" />
+                              <span className="shrink-0 rounded-full bg-white px-3 py-0.5 text-[11px] font-semibold text-gray-500 shadow-sm">
+                                {dateSeparatorLabel(msg.created_at)}
+                              </span>
+                              <div className="h-px flex-1 bg-gray-200" />
+                            </div>
+                          )}
                           <motion.div
-                            key={msg.id}
                             variants={msgItemVariants}
-                            className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}
+                            // Own messages already appeared as the optimistic
+                            // clock bubble — re-animating the confirmed one
+                            // would flicker, so only peer messages animate in.
+                            initial={mine ? false : 'hidden'}
+                            data-msg-id={msg.id}
+                            className={`group flex flex-col ${mine ? 'items-end' : 'items-start'}`}
                           >
-                            <div
-                              className={`max-w-[65%] rounded-2xl px-4 py-3 ${mine
-                                ? 'rounded-tr-sm bg-primary text-white'
-                                : 'rounded-tl-sm bg-white text-ink'
-                                }`}
-                            >
-                              {msg.content && (
-                                <Paragraph
-                                  className={`!text-sm leading-relaxed ${mine ? 'text-white' : 'text-ink'
-                                    }`}
-                                >
-                                  {msg.content}
-                                </Paragraph>
-                              )}
+                            <div className={`flex max-w-[75%] items-center gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
+                              <div
+                                className={`min-w-0 rounded-2xl px-4 py-3 transition-shadow ${mine
+                                  ? 'rounded-tr-sm bg-primary text-white'
+                                  : 'rounded-tl-sm bg-white text-ink'
+                                  } ${highlightId === msg.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                              >
+                                {msg.is_deleted ? (
+                                  <Paragraph
+                                    className={`flex items-center gap-1.5 !text-sm italic ${mine ? 'text-white/70' : 'text-gray-400'}`}
+                                  >
+                                    <Trash2 size={13} /> This message was deleted
+                                  </Paragraph>
+                                ) : (
+                                  <>
+                                    {msg.reply_to && (
+                                      <button
+                                        type="button"
+                                        onClick={() => msg.reply_to && scrollToMessage(msg.reply_to.id)}
+                                        className={`mb-2 w-full rounded-lg border-l-2 px-2.5 py-1.5 text-left transition-opacity hover:opacity-80 ${mine ? 'border-white/60 bg-white/15' : 'border-primary bg-gray-100'}`}
+                                      >
+                                        <p className={`text-[11px] font-bold ${mine ? 'text-white' : 'text-primary'}`}>{replyAuthor(msg.reply_to.sender_id)}</p>
+                                        <p className={`truncate text-[11px] ${mine ? 'text-white/80' : 'text-gray-500'}`}>{replyPreviewText(msg.reply_to)}</p>
+                                      </button>
+                                    )}
+                                    {msg.message_type === 'AUDIO' && msg.file_url ? (
+                                      <AudioPlayer src={msg.file_url} content={msg.content} seed={msg.id} mine={mine} />
+                                    ) : msg.message_type === 'IMAGE' && msg.file_url ? (
+                                      // Image attachment — click opens the original.
+                                      <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block">
+                                        <img
+                                          src={msg.file_url}
+                                          alt={msg.file_name ?? 'Image'}
+                                          loading="lazy"
+                                          className="max-h-[260px] max-w-[220px] rounded-lg object-cover"
+                                        />
+                                      </a>
+                                    ) : (
+                                      <>
+                                        {msg.content && (
+                                          <Paragraph
+                                            className={`!text-sm leading-relaxed ${mine ? 'text-white' : 'text-ink'
+                                              }`}
+                                          >
+                                            {msg.content}
+                                          </Paragraph>
+                                        )}
 
-                              {msg.message_type !== 'TEXT' && msg.file_url && (
-                                <a
-                                  href={msg.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`flex items-center gap-3 ${msg.content ? 'mt-3' : ''
-                                    } rounded-xl bg-white px-3 py-2`}
-                                >
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
-                                    <FileText size={14} className="text-blue-600" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-xs font-semibold text-ink">
-                                      {msg.file_name ?? 'Attachment'}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400">
-                                      {formatAttachment(msg)}
-                                    </p>
-                                  </div>
-                                  <span className="shrink-0 text-gray-400 hover:text-primary">
-                                    <Download size={14} />
-                                  </span>
-                                </a>
+                                        {msg.message_type !== 'TEXT' && msg.file_url && (
+                                          <a
+                                            href={msg.file_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`flex items-center gap-3 ${msg.content ? 'mt-3' : ''
+                                              } rounded-xl bg-white px-3 py-2`}
+                                          >
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                                              <FileText size={14} className="text-blue-600" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                              <p className="truncate text-xs font-semibold text-ink">
+                                                {msg.file_name ?? 'Attachment'}
+                                              </p>
+                                              <p className="text-[10px] text-gray-400">
+                                                {formatAttachment(msg)}
+                                              </p>
+                                            </div>
+                                            <span className="shrink-0 text-gray-400 hover:text-primary">
+                                              <Download size={14} />
+                                            </span>
+                                          </a>
+                                        )}
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              {!msg.is_deleted && (
+                                <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    onClick={() => setReplyTo(msg)}
+                                    title="Reply"
+                                    className="text-gray-400 hover:text-primary"
+                                  >
+                                    <Reply size={15} />
+                                  </button>
+                                  {mine && (
+                                    <button
+                                      onClick={() => handleDelete(msg)}
+                                      title="Delete"
+                                      className="text-gray-400 hover:text-red-500"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
 
@@ -498,7 +1019,7 @@ export function ChatView() {
                               <span className="text-[10px] text-black">
                                 {formatMessageTime(msg.created_at)}
                               </span>
-                              {mine && (
+                              {mine && !msg.is_deleted && (
                                 <span className="flex items-center">
                                   {/* sent → 1 tick · delivered → 2 ticks · seen → 2 blue ticks */}
                                   <Check
@@ -518,11 +1039,114 @@ export function ChatView() {
                               )}
                             </div>
                           </motion.div>
-                        )
-                      })
-                    )}
-                  </motion.div>
-                )}
+                        </Fragment>
+                      )
+                    })
+                  )}
+
+                  {/* Optimistic bubbles (voice + text): shown the instant you hit
+                      send, with a clock tick while in flight. Removed once the
+                      real message lands. */}
+                  {roomPending.map((p) => {
+                    const quote =
+                      p.kind === 'audio' ? p.audio.replyTo : p.kind === 'text' ? p.text.replyTo : p.file.replyTo
+                    return (
+                      <motion.div
+                        key={p.id}
+                        variants={msgItemVariants}
+                        className="group flex flex-col items-end"
+                      >
+                        <div className="flex max-w-[75%] items-center gap-2 flex-row-reverse">
+                          <div className="min-w-0 rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-white">
+                            {quote && (
+                              <div className="mb-2 w-full rounded-lg border-l-2 border-white/60 bg-white/15 px-2.5 py-1.5 text-left">
+                                <p className="text-[11px] font-bold text-white">
+                                  {replyAuthor(quote.sender_id)}
+                                </p>
+                                <p className="truncate text-[11px] text-white/80">
+                                  {replyPreviewText(quote)}
+                                </p>
+                              </div>
+                            )}
+                            {p.kind === 'audio' ? (
+                              <AudioPlayer
+                                src={p.audio.src}
+                                meta={{ d: p.audio.duration, w: p.audio.peaks }}
+                                seed={p.audio.id}
+                                mine
+                                uploadState={p.audio.status}
+                                onRetry={() => retryAudio(p.audio.id)}
+                              />
+                            ) : p.kind === 'text' ? (
+                              <Paragraph className="!text-sm leading-relaxed text-white">
+                                {p.text.content}
+                              </Paragraph>
+                            ) : p.file.kind === 'IMAGE' ? (
+                              <div className="relative">
+                                <img
+                                  src={p.file.previewUrl}
+                                  alt={p.file.file.name}
+                                  className="max-h-[260px] max-w-[220px] rounded-lg object-cover opacity-80"
+                                />
+                                {p.file.status === 'uploading' && (
+                                  <span className="absolute inset-0 m-auto h-6 w-6 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex min-w-[200px] items-center gap-3 rounded-xl bg-white px-3 py-2">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                                  {p.file.status === 'uploading' ? (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
+                                  ) : (
+                                    <FileText size={14} className="text-blue-600" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-xs font-semibold text-ink">{p.file.file.name}</p>
+                                  <p className="text-[10px] text-gray-400">
+                                    {p.file.status === 'uploading' ? 'Uploading…' : 'Failed'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1 flex-row-reverse">
+                          <span className="text-[10px] text-black">
+                            {formatMessageTime(p.createdAt)}
+                          </span>
+                          {p.kind === 'audio' && p.audio.status === 'error' ? (
+                            <span className="text-[10px] font-semibold text-red-500">
+                              Not sent
+                            </span>
+                          ) : p.kind === 'file' && p.file.status === 'error' ? (
+                            <button
+                              onClick={() => retryFile(p.file.id)}
+                              className="text-[10px] font-semibold text-red-500 hover:underline"
+                            >
+                              Not sent — Retry
+                            </button>
+                          ) : (
+                            // Clock tick while the message is still being sent.
+                            <Clock size={12} className="text-gray-400" />
+                          )}
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )}
+
+              {/* Typing indicator — last child so it sits at the bottom (newest). */}
+              {peerTyping && !chatLoading && (
+                <div className="flex items-start">
+                  <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm bg-white px-4 py-3.5">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Input Bar */}
@@ -532,36 +1156,168 @@ export function ChatView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2, ease: 'easeOut' }}
             >
+              {replyTo && (
+                <div className="mb-2 flex items-center gap-3 rounded-xl border-l-4 border-primary bg-white px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-primary">
+                      Replying to {replyAuthor(replyTo.sender_id)}
+                    </p>
+                    <p className="truncate text-xs text-gray-500">
+                      {replyPreviewText(replyTo)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setReplyTo(null)}
+                    title="Cancel reply"
+                    className="shrink-0 text-gray-400 hover:text-primary"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3">
-                {/* <button className="text-gray-400 transition-colors hover:text-primary">
-                  <Paperclip size={18} />
-                </button> */}
-                <button className="text-gray-400 transition-colors hover:text-primary">😊</button>
-                <input
-                  type="text"
-                  placeholder={`Type your message to ${roomName(active)}...`}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSend()
-                  }}
-                  className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-gray-400"
-                />
-                {/* <button className="text-gray-400 transition-colors hover:text-primary">
-                  <Mic size={18} />
-                </button> */}
-                <button
-                  onClick={handleSend}
-                  disabled={!text.trim() || sendMessage.isPending}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  <Send size={15} />
-                </button>
+                {recorder.isRecording ? (
+                  <>
+                    <button
+                      onClick={recorder.cancel}
+                      title="Cancel recording"
+                      className="shrink-0 text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    <div className="flex flex-1 items-center gap-2">
+                      <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+                      <span className="text-sm tabular-nums text-ink">{formatDuration(recorder.elapsed)}</span>
+                      {/* Live waveform: bars rise and fall with your voice. */}
+                      <div className="flex h-8 min-w-0 flex-1 items-center justify-end gap-[2px] overflow-hidden">
+                        {recorder.waveform.length === 0 ? (
+                          <span className="text-xs text-gray-400">Recording…</span>
+                        ) : (
+                          recorder.waveform.map((h, i) => (
+                            <span
+                              key={i}
+                              className="w-[3px] shrink-0 rounded-full bg-primary/70"
+                              style={{ height: `${Math.max(10, h)}%` }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSendAudio}
+                      disabled={sendAudioMessage.isPending}
+                      title="Send voice message"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      <Send size={15} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative shrink-0" ref={emojiWrapRef}>
+                      {emojiOpen && <EmojiPicker onSelect={insertEmoji} />}
+                      <button
+                        type="button"
+                        onClick={() => setEmojiOpen((o) => !o)}
+                        title="Emoji"
+                        className={`transition-colors ${emojiOpen ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
+                      >
+                        😊
+                      </button>
+                    </div>
+                    <div className="relative shrink-0" ref={attachWrapRef}>
+                      {attachOpen && (
+                        <div className="absolute bottom-full left-0 z-50 mb-2 w-44 rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                          <button
+                            type="button"
+                            onClick={() => pickAttachment('IMAGE')}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink hover:bg-gray-50"
+                          >
+                            <ImageIcon size={16} className="text-primary" />
+                            Image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => pickAttachment('PDF')}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink hover:bg-gray-50"
+                          >
+                            <FileText size={16} className="text-red-500" />
+                            Document (PDF)
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setAttachOpen((o) => !o)}
+                        title="Attach (image or PDF, max 5 MB)"
+                        className={`transition-colors ${attachOpen ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
+                      >
+                        <Paperclip size={18} />
+                      </button>
+                    </div>
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileSelected('IMAGE', e)}
+                    />
+                    <input
+                      ref={docInputRef}
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="hidden"
+                      onChange={(e) => handleFileSelected('PDF', e)}
+                    />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder={`Type your message to ${roomName(active)}...`}
+                      value={text}
+                      onChange={(e) => {
+                        setText(e.target.value)
+                        notifyTyping()
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSend()
+                      }}
+                      className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-gray-400"
+                    />
+                    {text.trim() ? (
+                      <button
+                        onClick={handleSend}
+                        disabled={sendMessage.isPending}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                      >
+                        <Send size={15} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStartRecording}
+                        title="Record voice message"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-opacity hover:opacity-90"
+                      >
+                        <Mic size={16} />
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </motion.div>
           </>
         )}
       </div>
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete message"
+        message="This message will be deleted for everyone in this chat."
+        confirmLabel="Delete"
+        confirmVariant="outline-danger"
+        isLoading={deleteMessage.isPending}
+      />
     </div>
   )
 }
