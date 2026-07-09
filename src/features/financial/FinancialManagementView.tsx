@@ -5,17 +5,23 @@ import { FinancialPayoutsTable } from '@/features/financial/components/Financial
 import { FinancialTabs, type FinancialTab } from '@/features/financial/components/FinancialTabs'
 import { FinancialTransactionsTable } from '@/features/financial/components/FinancialTransactionsTable'
 import { financialStatItems } from '@/features/financial/data/financialStatItems'
+import { useGetFinancialSummary } from '@/features/financial/hooks/useFinancialManagement'
 
 export function FinancialManagementView() {
   const [tab, setTab] = useState<FinancialTab>('transactions')
+
+  const { data: financialSummary, isLoading: isSummaryLoading } = useGetFinancialSummary()
+
+  const statItems = financialStatItems(financialSummary)
 
   return (
     <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
       <FinancialManagementHeader />
 
       <SummaryStatsGrid
-        items={financialStatItems}
+        items={statItems}
         columns={3}
+        isLoading={isSummaryLoading}
         skeletonCount={3}
         skeletonProps={{ layout: 'inline' }}
         className="gap-6"

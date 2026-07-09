@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { FacultyPayoutStatus, FacultyPayoutTransaction } from '@/api/FacultyManagement/facultyManagement.api'
 import { Card } from '@/components/ui/Card'
 import type { DataTableColumn } from '@/components/ui/DataTable'
@@ -7,6 +7,7 @@ import { SearchInput } from '@/components/ui/SearchInput'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { StatusBadgeVariant } from '@/components/ui/StatusBadge'
 import { Header2 } from '@/components/ui/Typography'
+import { PayoutDetailsModal } from '@/features/financial/components/PayoutDetailsModal'
 import { JoinedDateFilter } from '@/features/users/components/JoinedDateFilter'
 
 const statusBadge: Record<FacultyPayoutStatus, { label: string; variant: StatusBadgeVariant }> = {
@@ -44,6 +45,8 @@ export function FacultyTransactionsTable({
   isLoading = false,
   isError = false,
 }: FacultyTransactionsTableProps) {
+  const [detailPayoutId, setDetailPayoutId] = useState<string | null>(null)
+
   const columns = useMemo<DataTableColumn<FacultyPayoutTransaction>[]>(
     () => [
       {
@@ -51,7 +54,7 @@ export function FacultyTransactionsTable({
         header: 'Transaction ID',
         width: '14rem',
         cell: (row) => (
-          <span className="text-sm font-semibold text-[#1E1B4B]">#{row.transactionId}</span>
+          <span className="text-sm font-semibold text-[#1E1B4B]">{row.transactionId}</span>
         ),
       },
       {
@@ -82,16 +85,28 @@ export function FacultyTransactionsTable({
         id: 'status',
         header: 'Status',
         width: '8.5rem',
-        align: 'right',
-        headerClassName: 'text-right',
         cell: (row) => {
           const badge = statusBadge[row.status] ?? statusBadge.PENDING
-          return (
-            <div className="flex justify-end">
-              <StatusBadge label={badge.label} variant={badge.variant} />
-            </div>
-          )
+          return <StatusBadge label={badge.label} variant={badge.variant} />
         },
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        width: '6rem',
+        align: 'right',
+        headerClassName: 'text-right',
+        cell: (row) => (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setDetailPayoutId(row.transactionId)}
+              className="text-ink-heading text-sm font-semibold outline-none transition-colors hover:opacity-70 focus-visible:underline"
+            >
+              View
+            </button>
+          </div>
+        ),
       },
     ],
     [],
@@ -140,6 +155,12 @@ export function FacultyTransactionsTable({
         footerLayout="between"
         alwaysShowPagination
         className="rounded-none border-0 shadow-none"
+      />
+
+      <PayoutDetailsModal
+        open={detailPayoutId !== null}
+        payoutId={detailPayoutId}
+        onClose={() => setDetailPayoutId(null)}
       />
     </Card>
   )

@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   EarningsGrowthBarChart,
   EARNINGS_GROWTH_CHART_HEIGHT_CLASS,
   toRelativeBarHeights,
 } from '@/components/ui/EarningsGrowthBarChart'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { ChartPeriodFilter } from '@/features/dashboard/components/ChartPeriodFilter'
 import type { RevenueTrendPoint, TrendPeriod } from '@/features/dashboard/data/chartTrends'
 import { useGetFacultyRevenueTrends } from '@/features/faculty/hooks/useFacultyManagement'
 import { cn } from '@/utils/cn'
@@ -55,7 +54,8 @@ export function FacultyEarningsGrowthChart({
   facultyId,
   className,
 }: FacultyEarningsGrowthChartProps) {
-  const [period, setPeriod] = useState<TrendPeriod>('year')
+  // Fixed to the monthly (last 12 months) view — no period filter.
+  const period: TrendPeriod = 'year'
   const {
     data: trends = EMPTY_TRENDS,
     isLoading,
@@ -80,7 +80,6 @@ export function FacultyEarningsGrowthChart({
           <h2 className={CHART_TITLE_CLASS}>Earnings Growth</h2>
           <p className="mt-1 text-sm text-[#64748B]">{PERIOD_SUBTITLES[period]}</p>
         </div>
-        <ChartPeriodFilter value={period} onChange={setPeriod} />
       </div>
 
       <div className={cn('shrink-0', EARNINGS_GROWTH_CHART_HEIGHT_CLASS)}>

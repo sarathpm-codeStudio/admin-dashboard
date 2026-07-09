@@ -8,6 +8,11 @@ export type PendingActionTarget =
     | { kind: 'faculty'; facultyId: string }
     | { kind: 'course'; courseId: string }
 
+export type TopPerformers = {
+    faculty: { name: string; avatarUrl: string | null; category: string; metric: string } | null
+    course: { name: string; category: string; metric: string } | null
+}
+
 export type DashboardPendingAction = {
     /** Stable key, prefixed by type so faculty/course ids never collide. */
     id: string
@@ -444,10 +449,11 @@ export const dashboardManagementFunctions = {
 
             // 1. Fetch admin revenue records (PLATFORM_FEE rows in faculty_transactions).
             // Admin revenue is the platform commission, recorded per enrollment/bundle
-            // at payout time. Each row's `amount` is the admin commission.
+            // at payout time. Each row's `amount` is the admin commission; the run's
+            // payout_time_period is the enrollment month the revenue belongs to.
             const { data: platformFeeData, error: platformFeeError } = await supabase
                 .from('faculty_transactions')
-                .select('amount, transacted_at')
+                .select('amount, transacted_at, payout_time_period')
                 .eq('type', 'PLATFORM_FEE');
 
             if (platformFeeError) throw new Error(platformFeeError.message);
@@ -508,18 +514,86 @@ export const dashboardManagementFunctions = {
             }
 
             else if (period === 'year') {
-                // Last 12 months — monthly granularity
+                // Last 12 months — monthly granularity.
+                // Revenue is attributed to the ENROLLMENT month (payout_time_period),
+                // not the month the payout was processed — so a June payout run done
+                // in July shows under June. The current month shows the pending admin
+                // commission (its enrollments aren't paid out until next month).
                 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+                const buckets = [] as { key: string; label: string; revenue: number }[]
                 for (let i = 11; i >= 0; i--) {
-                    const start = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0);
-                    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1, 0, 0, 0, 0);
-
-                    result.push({
-                        label: monthLabels[start.getMonth()],
-                        revenue: revenueInRange(start, end),
-                    });
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+                    buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: monthLabels[d.getMonth()] ?? '', revenue: 0 })
                 }
+                const bucketByKey = new Map(buckets.map(b => [b.key, b]))
+
+                // Realized commission → bucket by payout_time_period (fallback transacted_at)
+                for (const r of allRevenue) {
+                    let month: number | null = null
+                    let year: number | null = null
+                    const parsed = r.payout_time_period ? new Date(`1 ${r.payout_time_period}`) : null
+                    if (parsed && !Number.isNaN(parsed.getTime())) {
+                        month = parsed.getMonth(); year = parsed.getFullYear()
+                    } else if (r.transacted_at) {
+                        const d = new Date(r.transacted_at); month = d.getMonth(); year = d.getFullYear()
+                    }
+                    if (month === null || year === null) continue
+                    const bucket = bucketByKey.get(`${year}-${month}`)
+                    if (bucket) bucket.revenue += r.amount ?? 0
+                }
+
+                // Current month → add pending admin commission (unpaid this-month sales)
+                const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+                const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+
+                const [
+                    { data: pendEnr },
+                    { data: pendBun },
+                    { data: saleTxns },
+                    { data: defSetting },
+                ] = await Promise.all([
+                    supabase.from('enrollments')
+                        .select('id, faculty_id, amount_paid, gst_amount')
+                        .eq('is_bundle_enrollment', false).eq('payment_status', 'SUCCESS').gt('amount_paid', 0)
+                        .gte('enrolled_at', thisMonthStart).lt('enrolled_at', nextMonthStart),
+                    supabase.from('bundle_enrollments')
+                        .select('id, faculty_id, amount_paid')
+                        .eq('payment_status', 'SUCCESS').gt('amount_paid', 0)
+                        .gte('enrolled_at', thisMonthStart).lt('enrolled_at', nextMonthStart),
+                    supabase.from('faculty_transactions')
+                        .select('type, enrollment_id, bundle_enrollment_id')
+                        .in('type', ['COURSE_SALE', 'BUNDLE_SALE']),
+                    supabase.from('platform_settings').select('value').eq('key', 'default_commission_percent').maybeSingle(),
+                ])
+
+                const paidEnrIds = new Set((saleTxns ?? []).filter(t => t.type === 'COURSE_SALE' && t.enrollment_id).map(t => t.enrollment_id))
+                const paidBunIds = new Set((saleTxns ?? []).filter(t => t.type === 'BUNDLE_SALE' && t.bundle_enrollment_id).map(t => t.bundle_enrollment_id))
+                const unpaidEnr = (pendEnr ?? []).filter(e => !paidEnrIds.has(e.id))
+                const unpaidBun = (pendBun ?? []).filter(b => !paidBunIds.has(b.id))
+
+                const facultyIds = [...new Set([...unpaidEnr, ...unpaidBun].map(e => e.faculty_id).filter(Boolean))]
+                let ratesByFaculty = new Map<string, number | null>()
+                if (facultyIds.length > 0) {
+                    const { data: profs } = await supabase.from('profiles').select('id, commission_rate').in('id', facultyIds)
+                    ratesByFaculty = new Map((profs ?? []).map(p => [p.id, p.commission_rate]))
+                }
+                const defaultCommission = parseFloat(defSetting?.value ?? '20') || 20
+                const rateOf = (fid: string | null) => (fid ? ratesByFaculty.get(fid) : null) ?? defaultCommission
+
+                let pendingCommission = 0
+                for (const e of unpaidEnr) {
+                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                    pendingCommission += Math.round(base * rateOf(e.faculty_id) / 100)
+                }
+                for (const b of unpaidBun) {
+                    pendingCommission += Math.round((b.amount_paid ?? 0) * rateOf(b.faculty_id) / 100)
+                }
+
+                const curBucket = bucketByKey.get(`${now.getFullYear()}-${now.getMonth()}`)
+                if (curBucket) curBucket.revenue += pendingCommission
+
+                result = buckets.map(b => ({ label: b.label, revenue: b.revenue }))
             }
 
             return result;
@@ -529,7 +603,130 @@ export const dashboardManagementFunctions = {
         }
     },
 
+    /**
+     * Dashboard "Top Performers":
+     *  - top faculty by total revenue = realized payouts (SUCCESS PAYOUT rows)
+     *    + pending payout (faculty share of not-yet-settled enrollments) —
+     *    the same definition used on the faculty revenue views
+     *  - top course by number of enrolled students
+     */
+    getTopPerformers: async (): Promise<TopPerformers> => {
+        try {
+            const [
+                { data: enrollments, error: enrErr },
+                { data: bundles, error: bunErr },
+                { data: payoutRows, error: payoutErr },
+                { data: saleTxns, error: saleErr },
+                { data: defSetting },
+            ] = await Promise.all([
+                supabase.from('enrollments').select('id, faculty_id, course_id, amount_paid, gst_amount, is_bundle_enrollment, payment_status, student_id'),
+                supabase.from('bundle_enrollments').select('id, faculty_id, amount_paid, payment_status'),
+                supabase.from('faculty_transactions').select('faculty_id, amount').eq('type', 'PAYOUT').eq('status', 'SUCCESS'),
+                supabase.from('faculty_transactions').select('type, enrollment_id, bundle_enrollment_id').in('type', ['COURSE_SALE', 'BUNDLE_SALE']),
+                supabase.from('platform_settings').select('value').eq('key', 'default_commission_percent').maybeSingle(),
+            ])
 
+            if (enrErr) throw new Error(enrErr.message)
+            if (bunErr) throw new Error(bunErr.message)
+            if (payoutErr) throw new Error(payoutErr.message)
+            if (saleErr) throw new Error(saleErr.message)
 
+            // Per-faculty commission rate (profiles.commission_rate → platform default)
+            const involvedFacultyIds = [...new Set(
+                [...(enrollments ?? []), ...(bundles ?? []), ...(payoutRows ?? [])].map(r => r.faculty_id).filter(Boolean),
+            )]
+            let ratesByFaculty = new Map<string, number | null>()
+            if (involvedFacultyIds.length > 0) {
+                const { data: profs } = await supabase.from('profiles').select('id, commission_rate').in('id', involvedFacultyIds)
+                ratesByFaculty = new Map((profs ?? []).map(p => [p.id, p.commission_rate]))
+            }
+            const defaultCommission = parseFloat(defSetting?.value ?? '20') || 20
+            const rateOf = (fid: string | null) => (fid ? ratesByFaculty.get(fid) : null) ?? defaultCommission
+
+            // 1. Realized: sum of SUCCESS PAYOUT amounts per faculty
+            const revByFaculty = new Map<string, number>()
+            for (const p of payoutRows ?? []) {
+                if (!p.faculty_id) continue
+                revByFaculty.set(p.faculty_id, (revByFaculty.get(p.faculty_id) ?? 0) + (p.amount ?? 0))
+            }
+
+            // 2. Pending: faculty share of unpaid SUCCESS enrollments/bundles
+            const paidEnrIds = new Set((saleTxns ?? []).filter(t => t.type === 'COURSE_SALE' && t.enrollment_id).map(t => t.enrollment_id))
+            const paidBunIds = new Set((saleTxns ?? []).filter(t => t.type === 'BUNDLE_SALE' && t.bundle_enrollment_id).map(t => t.bundle_enrollment_id))
+
+            for (const e of enrollments ?? []) {
+                if (!e.faculty_id || e.is_bundle_enrollment) continue
+                if ((e.payment_status ?? 'SUCCESS') !== 'SUCCESS' || (e.amount_paid ?? 0) <= 0) continue
+                if (paidEnrIds.has(e.id)) continue
+                const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                const share = base - Math.round(base * rateOf(e.faculty_id) / 100)
+                revByFaculty.set(e.faculty_id, (revByFaculty.get(e.faculty_id) ?? 0) + share)
+            }
+            for (const b of bundles ?? []) {
+                if (!b.faculty_id) continue
+                if ((b.payment_status ?? 'SUCCESS') !== 'SUCCESS' || (b.amount_paid ?? 0) <= 0) continue
+                if (paidBunIds.has(b.id)) continue
+                const base = b.amount_paid ?? 0
+                const share = base - Math.round(base * rateOf(b.faculty_id) / 100)
+                revByFaculty.set(b.faculty_id, (revByFaculty.get(b.faculty_id) ?? 0) + share)
+            }
+
+            // Distinct students per course
+            const studentsByCourse = new Map<string, Set<string>>()
+            for (const e of enrollments ?? []) {
+                if (!e.course_id) continue
+                if (!studentsByCourse.has(e.course_id)) studentsByCourse.set(e.course_id, new Set())
+                if (e.student_id) studentsByCourse.get(e.course_id)!.add(e.student_id)
+            }
+
+            let topFacultyId: string | null = null
+            let topFacultyRev = 0
+            for (const [fid, rev] of revByFaculty) {
+                if (rev > topFacultyRev) { topFacultyRev = rev; topFacultyId = fid }
+            }
+
+            let topCourseId: string | null = null
+            let topCourseCount = 0
+            for (const [cid, set] of studentsByCourse) {
+                if (set.size > topCourseCount) { topCourseCount = set.size; topCourseId = cid }
+            }
+
+            const [
+                { data: facProfile },
+                { data: course },
+            ] = await Promise.all([
+                topFacultyId
+                    ? supabase.from('profiles').select('first_name, last_name, avatar_url').eq('id', topFacultyId).maybeSingle()
+                    : Promise.resolve({ data: null } as any),
+                topCourseId
+                    ? supabase.from('courses').select('title, category').eq('id', topCourseId).maybeSingle()
+                    : Promise.resolve({ data: null } as any),
+            ])
+
+            const formatRevenue = (amount: number): string => {
+                const crore = 10000000, lakh = 100000
+                if (amount >= crore) return `₹${(amount / crore).toFixed(1)} Cr`
+                if (amount >= lakh) return `₹${(amount / lakh).toFixed(1)} L`
+                return `₹${Math.round(amount).toLocaleString('en-IN')}`
+            }
+
+            return {
+                faculty: topFacultyId ? {
+                    name: [facProfile?.first_name, facProfile?.last_name].filter(Boolean).join(' ') || 'Unknown',
+                    avatarUrl: facProfile?.avatar_url ?? null,
+                    category: 'Faculty',
+                    metric: `${formatRevenue(topFacultyRev)} revenue`,
+                } : null,
+                course: topCourseId ? {
+                    name: course?.title ?? 'Course',
+                    category: course?.category ?? 'Course',
+                    metric: `${topCourseCount.toLocaleString('en-IN')} student${topCourseCount === 1 ? '' : 's'}`,
+                } : null,
+            }
+
+        } catch (error: any) {
+            throw new Error(error.message)
+        }
+    },
 
 }

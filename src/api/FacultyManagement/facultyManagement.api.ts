@@ -233,9 +233,11 @@ export const facultyManagementFunctions = {
                             : `↓ ${Math.abs(totalStudentsGrowth)}%`,
                     },
 
+                    // Total revenue = already paid out (PAYOUT rows) + still pending.
+                    // Pending is also surfaced separately on the card below.
                     totalRevenue: {
-                        amount: totalRevenue,
-                        display: formatRevenue(totalRevenue),
+                        amount: totalRevenue + pendingPayout,
+                        display: formatRevenue(totalRevenue + pendingPayout),
                     },
 
                     pendingPayout: {
@@ -691,9 +693,9 @@ export const facultyManagementFunctions = {
             growth >= 0 ? `+${growth}%` : `${growth}%`;
 
         return {
-            totalRevenue: {            // → Total Revenue card  (sum of PAYOUT transactions paid to faculty)
-                amount: totalRevenue,
-                display: formatRevenue(totalRevenue),
+            totalRevenue: {            // → Total Revenue card = already paid out (PAYOUT rows) + still pending
+                amount: totalRevenue + pendingPayout,
+                display: formatRevenue(totalRevenue + pendingPayout),
                 growth: revenueGrowth,                 // numeric %, negative = decrease
                 growthDisplay: formatGrowth(revenueGrowth),
                 isPositive: revenueGrowth >= 0,        // for arrow / color in the card

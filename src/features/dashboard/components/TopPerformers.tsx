@@ -1,9 +1,10 @@
-import { Calculator, Star, TrendingUp } from 'lucide-react'
+import { Calculator, Star, TrendingUp, User } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Carousel } from '@/components/ui/Carousel'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/utils/cn'
-import { topPerformers } from '@/features/dashboard/data/mockData'
+import { useGetTopPerformers } from '@/features/dashboard/hooks/useDashboardmanagement'
 
 type TopPerformersProps = {
   className?: string
@@ -31,7 +32,54 @@ function PerformerRow({ leading, name, subtitle, trailing }: PerformerRowProps) 
 }
 
 export function TopPerformers({ className, fillHeight = false }: TopPerformersProps) {
-  const { faculty, course } = topPerformers
+  const { data, isLoading } = useGetTopPerformers()
+  const faculty = data?.faculty
+  const course = data?.course
+
+  const slides: ReactNode[] = []
+  if (faculty) {
+    slides.push(
+      <PerformerRow
+        key="faculty"
+        leading={
+          faculty.avatarUrl ? (
+            <img
+              src={faculty.avatarUrl}
+              alt=""
+              className="size-12 rounded-lg object-cover object-center"
+            />
+          ) : (
+            <div className="flex size-12 items-center justify-center rounded-lg bg-[#F1F5F9] text-[#64748B]" aria-hidden>
+              <User className="size-6 stroke-[1.75]" />
+            </div>
+          )
+        }
+        name={faculty.name}
+        subtitle={`${faculty.category} • ${faculty.metric}`}
+        trailing={<Star className="size-5 fill-[#F59E0B] text-[#F59E0B]" aria-hidden />}
+      />,
+    )
+  }
+  if (course) {
+    slides.push(
+      <PerformerRow
+        key="course"
+        leading={
+          <div
+            className="flex size-12 items-center justify-center rounded-lg bg-[#E0E7FF] text-[#4338CA]"
+            aria-hidden
+          >
+            <Calculator className="size-6 stroke-[1.75]" />
+          </div>
+        }
+        name={course.name}
+        subtitle={`${course.category} • ${course.metric}`}
+        trailing={
+          <TrendingUp className="size-5 text-[#2563EB]" strokeWidth={2.25} aria-hidden />
+        }
+      />,
+    )
+  }
 
   return (
     <Card
@@ -43,48 +91,22 @@ export function TopPerformers({ className, fillHeight = false }: TopPerformersPr
     >
       <h2 className="mb-4 text-base font-bold text-[#111827]">Top Performers</h2>
 
-      <Carousel
-        className={cn(fillHeight && 'min-h-0 flex-1')}
-        viewportClassName={cn(fillHeight && 'h-full')}
-        autoPlayInterval={4000}
-        slides={[
-          <PerformerRow
-            key="faculty"
-            leading={
-              <img
-                src={faculty.avatarUrl}
-                alt=""
-                className="size-12 rounded-lg object-cover object-center"
-              />
-            }
-            name={faculty.name}
-            subtitle={`${faculty.category} • ${faculty.metric}`}
-            trailing={
-              <Star className="size-5 fill-[#F59E0B] text-[#F59E0B]" aria-hidden />
-            }
-          />,
-          <PerformerRow
-            key="course"
-            leading={
-              <div
-                className="flex size-12 items-center justify-center rounded-lg bg-[#E0E7FF] text-[#4338CA]"
-                aria-hidden
-              >
-                <Calculator className="size-6 stroke-[1.75]" />
-              </div>
-            }
-            name={course.name}
-            subtitle={`${course.category} • ${course.metric}`}
-            trailing={
-              <TrendingUp
-                className="size-5 text-[#2563EB]"
-                strokeWidth={2.25}
-                aria-hidden
-              />
-            }
-          />,
-        ]}
-      />
+      {isLoading ? (
+        <div className="space-y-3">
+          <Skeleton className="h-[4.5rem] w-full rounded-lg" />
+        </div>
+      ) : slides.length === 0 ? (
+        <div className="flex items-center justify-center rounded-lg bg-[#F3F4F6] p-6 text-sm text-[#6B7280]">
+          No performance data yet.
+        </div>
+      ) : (
+        <Carousel
+          className={cn(fillHeight && 'min-h-0 flex-1')}
+          viewportClassName={cn(fillHeight && 'h-full')}
+          autoPlayInterval={4000}
+          slides={slides}
+        />
+      )}
     </Card>
   )
 }

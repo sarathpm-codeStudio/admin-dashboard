@@ -6,7 +6,7 @@ import { dashboardStatItems } from '@/features/dashboard/data/dashboardStatItems
 
 import { EnrollmentTrendsChart } from '@/features/dashboard/components/EnrollmentTrendsChart'
 
-import { FinancialPulseCard } from '@/features/dashboard/components/FinancialPulseCard'
+// import { FinancialPulseCard } from '@/features/dashboard/components/FinancialPulseCard'
 
 import { PendingActionsList } from '@/features/dashboard/components/PendingActionsList'
 
@@ -74,7 +74,7 @@ export function DashboardView() {
             isLoading={isPendingActionsLoading}
           />
 
-          <FinancialPulseCard />
+          {/* <FinancialPulseCard /> */}
 
           <TopPerformers className={dashboardColumnGrowClass} fillHeight />
 

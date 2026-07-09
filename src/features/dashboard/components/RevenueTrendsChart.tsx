@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Card, CardBody } from '@/components/ui/Card'
 import {
   EarningsGrowthBarChart,
@@ -6,7 +6,6 @@ import {
 } from '@/components/ui/EarningsGrowthBarChart'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { ChartPeriodFilter } from '@/features/dashboard/components/ChartPeriodFilter'
 import {
   periodSubtitles,
   type RevenueTrendPoint,
@@ -52,7 +51,8 @@ function RevenueChartSkeleton() {
 }
 
 export function RevenueTrendsChart({ className, fillHeight = false }: RevenueTrendsChartProps) {
-  const [period, setPeriod] = useState<TrendPeriod>('month')
+  // Fixed to the yearly (last 12 months) view — no period filter.
+  const period: TrendPeriod = 'year'
   const { data: trends = EMPTY_TRENDS, isLoading, isError } = useGetRevenueTrends(period)
   const subtitle = periodSubtitles[period]
 
@@ -69,7 +69,6 @@ export function RevenueTrendsChart({ className, fillHeight = false }: RevenueTre
             title="Revenue Trends"
             titleClassName="text-[#191c1e]"
             subtitle={subtitle}
-            action={<ChartPeriodFilter value={period} onChange={setPeriod} />}
           />
           <div className="flex justify-end">
             <span className="flex items-center gap-1 text-xs font-medium text-[#3A3A3A]">
