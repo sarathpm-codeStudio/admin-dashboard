@@ -739,21 +739,35 @@ export const facultyManagementFunctions = {
             if (coursesError) throw new Error(coursesError.message);
             const courseIds = (courses ?? []).map((c) => c.id);
 
-            // Faculty net revenue = (amount_paid - GST) after the platform commission.
-            // Mirrors the payout calc in enrollment-payout-workflow.md §3.
+            // Actual settled faculty share (recorded at payout time) takes priority
+            // over a current-rate estimate, so a later commission-rate change never
+            // rewrites past months (enrollment-payout-workflow.md §7).
+            const { data: saleRows, error: saleError } = await db
+                .from('faculty_transactions')
+                .select('enrollment_id, amount')
+                .eq('faculty_id', facultyId)
+                .eq('type', 'COURSE_SALE')
+                .not('enrollment_id', 'is', null);
+
+            if (saleError) throw new Error(saleError.message);
+            const settledByEnrollment = new Map(
+                (saleRows ?? []).map((r) => [r.enrollment_id, Number(r.amount ?? 0)]),
+            );
+
+            // For not-yet-paid enrollments only, estimate at the current rate.
             const commissionPercent = await getCommissionPercentForFaculty(facultyId);
-            const facultyShareRatio = 1 - commissionPercent / 100;
-            const facultyNet = (e: { amount_paid?: number; gst_amount?: number }) => {
+            const facultyNet = (e: { id?: string; amount_paid?: number; gst_amount?: number }) => {
+                if (e.id && settledByEnrollment.has(e.id)) return settledByEnrollment.get(e.id)!;
                 const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
                 if (base <= 0) return 0;
-                return base * facultyShareRatio;
+                return base - Math.round((base * commissionPercent) / 100);
             };
 
-            let earnings: { enrolled_at?: string; amount_paid?: number; gst_amount?: number }[] = [];
+            let earnings: { id?: string; enrolled_at?: string; amount_paid?: number; gst_amount?: number }[] = [];
             if (courseIds.length > 0) {
                 const { data: enrollments, error } = await db
                     .from('enrollments')
-                    .select('enrolled_at, amount_paid, gst_amount')
+                    .select('id, enrolled_at, amount_paid, gst_amount')
                     .in('course_id', courseIds);
 
                 if (error) throw new Error(error.message);
@@ -814,18 +828,56 @@ export const facultyManagementFunctions = {
             }
 
             else if (period === 'year') {
-                // Last 12 months — monthly granularity
+                // Last 12 months. Previous months come from the CREDITED records in
+                // faculty_transactions (COURSE_SALE/BUNDLE_SALE) — permanent, so they
+                // survive enrollment edits/deletes and never change when commission
+                // changes. The current month adds live pending (unpaid this month).
                 const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-                for (let i = 11; i >= 0; i--) {
-                    const start = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0);
-                    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1, 0, 0, 0, 0);
+                const { data: saleTxns, error: saleTxnErr } = await db
+                    .from('faculty_transactions')
+                    .select('amount, transacted_at, payout_time_period, enrollment_id')
+                    .eq('faculty_id', facultyId)
+                    .in('type', ['COURSE_SALE', 'BUNDLE_SALE']);
+                if (saleTxnErr) throw new Error(saleTxnErr.message);
 
-                    result.push({
-                        label: monthLabels[start.getMonth()],
-                        revenue: earningsInRange(start, end),
-                    });
+                const buckets: { key: string; label: string; revenue: number }[] = [];
+                for (let i = 11; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: monthLabels[d.getMonth()] ?? '', revenue: 0 });
                 }
+                const byKey = new Map(buckets.map(b => [b.key, b]));
+
+                // Credited earnings → bucket by enrollment period (payout_time_period),
+                // falling back to the processed date.
+                for (const r of saleTxns ?? []) {
+                    let key: string | null = null;
+                    const parsed = r.payout_time_period ? new Date(`1 ${r.payout_time_period}`) : null;
+                    if (parsed && !Number.isNaN(parsed.getTime())) key = `${parsed.getFullYear()}-${parsed.getMonth()}`;
+                    else if (r.transacted_at) { const d = new Date(r.transacted_at); key = `${d.getFullYear()}-${d.getMonth()}` }
+                    if (key && byKey.has(key)) byKey.get(key)!.revenue += Number(r.amount ?? 0);
+                }
+
+                // Current-month pending (unpaid this-month enrollments) at current rate
+                const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+                const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+                const { data: pendEnr } = await db
+                    .from('enrollments')
+                    .select('id, amount_paid, gst_amount')
+                    .eq('faculty_id', facultyId).eq('is_bundle_enrollment', false).eq('payment_status', 'SUCCESS').gt('amount_paid', 0)
+                    .gte('enrolled_at', thisMonthStart).lt('enrolled_at', nextMonthStart);
+
+                const paidIds = new Set((saleTxns ?? []).map(r => r.enrollment_id).filter(Boolean));
+                let pending = 0;
+                for (const e of pendEnr ?? []) {
+                    if (paidIds.has(e.id)) continue;
+                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0);
+                    if (base > 0) pending += base - Math.round(base * commissionPercent / 100);
+                }
+                const curKey = `${now.getFullYear()}-${now.getMonth()}`;
+                if (byKey.has(curKey)) byKey.get(curKey)!.revenue += pending;
+
+                result.push(...buckets.map(b => ({ label: b.label, revenue: Math.round(b.revenue) })));
             }
 
             return result;
