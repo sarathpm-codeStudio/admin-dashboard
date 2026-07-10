@@ -1,37 +1,40 @@
+import { getGroupUi } from '@/features/platform-settings/components/groupConfig'
 import { cn } from '@/utils/cn'
 
-export type PlatformSettingsTab = 'coin' | 'commission'
-
 type PlatformSettingsTabsProps = {
-  activeTab: PlatformSettingsTab
-  onChange: (tab: PlatformSettingsTab) => void
+  tabs: string[]
+  activeTab: string
+  onChange: (group: string) => void
 }
 
-const tabs: { key: PlatformSettingsTab; label: string }[] = [
-  { key: 'coin', label: 'Coin' },
-  { key: 'commission', label: 'Commission' },
-]
-
-export function PlatformSettingsTabs({ activeTab, onChange }: PlatformSettingsTabsProps) {
+export function PlatformSettingsTabs({ tabs, activeTab, onChange }: PlatformSettingsTabsProps) {
   return (
-    <div className="flex items-center gap-1 rounded-nav bg-surface-input p-1">
-      {tabs.map((tab) => (
-        <button
-          key={tab.key}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === tab.key}
-          onClick={() => onChange(tab.key)}
-          className={cn(
-            'rounded-md px-4 py-2 text-sm font-semibold transition-colors',
-            activeTab === tab.key
-              ? 'bg-white text-primary shadow-sm'
-              : 'text-nav hover:text-primary',
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div
+      role="tablist"
+      className="inline-flex flex-wrap items-center gap-1 rounded-nav border border-[#e2e8f0]/70 bg-surface-input p-1"
+    >
+      {tabs.map((group) => {
+        const isActive = group === activeTab
+        const { icon: Icon } = getGroupUi(group)
+        return (
+          <button
+            key={group}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(group)}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors',
+              isActive
+                ? 'bg-white text-primary shadow-sm ring-1 ring-inset ring-[#e2e8f0]'
+                : 'text-nav hover:text-primary',
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+            {group}
+          </button>
+        )
+      })}
     </div>
   )
 }

@@ -210,19 +210,19 @@ export function CommissionFacultiesTable() {
   )
 
   return (
-    <div className="space-y-4 mt-8 border-t border-[#e2e8f0]/60 pt-6">
+    <div className="space-y-4 p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Paragraph variant="emphasis" className="text-lg text-ink-heading">
+          <Paragraph variant="emphasis" className="text-base text-ink-heading">
             Faculties who receive commission
           </Paragraph>
-          <Paragraph variant="caption" className="mt-1 text-sm">
+          <Paragraph variant="caption" className="mt-0.5 text-[13px]">
             Faculty members eligible for enrollment revenue share (excluding suspended).
           </Paragraph>
         </div>
-        <Paragraph variant="caption" className="text-nav">
+        <span className="inline-flex items-center rounded-full bg-surface-input px-3 py-1 text-xs font-semibold text-nav">
           {totalCount} {totalCount === 1 ? 'faculty' : 'faculties'}
-        </Paragraph>
+        </span>
       </div>
 
       <div className="relative max-w-md">

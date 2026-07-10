@@ -11,7 +11,157 @@ export const PLATFORM_SETTING_KEYS = {
 export type PlatformSettingKey =
   (typeof PLATFORM_SETTING_KEYS)[keyof typeof PLATFORM_SETTING_KEYS]
 
-export type PlatformSettingsMap = Record<PlatformSettingKey, string>
+/** Values are keyed by whatever `key`s exist in the DB, not just the known ones. */
+export type PlatformSettingsMap = Record<string, string>
+
+/**
+ * Display metadata for a setting key. Add an entry here to give a new DB key a
+ * proper label, description, unit and group. Keys without an entry still show
+ * up in the UI with a humanized label under "Other settings".
+ */
+export type PlatformSettingMeta = {
+  label: string
+  description: string
+  group: string
+  unit?: string
+  min?: number
+  max?: number
+  step?: string
+}
+
+export const PLATFORM_SETTING_META: Record<string, PlatformSettingMeta> = {
+  [PLATFORM_SETTING_KEYS.defaultCoinValue]: {
+    label: 'Coin value',
+    description: 'Monetary worth of a single coin.',
+    group: 'Coin economy',
+    unit: '₹',
+    min: 0,
+    step: '1',
+  },
+  [PLATFORM_SETTING_KEYS.defaultEnrollmentCoinCount]: {
+    label: 'Enrollment reward',
+    description: 'Coins granted when a student enrolls in a course.',
+    group: 'Coin economy',
+    unit: 'coins',
+    min: 0,
+    step: '1',
+  },
+  welcome_bonus_coin: {
+    label: 'Welcome bonus',
+    description: 'Coins granted to a student on sign-up.',
+    group: 'Coin economy',
+    unit: 'coins',
+    min: 0,
+    step: '1',
+  },
+  [PLATFORM_SETTING_KEYS.defaultStreakDays]: {
+    label: 'Streak length',
+    description: 'Consecutive active days needed to earn a streak bonus.',
+    group: 'Streak rewards',
+    unit: 'days',
+    min: 0,
+    step: '1',
+  },
+  [PLATFORM_SETTING_KEYS.defaultStreakCoinCount]: {
+    label: 'Streak reward',
+    description: 'Coins granted when a student completes a streak.',
+    group: 'Streak rewards',
+    unit: 'coins',
+    min: 0,
+    step: '1',
+  },
+  default_best_course: {
+    label: 'Featured best courses',
+    description: 'Number of top courses highlighted to students.',
+    group: 'Courses',
+    unit: 'courses',
+    min: 0,
+    step: '1',
+  },
+  [PLATFORM_SETTING_KEYS.defaultCommissionPercent]: {
+    label: 'Commission rate',
+    description: 'Applied to every faculty on the platform default.',
+    group: 'Commission',
+    unit: '%',
+    min: 0,
+    max: 100,
+    step: 'any',
+  },
+}
+
+/** "welcome_bonus_coin" -> "Welcome Bonus Coin" */
+export function humanizeSettingKey(key: string): string {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+/** Metadata for a key, falling back to a humanized label for unknown keys. */
+export function getSettingMeta(key: string): PlatformSettingMeta {
+  return (
+    PLATFORM_SETTING_META[key] ?? {
+      label: humanizeSettingKey(key),
+      description: '',
+      group: 'Other settings',
+      min: 0,
+      step: 'any',
+    }
+  )
+}
+
+/** A fully-resolved setting: DB metadata wins, code registry fills the gaps. */
+export type PlatformSetting = {
+  id: string
+  key: string
+  value: string
+  label: string
+  description: string
+  group: string
+  unit: string
+  sortOrder: number
+}
+
+type PlatformSettingRow = {
+  id: string
+  key: string
+  value: string | null
+  label: string | null
+  description: string | null
+  group_name: string | null
+  unit: string | null
+  sort_order: number | null
+}
+
+const FALLBACK_GROUP = 'Other settings'
+
+function resolveSetting(row: PlatformSettingRow): PlatformSetting {
+  const meta = getSettingMeta(row.key)
+  return {
+    id: row.id,
+    key: row.key,
+    value: row.value ?? '',
+    label: row.label?.trim() || meta.label,
+    description: row.description?.trim() || meta.description,
+    group: row.group_name?.trim() || meta.group || FALLBACK_GROUP,
+    unit: row.unit?.trim() || meta.unit || '',
+    sortOrder: row.sort_order ?? 0,
+  }
+}
+
+export type CreateSettingInput = {
+  key: string
+  value: string
+  label: string
+  group: string
+  description?: string
+  unit?: string
+}
+
+/** snake_case identifier, e.g. "welcome_bonus_coin". */
+export function isValidSettingKey(key: string): boolean {
+  return /^[a-z][a-z0-9_]*$/.test(key)
+}
 
 export type CommissionFacultyRow = {
   id: string
@@ -37,8 +187,6 @@ export type CommissionFacultiesResponse = {
     limit: number
   }
 }
-
-const ALL_KEYS = Object.values(PLATFORM_SETTING_KEYS)
 
 export const PLATFORM_SETTING_DEFAULTS: PlatformSettingsMap = {
   [PLATFORM_SETTING_KEYS.defaultCoinValue]: '1',
@@ -172,23 +320,91 @@ async function syncFacultyDefaultCommissionRates(
 
 export const platformSettingsFunctions = {
   getSettings: async (): Promise<PlatformSettingsMap> => {
-    const { data, error } = await supabase
-      .from('platform_settings')
-      .select('key, value')
-      .in('key', ALL_KEYS)
+    // The table is the source of truth: settings show up when a row exists and
+    // disappear when it is deleted. Defaults are only used as input placeholders.
+    const { data, error } = await supabase.from('platform_settings').select('key, value')
 
     if (error) throw new Error(error.message)
 
-    const result = { ...PLATFORM_SETTING_DEFAULTS }
+    const result: PlatformSettingsMap = {}
     for (const row of data ?? []) {
-      if (ALL_KEYS.includes(row.key as PlatformSettingKey)) {
-        result[row.key as PlatformSettingKey] = row.value ?? ''
+      if (row.key) {
+        result[row.key] = row.value ?? ''
       }
     }
     return result
   },
 
-  updateSetting: async (key: PlatformSettingKey, value: string): Promise<void> => {
+  /** Full settings with resolved display metadata, ordered for the UI. */
+  listSettings: async (): Promise<PlatformSetting[]> => {
+    const { data, error } = await supabase
+      .from('platform_settings')
+      .select('id, key, value, label, description, group_name, unit, sort_order')
+
+    if (error) throw new Error(error.message)
+
+    return ((data ?? []) as PlatformSettingRow[])
+      .map(resolveSetting)
+      .sort(
+        (a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label),
+      )
+  },
+
+  /** Create a new setting row (optionally in a brand-new group). */
+  createSetting: async (input: CreateSettingInput): Promise<void> => {
+    const key = input.key.trim()
+    const value = input.value.trim()
+    const label = input.label.trim()
+    const group = input.group.trim()
+
+    if (!key) throw new Error('Key is required')
+    if (!isValidSettingKey(key)) {
+      throw new Error('Key must be lowercase letters, numbers and underscores (e.g. welcome_bonus_coin)')
+    }
+    if (!value) throw new Error('Value is required')
+    if (!group) throw new Error('Group is required')
+
+    const { data: existing, error: existingError } = await supabase
+      .from('platform_settings')
+      .select('id')
+      .eq('key', key)
+      .maybeSingle()
+
+    if (existingError) throw new Error(existingError.message)
+    if (existing) throw new Error(`A setting with key "${key}" already exists`)
+
+    // Place the new setting at the end of its group (or the list, for a new group).
+    const { data: peers, error: peersError } = await supabase
+      .from('platform_settings')
+      .select('sort_order, group_name')
+
+    if (peersError) throw new Error(peersError.message)
+
+    const rows = (peers ?? []) as { sort_order: number | null; group_name: string | null }[]
+    const groupRows = rows.filter((row) => (row.group_name ?? '') === group)
+    const baseRows = groupRows.length > 0 ? groupRows : rows
+    const maxSort = baseRows.reduce((max, row) => Math.max(max, row.sort_order ?? 0), 0)
+
+    const { error } = await supabase.from('platform_settings').insert({
+      key,
+      value,
+      label: label || null,
+      group_name: group,
+      unit: input.unit?.trim() || null,
+      description: input.description?.trim() || null,
+      sort_order: maxSort + 10,
+    })
+
+    if (error) throw new Error(error.message)
+  },
+
+  /** Remove a setting entirely. */
+  deleteSetting: async (key: string): Promise<void> => {
+    const { error } = await supabase.from('platform_settings').delete().eq('key', key)
+    if (error) throw new Error(error.message)
+  },
+
+  updateSetting: async (key: string, value: string): Promise<void> => {
     const trimmed = value.trim()
     if (!trimmed) throw new Error('Value cannot be empty')
 
