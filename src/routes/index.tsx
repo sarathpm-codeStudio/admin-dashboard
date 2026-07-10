@@ -13,6 +13,7 @@ import { CourseAcademicStructurePage } from '@/pages/CourseAcademicStructurePage
 import { CourseManagementPage } from '@/pages/CourseManagementPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { FinancialManagementPage } from '@/pages/FinancialManagementPage'
+import { GstReportPage } from '@/pages/GstReportPage'
 import { HelpCenterPage } from '@/pages/HelpCenterPage'
 import { ReportsAnalyticsPage } from '@/pages/ReportsAnalyticsPage'
 import { FacultyCoursesPage } from '@/pages/FacultyCoursesPage'
@@ -58,6 +59,7 @@ export function AppRoutes() {
             element={<CourseAcademicStructurePage />}
           />
           <Route path="financial" element={<FinancialManagementPage />} />
+          <Route path="gst-report" element={<GstReportPage />} />
           <Route path="chats" element={<ChatsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="announcements/create" element={<CreateAnnouncementPage />} />
