@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, Send, FileText, Download, Check, MessageCircle, Reply, X, Trash2, Mic, Clock, Paperclip, Image as ImageIcon } from 'lucide-react'
+// NOTE: `Mic` is kept out of this import while voice messages are disabled.
+// Re-add it here when re-enabling the voice-message feature.
+import { Search, Send, FileText, Download, Check, MessageCircle, Reply, X, Trash2, /* Mic, */ Clock, Paperclip, Image as ImageIcon } from 'lucide-react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import { Input } from '@/components/ui/Input'
@@ -522,14 +524,15 @@ export function ChatView() {
     senderId === myId ? 'You' : active ? roomName(active) : ''
 
   // Start recording a voice message (asks for mic permission).
-  const handleStartRecording = async () => {
-    stopTyping()
-    try {
-      await recorder.start()
-    } catch {
-      toast.error('Microphone access is required to record a voice message')
-    }
-  }
+  // Voice message sending is temporarily disabled — keep for future use.
+  // const handleStartRecording = async () => {
+  //   stopTyping()
+  //   try {
+  //     await recorder.start()
+  //   } catch {
+  //     toast.error('Microphone access is required to record a voice message')
+  //   }
+  // }
 
   // Upload (or re-upload) a pending voice message. Flips it back to 'uploading'
   // while in flight; on success the real message is appended to the thread by
@@ -1453,13 +1456,16 @@ export function ChatView() {
                         <Send size={15} />
                       </button>
                     ) : (
-                      <button
+                      // Voice message sending is temporarily disabled.
+                      // Keep this button — we want the feature back in future.
+                      null
+                      /* <button
                         onClick={handleStartRecording}
                         title="Record voice message"
                         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition-opacity hover:opacity-90"
                       >
                         <Mic size={16} />
-                      </button>
+                      </button> */
                     )}
                   </>
                 )}
