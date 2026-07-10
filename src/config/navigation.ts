@@ -8,6 +8,7 @@ import {
   Package,
   Receipt,
   Settings,
+  Star,
   Users,
   Wallet,
   type LucideIcon,
@@ -20,13 +21,23 @@ export type NavItem = {
   path: string
   icon: LucideIcon
   showChevron?: boolean
+  /** Match this path exactly for active state (e.g. a parent path that prefixes a sibling). */
+  end?: boolean
   children?: NavItem[]
 }
 
 export const mainNavItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'User Management', path: '/users', icon: Users },
-  { label: 'Course Management', path: '/courses', icon: Package },
+  {
+    label: 'Course Management',
+    path: '/courses',
+    icon: Package,
+    children: [
+      { label: 'Overview', path: '/courses', icon: LayoutList, end: true },
+      { label: 'Featured Courses', path: '/courses/featured', icon: Star },
+    ],
+  },
   {
     label: 'Financial Management',
     path: '/financial',

@@ -14,6 +14,7 @@ export type AnnouncementListRow = {
   is_draft: boolean
   is_deleted: boolean
   published: string | null
+  admin_created?: boolean | null
   content?: string
   image_url?: string | null
   courses?: { title: string } | { title: string }[] | null
@@ -99,11 +100,15 @@ export const announcementApi = {
           is_draft,
           is_deleted,
           published,
+          admin_created,
           courses ( title )
         `,
           { count: 'exact' },
         )
         .eq('is_deleted', false)
+        // Admin dashboard manages admin-created announcements only; faculty-created
+        // announcements are managed from the faculty app.
+        .eq('admin_created', true)
 
       if (tab === 'drafts') {
         query = query.eq('is_draft', true)

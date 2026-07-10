@@ -63,7 +63,7 @@ export function SidebarItem({ item }: SidebarItemProps) {
   return (
     <NavLink
       to={item.path}
-      end={item.path === '/'}
+      end={item.end ?? item.path === '/'}
       className={({ isActive }) =>
         cn(
           'flex items-center gap-3 px-4 py-3 text-base tracking-tight transition-colors',

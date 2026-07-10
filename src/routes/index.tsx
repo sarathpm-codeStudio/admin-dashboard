@@ -11,6 +11,7 @@ import { ChatsPage } from '@/pages/ChatsPage'
 import { AnnouncementsPage } from '@/pages/AnnouncementsPage'
 import { CourseAcademicStructurePage } from '@/pages/CourseAcademicStructurePage'
 import { CourseManagementPage } from '@/pages/CourseManagementPage'
+import { FeaturedCoursesPage } from '@/pages/FeaturedCoursesPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { FinancialManagementPage } from '@/pages/FinancialManagementPage'
 import { GstReportPage } from '@/pages/GstReportPage'
@@ -54,6 +55,7 @@ export function AppRoutes() {
           <Route path="userdetails/student/:studentId" element={<StudentDetailPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="courses" element={<CourseManagementPage />} />
+          <Route path="courses/featured" element={<FeaturedCoursesPage />} />
           <Route
             path="courses/:courseId/course-details"
             element={<CourseAcademicStructurePage />}
