@@ -109,7 +109,11 @@ async function fetchDefaultCommissionPercent(): Promise<number> {
     : Number(PLATFORM_SETTING_DEFAULTS[PLATFORM_SETTING_KEYS.defaultCommissionPercent])
 }
 
-/** NULL commission_rate → platform default; non-null → fixed individual rate. */
+/** commission_rate equal to platform default → Default; otherwise Custom. NULL → Default (legacy). */
+function isSameCommissionRate(rate: number, defaultPercent: number): boolean {
+  return Math.abs(rate - defaultPercent) < 1e-9
+}
+
 function resolveCommissionPercent(
   commissionRate: number | string | null | undefined,
   defaultPercent: number,
@@ -117,6 +121,9 @@ function resolveCommissionPercent(
   if (commissionRate != null && commissionRate !== '') {
     const custom = Number(commissionRate)
     if (Number.isFinite(custom)) {
+      if (isSameCommissionRate(custom, defaultPercent)) {
+        return { percent: defaultPercent, hasCustom: false }
+      }
       return { percent: custom, hasCustom: true }
     }
   }
@@ -145,6 +152,24 @@ export async function getFacultyCommissionPercent(facultyId: string): Promise<nu
   return resolveCommissionPercent(data?.commission_rate, defaultPercent).percent
 }
 
+/** Set commission_rate to the platform default for faculties still on default (NULL or previous default). */
+async function syncFacultyDefaultCommissionRates(
+  previousDefault: number,
+  nextDefault: number,
+): Promise<void> {
+  if (isSameCommissionRate(previousDefault, nextDefault)) return
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ commission_rate: nextDefault })
+    .eq('role', 'FACULTY')
+    .or(`commission_rate.is.null,commission_rate.eq.${previousDefault}`)
+
+  if (error && !isMissingCommissionRateColumn(error)) {
+    throw new Error(error.message)
+  }
+}
+
 export const platformSettingsFunctions = {
   getSettings: async (): Promise<PlatformSettingsMap> => {
     const { data, error } = await supabase
@@ -167,11 +192,24 @@ export const platformSettingsFunctions = {
     const trimmed = value.trim()
     if (!trimmed) throw new Error('Value cannot be empty')
 
+    const previousDefaultCommission =
+      key === PLATFORM_SETTING_KEYS.defaultCommissionPercent
+        ? await fetchDefaultCommissionPercent()
+        : null
+
     const { error } = await supabase
       .from('platform_settings')
       .upsert({ key, value: trimmed }, { onConflict: 'key' })
 
     if (error) throw new Error(error.message)
+
+    if (key === PLATFORM_SETTING_KEYS.defaultCommissionPercent) {
+      const nextDefault = Number(trimmed)
+      if (!Number.isFinite(nextDefault)) {
+        throw new Error('Default commission must be a number')
+      }
+      await syncFacultyDefaultCommissionRates(previousDefaultCommission!, nextDefault)
+    }
   },
 
   getCommissionFaculties: async ({
@@ -212,6 +250,28 @@ export const platformSettingsFunctions = {
     if (error) throw new Error(error.message)
 
     const profileRows = (rows ?? []) as unknown as CommissionFacultyProfileRow[]
+
+    const nullFacultyIds = profileRows
+      .filter((row) => row.commission_rate == null || row.commission_rate === '')
+      .map((row) => row.id)
+
+    if (nullFacultyIds.length > 0) {
+      const { error: backfillError } = await supabase
+        .from('profiles')
+        .update({ commission_rate: defaultCommissionPercent })
+        .in('id', nullFacultyIds)
+
+      if (backfillError && !isMissingCommissionRateColumn(backfillError)) {
+        throw new Error(backfillError.message)
+      }
+
+      profileRows.forEach((row) => {
+        if (nullFacultyIds.includes(row.id)) {
+          row.commission_rate = defaultCommissionPercent
+        }
+      })
+    }
+
     const facultyIds = profileRows.map((row) => row.id)
     const courseMap: Record<string, number> = {}
 
@@ -282,9 +342,14 @@ export const platformSettingsFunctions = {
       throw new Error('Commission must be between 0 and 100')
     }
 
+    const defaultPercent = await fetchDefaultCommissionPercent()
+    const commissionRate = isSameCommissionRate(commissionPercent, defaultPercent)
+      ? defaultPercent
+      : commissionPercent
+
     const { error } = await supabase
       .from('profiles')
-      .update({ commission_rate: commissionPercent })
+      .update({ commission_rate: commissionRate })
       .eq('id', facultyId)
       .eq('role', 'FACULTY')
 
@@ -296,11 +361,13 @@ export const platformSettingsFunctions = {
     }
   },
 
-  /** Remove custom commission so the faculty follows the platform default again. */
+  /** Reset faculty to platform default (stores the current default % in commission_rate). */
   resetFacultyCommission: async (facultyId: string): Promise<void> => {
+    const defaultPercent = await fetchDefaultCommissionPercent()
+
     const { error } = await supabase
       .from('profiles')
-      .update({ commission_rate: null })
+      .update({ commission_rate: defaultPercent })
       .eq('id', facultyId)
       .eq('role', 'FACULTY')
 
@@ -312,3 +379,4 @@ export const platformSettingsFunctions = {
     }
   },
 }
+ 
