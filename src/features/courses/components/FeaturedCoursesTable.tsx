@@ -8,7 +8,7 @@ import { cn } from '@/utils/cn'
 
 const tableTextClass = 'font-bold text-[#44474E]'
 const gridClass =
-  'grid grid-cols-[1.5rem_2.5rem_minmax(0,2.2fr)_1.1fr_1.1fr_0.9fr_2rem] items-center gap-3'
+  'grid grid-cols-[1.5rem_2.5rem_minmax(0,2.2fr)_1.1fr_1.1fr_0.9fr_1fr_2rem] items-center gap-3'
 
 type FeaturedCoursesTableProps = {
   courses: FeaturedCourseRow[]
@@ -120,6 +120,10 @@ function FeaturedRow({ course, position, isBusy, onCommit, onRemove }: FeaturedR
         {course.isFree ? 'Free' : course.priceDisplay}
       </Paragraph>
 
+      <Paragraph variant="muted" className={cn('text-center', tableTextClass)}>
+        {course.createdAtDisplay}
+      </Paragraph>
+
       <button
         type="button"
         aria-label={`Remove ${course.title} from featured`}
@@ -169,6 +173,7 @@ export function FeaturedCoursesTable({
         <span>Faculty</span>
         <span>Category</span>
         <span className="text-center">Price</span>
+        <span className="text-center">Added on</span>
         <span aria-hidden />
       </div>
 

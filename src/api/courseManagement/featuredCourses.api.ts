@@ -12,6 +12,9 @@ export type FeaturedCourseRow = {
   facultyName: string
   isFree: boolean
   priceDisplay: string
+  /** featured_courses.created_at — when the course was added to the list */
+  createdAt: string | null
+  createdAtDisplay: string
 }
 
 /** A published course that can be added to the featured list. */
@@ -27,6 +30,17 @@ export type PublishableCourseOption = {
 
 const formatCurrency = (amount: number): string =>
   `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const formatAddedOn = (value: string | null): string => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
 
 const facultyNameOf = (raw: unknown): string => {
   const profile = Array.isArray(raw) ? raw[0] : raw
@@ -46,6 +60,7 @@ export const featuredCoursesFunctions = {
           id,
           course_id,
           position,
+          created_at,
           course:courses!featured_courses_course_id_fkey (
             id,
             title,
@@ -79,6 +94,8 @@ export const featuredCoursesFunctions = {
           facultyName: facultyNameOf(course?.faculty),
           isFree: course?.is_free ?? false,
           priceDisplay: formatCurrency(priceAmount),
+          createdAt: row.created_at ?? null,
+          createdAtDisplay: formatAddedOn(row.created_at ?? null),
         }
       })
     } catch (error: unknown) {

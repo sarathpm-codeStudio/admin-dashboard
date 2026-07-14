@@ -131,6 +131,7 @@ export const studentManagementFunctions = {
                     courseEnrolled: courseEnrolled ?? 0,              // "03"
                     testScore: `${testScore}%`,                  // "94.8%"
                     totalCoins: totalCoins,                       // "1,200"
+                    coinBalance: student.coin_balance ?? 0,       // current balance from profile
                     totalSpend: {
                         amount: totalSpend,
                         display: `₹${totalSpend.toLocaleString('en-IN')}`, // "₹12500"

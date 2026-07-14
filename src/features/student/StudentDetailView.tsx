@@ -114,7 +114,7 @@ export function StudentDetailView() {
   const [page, setPage] = useState(1)
 
 
-  
+
   const { data, isLoading, isError } = useGetStudentById(studentId ?? '')
 
   const {
