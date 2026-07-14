@@ -42,14 +42,43 @@ function columnCellClassName<T>(column: DataTableColumn<T>, appearance: DataTabl
   )
 }
 
+const REM_PX = 16
+/** Floor for a column that declares no width at all, so it isn't crushed. */
+const AUTO_COLUMN_MIN_PX = 8 * REM_PX
+const TABLE_MIN_PX = 720
+
+/** What one column contributes to the table's minimum width, in px. */
+const columnMinWidthPx = (width?: string): number => {
+  if (!width) return AUTO_COLUMN_MIN_PX
+  const match = /^([\d.]+)(rem|px)$/.exec(width.trim())
+  // Percentages (and calc, …) are proportional — they shrink with the table and
+  // can't overflow it, so they impose no minimum of their own.
+  if (!match) return 0
+  const value = Number.parseFloat(match[1]!)
+  return match[2] === 'rem' ? value * REM_PX : value
+}
+
+/**
+ * Under `table-fixed`, a table narrower than the sum of its declared column
+ * widths shrinks those columns to fit — cells then overlap their neighbours.
+ * So the table's own minimum is whatever its columns actually asked for; the
+ * scroll container handles the overflow.
+ */
+function tableMinWidthPx<T>(columns: DataTableColumn<T>[]): number {
+  const total = columns.reduce((sum, column) => sum + columnMinWidthPx(column.width), 0)
+  return Math.max(TABLE_MIN_PX, total)
+}
+
 function columnHeaderClassName<T>(
   column: DataTableColumn<T>,
   appearance: DataTableAppearance,
   sticky = false,
 ) {
+  // `truncate` matters under table-fixed: without it a header that outgrows its
+  // column paints straight over the neighbouring one instead of being clipped.
   if (appearance === 'minimal') {
     return cn(
-      'bg-transparent px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#94a3b8]',
+      'truncate bg-transparent px-5 py-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-[#94a3b8]',
       sticky && 'sticky top-0 z-30 bg-surface-card',
       column.align ? columnAlignClass[column.align] : columnAlignClass.left,
       column.headerClassName,
@@ -57,7 +86,7 @@ function columnHeaderClassName<T>(
   }
 
   return cn(
-    'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-nav',
+    'truncate px-4 py-3 text-xs font-semibold uppercase tracking-wide text-nav',
     tableHeaderBgClass,
     sticky && stickyHeaderCellClass,
     column.align ? columnAlignClass[column.align] : columnAlignClass.left,
@@ -280,6 +309,8 @@ export function DataTable<T>({
   const skeletonRows = loadingRowCount ?? (data.length > 0 ? data.length : 10)
   const tbodyKey = rowAnimationKey ?? page
 
+  const tableMinWidth = tableMinWidthPx(columns)
+
   const cardLayoutClass =
     scrollableBody &&
     cn('flex min-h-0 flex-col', !scrollBodyMaxHeight && 'flex-1')
@@ -291,10 +322,8 @@ export function DataTable<T>({
 
   const tableElement = (
     <table
-      className={cn(
-        'w-full min-w-[720px] border-collapse text-left',
-        tableClassName ?? 'table-fixed',
-      )}
+      style={{ minWidth: tableMinWidth }}
+      className={cn('w-full border-collapse text-left', tableClassName ?? 'table-fixed')}
     >
       {columns.some((column) => column.width) && (
         <colgroup>

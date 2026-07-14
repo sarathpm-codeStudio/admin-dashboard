@@ -123,13 +123,24 @@ export function AnnouncementsTable({
         header: 'Time Period',
         width: '14%',
         align: 'center',
-        cell: (row) => (
-          <div className="flex justify-center">
-            <Paragraph variant="muted" className={cn('whitespace-nowrap', tableTextClass)}>
-              {row.timePeriod}
-            </Paragraph>
-          </div>
-        ),
+        cell: (row) => {
+          // Keep each date unbreakable but allow a line break at the dash, so a
+          // narrow column gets two clean lines instead of overflowing sideways.
+          const [start, end] = row.timePeriod.split(' – ')
+          return (
+            <div className="flex justify-center">
+              <Paragraph variant="muted" className={cn('text-center', tableTextClass)}>
+                <span className="whitespace-nowrap">{start}</span>
+                {end ? (
+                  <>
+                    {' – '}
+                    <span className="whitespace-nowrap">{end}</span>
+                  </>
+                ) : null}
+              </Paragraph>
+            </div>
+          )
+        },
       },
       {
         id: 'status',

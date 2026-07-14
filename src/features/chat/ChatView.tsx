@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, Fragment } from 
 import { useLocation, useNavigate } from 'react-router-dom'
 // NOTE: `Mic` is kept out of this import while voice messages are disabled.
 // Re-add it here when re-enabling the voice-message feature.
-import { Search, Send, FileText, Download, Check, MessageCircle, Reply, X, Trash2, /* Mic, */ Clock, Paperclip, Image as ImageIcon } from 'lucide-react'
+import { Search, Send, FileText, Download, Check, MessageCircle, Reply, X, Trash2, /* Mic, */ Clock, Paperclip, Image as ImageIcon, ArrowLeft } from 'lucide-react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import { Input } from '@/components/ui/Input'
@@ -768,8 +768,16 @@ export function ChatView() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* ── Left Panel ── */}
-      <div className="flex w-[300px] shrink-0 flex-col bg-white lg:w-[360px] xl:w-[400px]">
+      {/* ── Left Panel ──
+          Below lg there isn't room for both panes, so the list and the thread
+          become two separate views: opening a room swaps the list out for the
+          thread, and the header's back arrow brings it back. From lg up both
+          panes sit side by side as before. */}
+      <div
+        className={`w-full shrink-0 flex-col bg-white lg:flex lg:w-[360px] xl:w-[400px] ${
+          active ? 'hidden' : 'flex'
+        }`}
+      >
         <motion.div
           className="shrink-0 px-5 pb-4 pt-6"
           initial={{ opacity: 0, y: -12 }}
@@ -885,7 +893,9 @@ export function ChatView() {
       </div>
 
       {/* ── Right Panel ── */}
-      <div className="flex min-w-0 flex-1 flex-col bg-gray-100">
+      <div
+        className={`min-w-0 flex-1 flex-col bg-gray-100 lg:flex ${active ? 'flex' : 'hidden'}`}
+      >
         {!active ? (
           <motion.div
             className="flex flex-1 flex-col items-center justify-center px-6 text-center"
@@ -915,7 +925,19 @@ export function ChatView() {
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  {/* Back to the room list — only exists while the panes are
+                      stacked; from lg up the list is always on screen. */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveId(null)}
+                    title="Back to conversations"
+                    aria-label="Back to conversations"
+                    className="-ml-2 shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary lg:hidden"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+
                   {active.peer?.avatar_url ? (
                     <img
                       src={active.peer.avatar_url}

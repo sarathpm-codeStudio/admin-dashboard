@@ -39,6 +39,8 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
       icon: Wallet,
       iconTileClassName: 'bg-[#EEF2FF]',
       iconClassName: 'text-[#4338CA]',
+      // Laptop (lg+): the original right-side footer. Tablet: that footer is
+      // hidden and the same content renders in a row under the value instead.
       footer: (
         <span className="flex flex-col items-end gap-1.5">
           {growthFooter(data.totalRevenue.growthDisplay)}
@@ -49,6 +51,18 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
           ) : null}
         </span>
       ),
+      footerClassName: 'hidden lg:block',
+      valueFooter: (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {growthFooter(data.totalRevenue.growthDisplay)}
+          {data.totalRevenue.pending > 0 ? (
+            <span className="whitespace-nowrap rounded-full bg-[#FFFBEB] px-3 py-1 text-[11px] font-semibold text-[#D97706]">
+              {data.totalRevenue.pendingDisplay} pending
+            </span>
+          ) : null}
+        </span>
+      ),
+      valueFooterClassName: 'lg:hidden',
     },
     {
       id: 'todaysRevenue',
@@ -59,6 +73,9 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
       iconTileClassName: 'bg-[#F0FDF4]',
       iconClassName: 'text-[#15803D]',
       footer: growthFooter(data.todaysRevenue.growthDisplay, 'vs. yesterday'),
+      footerClassName: 'hidden lg:block',
+      valueFooter: growthFooter(data.todaysRevenue.growthDisplay, 'vs. yesterday'),
+      valueFooterClassName: 'lg:hidden',
     },
     {
       id: 'pendingPayouts',
@@ -86,6 +103,26 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
           )}
         </span>
       ),
+      footerClassName: 'hidden lg:block',
+      valueFooter: (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {data.pendingPayouts.previousMonth > 0 ? (
+            <>
+              <span className="whitespace-nowrap rounded-full bg-[#FEF2F2] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#DC2626]">
+                Needs Action
+              </span>
+              <span className="whitespace-nowrap rounded-full bg-[#FFF7ED] px-3 py-1 text-[11px] font-semibold text-[#C2410C]">
+                {data.pendingPayouts.previousMonthLabel}: {data.pendingPayouts.previousMonthDisplay} ready
+              </span>
+            </>
+          ) : (
+            <span className="whitespace-nowrap rounded-full bg-[#F0FDF4] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#15803D]">
+              All Settled
+            </span>
+          )}
+        </span>
+      ),
+      valueFooterClassName: 'lg:hidden',
     },
   ]
 }
