@@ -355,7 +355,7 @@ export const facultyManagementFunctions = {
             const { data: courses, error: coursesError } = await applyFilters(
                 supabase
                     .from('courses')
-                    .select('id, title, category, status, is_draft, price, final_price, cover_image, created_at'),
+                    .select('id, title, category, status, is_draft, is_free, price, final_price, validity, cover_image, created_at'),
             )
                 .order('created_at', { ascending: false })
                 .range(offset, offset + limit - 1);
@@ -367,6 +367,10 @@ export const facultyManagementFunctions = {
                 title: string | null
                 category: string | null
                 is_draft: boolean | null
+                is_free: boolean | null
+                price: number | null
+                final_price: number | null
+                validity: string | null
                 cover_image: string | null
             }
             const courseRows: CourseRow[] = courses ?? [];
@@ -393,12 +397,31 @@ export const facultyManagementFunctions = {
                 return `₹${amount.toLocaleString('en-IN')}`;
             };
 
+            const formatPrice = (amount: number): string =>
+                `₹${amount.toLocaleString('en-IN')}`;
+
+            // `validity` is a month count, or the literal "lifetime"
+            const formatDuration = (raw: string | null): string => {
+                const value = (raw ?? '').trim();
+                if (!value) return '—';
+                if (value.toLowerCase() === 'lifetime') return 'Lifetime';
+                const months = Number(value);
+                if (!Number.isFinite(months)) return value;
+                return `${months} ${months === 1 ? 'Month' : 'Months'}`;
+            };
+
             const items = courseRows.map(course => {
                 const courseEnrollments = enrollments.filter(e => e.course_id === course.id);
                 const studentsEnrolled = new Set(courseEnrollments.map(e => e.student_id)).size;
                 const revenueAmount = courseEnrollments.reduce(
                     (sum, e) => sum + (e.amount_paid ?? 0), 0,
                 );
+
+                // `price` is the list price, `final_price` what the student actually pays
+                const isFree = course.is_free ?? false;
+                const listPrice = course.price ?? 0;
+                const sellingPrice = course.final_price ?? listPrice;
+                const isDiscounted = !isFree && listPrice > sellingPrice;
 
                 return {
                     id: course.id,
@@ -407,6 +430,10 @@ export const facultyManagementFunctions = {
                     status: (course.is_draft ? 'draft' : 'active') as 'active' | 'draft',
                     category: course.category ?? '',
                     coverImage: course.cover_image ?? null,
+                    durationDisplay: formatDuration(course.validity),
+                    isFree,
+                    priceDisplay: isFree ? 'Free' : formatPrice(sellingPrice),
+                    originalPriceDisplay: isDiscounted ? formatPrice(listPrice) : null,
                     studentsEnrolled,
                     revenueAmount,
                     revenue: formatRevenue(revenueAmount),

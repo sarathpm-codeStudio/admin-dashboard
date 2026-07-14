@@ -8,7 +8,21 @@ export type FacultyCourse = {
   studentsEnrolled: number
   revenue: string
   category: string
+  coverImage: string | null
+  /** Course validity, e.g. "3 Months" or "Lifetime" */
+  durationDisplay: string
+  isFree: boolean
+  /** What the student pays, e.g. "₹4,200" — or "Free" */
+  priceDisplay: string
+  /** List price, shown struck through; null when there is no discount */
+  originalPriceDisplay: string | null
 }
+
+/** The card-display fields are derived server-side, so the fixtures omit them */
+type MockFacultyCourse = Omit<
+  FacultyCourse,
+  'coverImage' | 'durationDisplay' | 'isFree' | 'priceDisplay' | 'originalPriceDisplay'
+>
 
 export const FACULTY_COURSE_CATEGORIES = [
   'accounting',
@@ -21,7 +35,7 @@ export const FACULTY_COURSE_CATEGORIES = [
 
 export type FacultyCourseCategory = (typeof FACULTY_COURSE_CATEGORIES)[number]
 
-const mockFacultyCourses: FacultyCourse[] = [
+const mockFacultyCourses: MockFacultyCourse[] = [
   {
     id: 'fc-1',
     facultyId: 'john-smith',
@@ -117,5 +131,10 @@ export function getFacultyCourses(facultyId: string): FacultyCourse[] {
   return mockFacultyCourses.map((course) => ({
     ...course,
     facultyId: normalizedId,
+    coverImage: null,
+    durationDisplay: '—',
+    isFree: false,
+    priceDisplay: '—',
+    originalPriceDisplay: null,
   }))
 }
