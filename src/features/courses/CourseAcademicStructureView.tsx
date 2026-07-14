@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Header1, Paragraph } from '@/components/ui/Typography'
 import { VideoPlayer } from '@/components/ui/VideoPlayer'
 import { CourseEnrollmentSection } from '@/features/courses/components/CourseEnrollmentSection'
+import { CourseOverviewSection } from '@/features/courses/components/CourseOverviewSection'
 import {
   useGetCourseContent,
   useGetCourseDetail,
@@ -79,7 +80,7 @@ export function CourseAcademicStructureView() {
   const currentParentId = navPath.length > 0 ? (navPath[navPath.length - 1]?.id ?? null) : null
   const currentFolderTitle = navPath[navPath.length - 1]?.title ?? ''
 
-  const { data: detail } = useGetCourseDetail(courseId)
+  const { data: detail, isLoading: isDetailLoading } = useGetCourseDetail(courseId)
   const { data: items = [], isLoading } = useGetCourseContent(courseId, currentParentId)
 
   const drillInto = (folder: CourseContentItem) =>
@@ -113,17 +114,17 @@ export function CourseAcademicStructureView() {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <Header1>Course Details</Header1>
-            {detail?.title ? (
-              <Paragraph variant="muted" className="mt-1 truncate">
-                {detail.title}
-              </Paragraph>
-            ) : null}
           </div>
           <Button type="button" variant="outline" onClick={() => navigate('/courses')}>
             <MoveLeft size={16} /> Back to Courses
           </Button>
         </div>
+      </div>
 
+      {/* Course basics + pricing — shown above both tabs */}
+      <CourseOverviewSection detail={detail} isLoading={isDetailLoading} />
+
+      <div className="space-y-3">
         {/* Section tabs */}
         <div className="flex items-center gap-1 rounded-nav bg-surface-input p-1">
           {(

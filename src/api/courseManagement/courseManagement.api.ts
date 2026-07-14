@@ -21,6 +21,8 @@ export type CourseListRow = {
   validityDisplay: string
 }
 
+export type CourseDiscountType = 'flat' | 'percentage'
+
 export type CourseDetail = {
   id: string
   title: string
@@ -42,6 +44,22 @@ export type CourseDetail = {
   avgRating: number
   /** Number of reviews the average is based on (courses.total_reviews) */
   totalReviews: number
+  /** Human-facing course code (courses.unique_id) */
+  uniqueId: string
+  isDraft: boolean
+  level: string
+  /** Access period, e.g. "6 months" or "Lifetime" */
+  validityDisplay: string
+  languages: string[]
+  /** How the discount was configured; null when the course has none */
+  discountType: CourseDiscountType | null
+  /** The configured discount as set by the faculty, e.g. "Flat ₹2,300 off" or "20% off" */
+  discountLabel: string | null
+  /** Money actually saved (price − final_price) */
+  discountAmountDisplay: string | null
+  /** Savings as a share of the list price, e.g. "46% off" */
+  discountPercentDisplay: string | null
+  couponsEnabled: boolean
 }
 
 export type CourseContentItem = {
@@ -420,6 +438,14 @@ export const courseManagementFunctions = {
           price,
           final_price,
           is_free,
+          discount,
+          discount_type,
+          "enableCoupons",
+          unique_id,
+          is_draft,
+          level,
+          validity,
+          languages,
           cover_image,
           video_asset_id,
           avg_rating,
@@ -460,6 +486,21 @@ export const courseManagementFunctions = {
         ? new Date(course.created_at).toLocaleDateString('en-GB')
         : '—'
 
+      // A discount only counts if the learner actually pays less than the list price
+      const isFree = course.is_free ?? false
+      const savings = originalPrice - finalPrice
+      const hasDiscount = !isFree && savings > 0 && originalPrice > 0
+      const discountType = (course.discount_type as CourseDiscountType | null) ?? null
+      const discountValue = course.discount ?? 0
+
+      const discountLabel = !hasDiscount
+        ? null
+        : discountType === 'percentage'
+          ? `${discountValue}% off`
+          : discountType === 'flat'
+            ? `Flat ${formatCurrency(discountValue)} off`
+            : null
+
       return {
         id: course.id,
         title: course.title ?? '',
@@ -467,9 +508,9 @@ export const courseManagementFunctions = {
         category: course.category ?? '',
         description: course.description ?? '',
         priceDisplay: formatCurrency(originalPrice),
-        isFree: course.is_free,
+        isFree,
         finalPriceDisplay: formatCurrency(finalPrice),
-        hasDiscount: finalPrice < originalPrice,
+        hasDiscount,
         status: fromDbCourseStatus(course.status as string | null),
         postedOnDisplay,
         coverImage: course.cover_image ?? null,
@@ -479,6 +520,18 @@ export const courseManagementFunctions = {
         testCount,
         avgRating: Number(course.avg_rating ?? 0),
         totalReviews: course.total_reviews ?? 0,
+        uniqueId: (course.unique_id as string | null) ?? '—',
+        isDraft: course.is_draft ?? false,
+        level: (course.level as string | null) ?? '',
+        validityDisplay: formatValidity(course.validity as string | null),
+        languages: ((course.languages as string[] | null) ?? []).filter(Boolean),
+        discountType,
+        discountLabel,
+        discountAmountDisplay: hasDiscount ? formatCurrency(savings) : null,
+        discountPercentDisplay: hasDiscount
+          ? `${Math.round((savings / originalPrice) * 100)}% off`
+          : null,
+        couponsEnabled: course.enableCoupons ?? false,
       }
     } catch (error: any) {
       throw new Error(error.message)

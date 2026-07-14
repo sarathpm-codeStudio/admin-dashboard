@@ -105,14 +105,14 @@ export function PendingActionsList({ actions, isLoading, className }: PendingAct
                 className="inline-block h-6 w-8 animate-pulse rounded-full bg-[#F2F4F6]"
                 aria-hidden
               />
-            ) : (
+            ) : actions.length > 0 ? (
               <span
                 className="inline-flex min-w-7 shrink-0 items-center justify-center rounded-full bg-[#2c1452] px-2 py-0.5 text-xs font-bold tabular-nums text-white"
                 aria-label={`${actions.length} pending actions`}
               >
                 {actions.length}
               </span>
-            )}
+            ) : null}
             <h2 className="text-base font-bold text-[#191c1e]">Pending Actions</h2>
           </div>
           {/* <button

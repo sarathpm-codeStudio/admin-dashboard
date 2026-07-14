@@ -1,7 +1,6 @@
-import { Bell, LogOut } from 'lucide-react'
+import { Bell, LogOut, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import userAvatar from '@/asset/image/user1.png'
-import { SearchInput } from '@/components/ui/SearchInput'
+import { GlobalSearch } from '@/features/search/components/GlobalSearch'
 import { useSignOut } from '@/features/auth/hooks/useSignOut'
 import { NotificationDrawer } from '@/features/notifications/components/NotificationDrawer'
 import {
@@ -54,10 +53,7 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-6 border-b border-[rgba(198,197,212,0.1)] bg-surface-topbar px-8 backdrop-blur-xl">
-      <SearchInput
-        wrapperClassName="max-w-md flex-1"
-        placeholder="Search analytics, students or courses..."
-      />
+      <GlobalSearch wrapperClassName="max-w-md flex-1" />
       <div className="flex items-center gap-6">
         <button
           type="button"
@@ -89,13 +85,9 @@ export function TopBar() {
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               onClick={() => setMenuOpen((open) => !open)}
-              className="flex h-10 w-14 shrink-0 overflow-hidden rounded-card border-2 border-primary-50 bg-primary-50 transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary-50 focus:ring-offset-2"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-primary-50 bg-primary-50 text-primary transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary-50 focus:ring-offset-2"
             >
-              <img
-                src={userAvatar}
-                alt="user avatar"
-                className="size-full object-contain object-center"
-              />
+              <UserRound className="size-5" aria-hidden />
             </button>
 
             {menuOpen && (

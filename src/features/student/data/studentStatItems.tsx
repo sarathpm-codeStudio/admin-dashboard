@@ -27,7 +27,15 @@ export function getStudentStatItems(analytics: any): SummaryStatItem[] {
     {
       id: 'total-coins',
       label: 'Total coins',
-      value: analytics.totalCoins.toLocaleString(),
+      value: Number(analytics.totalCoins ?? 0).toLocaleString(),
+      valueAdornment: (
+        <span className="ml-auto flex flex-col items-end gap-0.5 text-right leading-tight">
+          <span className="text-[12px] font-semibold text-amber-600">Current balance</span>
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[14px] font-bold text-amber-700">
+            {Number(analytics.coinBalance ?? 0).toLocaleString()}
+          </span>
+        </span>
+      ),
       headerImage: coinsIcon,
       headerImageAlt: 'Total coins',
     },
