@@ -17,6 +17,12 @@ export type SummaryStatCardProps = {
   value: string
   /** Shown inline after the value (e.g. rating star) */
   valueAdornment?: ReactNode
+  /** Inline layout: shown under the value, left-aligned (e.g. a pending badge).
+   *  Unlike `footer`, this stays with the value instead of hugging the right. */
+  valueFooter?: ReactNode
+  /** Class on the valueFooter wrapper — e.g. `lg:hidden` to swap it for the
+   *  right-side `footer` on laptop. */
+  valueFooterClassName?: string
   /** Bottom-right text (growth %, reviews, etc.) */
   footer?: ReactNode
   /** Bottom-right icon (Lucide) */
@@ -79,6 +85,8 @@ export function SummaryStatCard({
   label,
   value,
   valueAdornment,
+  valueFooter,
+  valueFooterClassName,
   footer,
   cornerIcon: CornerIcon,
   cornerIconClassName,
@@ -103,7 +111,10 @@ export function SummaryStatCard({
     const inlineCard = (
       <Card
         className={cn(
-          'flex h-full items-center gap-4 rounded-[12px] border border-[#e2e8f0]/60 p-6 shadow-sm',
+          // flex-wrap: when the label/value and the footer badge can't share a
+          // row (tablet), the footer drops to its own line instead of the value
+          // overflowing its column and painting under the badge.
+          'flex h-full flex-wrap items-center gap-x-4 gap-y-3 rounded-[12px] border border-[#e2e8f0]/60 p-6 shadow-sm',
           to && interactiveCardClass,
           className,
         )}
@@ -123,15 +134,23 @@ export function SummaryStatCard({
               />
             </div>
           ) : null)}
-        <div className="min-w-0 flex flex-col gap-1">
+        {/* Floor the width at the value's own size (rather than min-w-0) so a
+            cramped row wraps the footer instead of letting the value spill. */}
+        <div className="flex min-w-[6rem] flex-1 flex-col gap-1">
           <p className={cn(inlineLabelClass, labelClassName)}>{label}</p>
           <div className="flex items-center gap-1.5">
             <span className={cn(inlineValueClass, valueClassName)}>{value}</span>
             {valueAdornment}
           </div>
+          {valueFooter ? (
+            <div className={cn('mt-1.5 flex', valueFooterClassName)}>{valueFooter}</div>
+          ) : null}
         </div>
         {footer ? (
-          <div className={cn('ml-auto shrink-0', footerClassName)}>{footer}</div>
+          // No `ml-auto`: the text column's flex-1 already pushes this to the
+          // right on a single row, and without it the footer aligns left (under
+          // the value) once it wraps to its own line.
+          <div className={cn('shrink-0', footerClassName)}>{footer}</div>
         ) : null}
       </Card>
     )

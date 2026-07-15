@@ -1,11 +1,11 @@
 import {
+  BookOpen,
   GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LayoutList,
   Megaphone,
   MessageSquare,
-  Package,
   Receipt,
   Settings,
   Star,
@@ -32,7 +32,7 @@ export const mainNavItems: NavItem[] = [
   {
     label: 'Course Management',
     path: '/courses',
-    icon: Package,
+    icon: BookOpen,
     children: [
       { label: 'Overview', path: '/courses', icon: LayoutList, end: true },
       { label: 'Featured Courses', path: '/courses/featured', icon: Star },

@@ -15,6 +15,7 @@ import {
   type ChatRoomSummary,
 } from '@/api/chat/chat.api'
 import { supabase } from '@/config/supabase'
+import { uniqueChannel } from '@/utils/realtimeChannel'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
 import { decryptMessageSafe } from '@/utils/chatEncryption'
@@ -406,7 +407,7 @@ export const useChatRoomsRealtime = () => {
 
   useEffect(() => {
     const channel = supabase
-      .channel('admin-chat-rooms-global')
+      .channel(uniqueChannel('admin-chat-rooms-global'))
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
@@ -492,7 +493,7 @@ export const useChatRealtime = (activeRoomId?: string | null) => {
 
   useEffect(() => {
     const channel = supabase
-      .channel('admin-chat-messages')
+      .channel(uniqueChannel('admin-chat-messages'))
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },

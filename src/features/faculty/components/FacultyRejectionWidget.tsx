@@ -27,7 +27,7 @@ export function FacultyRejectionWidget({ reason }: FacultyRejectionWidgetProps) 
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.96 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed bottom-6 left-6 z-40 w-[min(22rem,calc(100vw-3rem))]"
+          className="fixed bottom-6 left-6 z-[60] w-[min(22rem,calc(100vw-3rem))]"
           role="status"
         >
           <div className="overflow-hidden rounded-card border border-red-200 bg-white shadow-lg">

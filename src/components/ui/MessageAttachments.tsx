@@ -42,7 +42,7 @@ export function MessageAttachments({
     return (
       <div className="flex flex-col gap-2">
         {items.map((it, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2">
+          <div key={i} className="flex w-full min-w-[200px] max-w-full items-center gap-3 rounded-xl bg-white px-3 py-2">
             <button
               type="button"
               onClick={() => onOpenPdf(it.url, it.name)}
@@ -54,7 +54,7 @@ export function MessageAttachments({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-gray-800">{it.name || 'Document'}</p>
-                <p className="text-[10px] text-gray-400">
+                <p className="truncate whitespace-nowrap text-[10px] text-gray-400">
                   {[formatSize(it.size), 'PDF Document'].filter(Boolean).join(' • ')}
                 </p>
               </div>
