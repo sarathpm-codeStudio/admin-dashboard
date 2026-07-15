@@ -26,7 +26,7 @@ import {
   useThreadCatchUp,
   useTyping,
 } from '@/features/chat/hooks/useChat'
-import { usePresenceHeartbeat, usePeerPresence } from '@/features/chat/hooks/usePresence'
+import { usePeerPresence } from '@/features/chat/hooks/usePresence'
 import { MessageAttachments } from '@/components/ui/MessageAttachments'
 import { CHAT_ATTACHMENT_MAX_BYTES, type ChatRoomSummary, type ChatMessage, type ChatReplyPreview, type ChatAttachment } from '@/api/chat/chat.api'
 
@@ -319,9 +319,8 @@ export function ChatView() {
   // Ephemeral typing indicator for the open room (broadcast, no DB writes).
   const { peerTyping, notifyTyping, stopTyping } = useTyping(activeId, myId)
 
-  // Broadcast my own presence while I'm on the chat page (online + heartbeat
-  // now, offline on leave); live presence of the open peer for the header.
-  usePresenceHeartbeat(!!myId)
+  // My own presence heartbeat runs app-wide in DashboardLayout; this view only
+  // reads the open peer's presence for the header.
 
   // Flatten the paged history (newest page first) into one ascending list.
   const messages = useMemo(

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { presenceFunctions, type UserPresence } from '@/api/chat/presence.api'
 import { supabase } from '@/config/supabase'
+import { uniqueChannel } from '@/utils/realtimeChannel'
 
 // How often to refresh my own last_seen while I'm in the chat module.
 const PRESENCE_HEARTBEAT_MS = 30_000
@@ -74,7 +75,7 @@ export const usePeerPresence = (peerId?: string | null) => {
     })
 
     const channel = supabase
-      .channel(`user-presence-${peerId}`)
+      .channel(uniqueChannel(`user-presence-${peerId}`))
       .on(
         'postgres_changes',
         {
