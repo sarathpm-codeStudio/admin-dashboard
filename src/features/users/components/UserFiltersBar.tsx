@@ -36,7 +36,7 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
   return (
     <div
       className={cn(
-        'flex flex-nowrap items-center gap-6 rounded-card bg-surface-input p-4',
+        'flex flex-wrap items-center gap-4 rounded-card bg-surface-input p-4 lg:gap-6',
         className,
       )}
     >
@@ -44,7 +44,7 @@ export function UserFiltersBar({ values, onChange, className }: UserFiltersBarPr
         placeholder="Search by name, email or ID..."
         value={values.search}
         onChange={(e) => update({ search: e.target.value })}
-        wrapperClassName="min-w-[12rem] max-w-[40%] flex-[1_1_36%]"
+        wrapperClassName="w-full min-w-[12rem] lg:w-auto lg:max-w-[40%] lg:flex-[1_1_36%]"
         className={cn(filterFieldClass, 'py-2.5 text-sm placeholder:text-[#454652]/60')}
       />
 

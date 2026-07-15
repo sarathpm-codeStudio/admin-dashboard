@@ -65,7 +65,7 @@ export function UserManagementView() {
   }
 
   return (
-    <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto">
+    <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden">
       <UserManagementHeader />
       <UserSummaryStats />
       <UserFiltersBar values={filters} onChange={handleFiltersChange} />

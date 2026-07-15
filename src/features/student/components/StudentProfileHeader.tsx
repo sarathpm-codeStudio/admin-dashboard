@@ -45,7 +45,7 @@ function MetaItem({ icon: Icon, text }: MetaField) {
       <Icon className={metaIconClass} aria-hidden />
       <Paragraph
         className={cn(
-          'whitespace-nowrap text-xs font-medium leading-normal',
+          'truncate text-xs font-medium leading-normal',
           profileTextClass,
         )}
       >
@@ -148,7 +148,7 @@ export function StudentProfileHeader({
   return (
     <>
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-1 items-start gap-6 sm:gap-8">
+        <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-6 md:gap-8">
           {student.avatarUrl ? (
             <ProfileAvatar
               src={student.avatarUrl}
@@ -175,9 +175,9 @@ export function StudentProfileHeader({
             >
               {student.name}
             </Header1>
-            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6 md:gap-8">
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-6 sm:gap-y-4 md:gap-x-8">
               {metaColumns.map((column) => (
-                <div key={column[0]?.text} className="flex flex-col gap-3">
+                <div key={column[0]?.text} className="flex min-w-0 max-w-full flex-col gap-3">
                   {column.map((field) => (
                     <MetaItem key={field.text} {...field} />
                   ))}
@@ -187,7 +187,7 @@ export function StudentProfileHeader({
           </div>
         </div>
 
-        <div className="flex w-[13rem] shrink-0 flex-col gap-2 self-end lg:self-auto">
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-[13rem] sm:self-end lg:self-auto">
           <Button
             type="button"
             onClick={handleMessage}
