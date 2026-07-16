@@ -1,8 +1,9 @@
 # Enrollment & Payout Workflow Reference
 
 > **Project:** LMS Platform
-> **Last Updated:** July 2026 (payout_time_period column + previous-month payout scoping; payment_status; payment_id on PAYOUT/PLATFORM_EARNING rows)
+> **Last Updated:** July 2026 (GST-inclusive pricing with dual discount modes [EXCLUSIVE_GST/INCLUSIVE_GST]; admin-funded discounts [coins + platform offers] added back to the payout base; previously: payout_time_period column + previous-month payout scoping; payment_status; payment_id on PAYOUT/PLATFORM_EARNING rows)
 > **Purpose:** Full reference for enrollment creation, faculty payout calculation, and transaction recording.
+> **See also:** `course-gst-pricing.md` — GST-inclusive pricing model (exclude_price → price/final_price), checkout formulas, coin/offer handling. Copies live in the admin, faculty and server repos.
 
 ---
 
@@ -16,9 +17,7 @@
 6. [Pending Payout Calculation](#6-pending-payout-calculation)
 7. [Commission Settings](#7-commission-settings)
 8. [faculty_transactions Row Reference](#8-faculty_transactions-row-reference)
-9. [SQL Queries](#9-sql-queries)
-10. [JavaScript Functions](#10-javascript-functions)
-11. [Key Rules & Gotchas](#11-key-rules--gotchas)
+9. [Admin-Funded Discounts — Coins & Platform Offers](#9-admin-funded-discounts--coins--platform-offers)
 
 ---
 
@@ -42,9 +41,13 @@ id                    → primary key
 student_id            → who bought
 course_id             → which course
 faculty_id            → which faculty earns
-amount_paid           → total paid by student (in paise)
+amount_paid           → total ACTUALLY paid by student (in paise, after coins/offers)
 gst_amount            → GST portion (in paise)
 course_price          → original course price
+coins_used_count      → number of coins redeemed on this purchase (default 0)
+coin_redeem_amount    → TAXABLE (ex-GST) portion of the coin discount, paise (admin-funded, §9)
+offer_discount_amount → TAXABLE (ex-GST) portion of the offer discount, paise (admin-funded, §9)
+offer_id              → which platform offer was applied (nullable, reporting)
 is_bundle_enrollment  → true if came from bundle purchase
 bundle_enrollment_id  → links to bundle_enrollments if is_bundle_enrollment=true
 payment_id            → razorpay/payment gateway id
@@ -58,7 +61,11 @@ id          → primary key
 student_id  → who bought
 bundle_id   → which bundle
 faculty_id  → which faculty owns the bundle
-amount_paid → total bundle amount paid (in paise)
+amount_paid → total bundle amount ACTUALLY paid (in paise, after coins/offers)
+coins_used_count      → number of coins redeemed on this purchase (default 0)
+coin_redeem_amount    → TAXABLE (ex-GST) portion of the coin discount, paise (admin-funded, §9)
+offer_discount_amount → TAXABLE (ex-GST) portion of the offer discount, paise (admin-funded, §9)
+offer_id              → which platform offer was applied (nullable, reporting)
 payment_id  → razorpay/payment gateway id
 payment_status → SUCCESS | PENDING | FAILED (default SUCCESS)
                  only SUCCESS rows count toward revenue & payouts
@@ -161,7 +168,9 @@ enrollments row:
 
 ### At payout time
 ```
-base_amount    = amount_paid - gst_amount  = 100000 paise (₹1,000)
+base_amount    = amount_paid - gst_amount
+                 + coin_redeem_amount + offer_discount_amount   (admin subsidy, §9)
+               = 100000 paise (₹1,000)   ← no coins/offers used in this example
 commission     = base_amount * 20%         =  20000 paise (₹200)
 faculty_share  = base_amount - commission  =  80000 paise (₹800)
 ```
@@ -211,7 +220,9 @@ bundle_enrollments row:
 
 ### At payout time
 ```
-base_amount    = bundle amount_paid         = 250000 paise (₹2,500)
+base_amount    = bundle amount_paid
+                 + coin_redeem_amount + offer_discount_amount   (admin subsidy, §9)
+               = 250000 paise (₹2,500)   ← no coins/offers used in this example
 commission     = base_amount * 20%          =  50000 paise (₹500)
 faculty_share  = base_amount - commission   = 200000 paise (₹2,000)
 
@@ -307,8 +318,9 @@ All other rows payout_id   = "TXN-PAY-001"
 > faculty with 2 unpaid course sales. Commission resolved to 16%
 > (`profiles.commission_rate`, else platform default).
 >
-> Per enrollment: `base = amount_paid − gst_amount`,
+> Per enrollment: `base = amount_paid − gst_amount + coin_redeem_amount + offer_discount_amount`,
 > `commission = round(base × 16%)`, `faculty share = base − commission`.
+> (No coins/offers were used in this captured run, so the subsidy terms are 0.)
 
 | transaction_id | type | enrollment | gross (base) | gst | amount | meaning |
 |---|---|---|---|---|---|---|
@@ -366,8 +378,8 @@ Pending Payout =
 | Card | Source | Formula |
 |---|---|---|
 | Total Revenue | `faculty_transactions` PLATFORM_EARNING + unpaid commission | realized platform commission + admin commission pending on unpaid enrollments |
-| Today's Revenue | today's SUCCESS enrollments + bundles | commission share of today's sales: (amount_paid − GST) × rate% |
-| Pending Payout | Unpaid enrollments only | faculty share: (amount_paid − GST) × (1 − rate%) |
+| Today's Revenue | today's SUCCESS enrollments + bundles | commission share of today's sales: (amount_paid − GST + admin subsidy §9) × rate% |
+| Pending Payout | Unpaid enrollments only | faculty share: (amount_paid − GST + admin subsidy §9) × (1 − rate%) |
 
 Rules for all three cards:
 - commission rate resolved per faculty (profiles.commission_rate → platform default)
@@ -486,3 +498,157 @@ Cross check:
   SUM of all COURSE_SALE amounts  = 800+1600+400+800+2400 = 6000 ✅ = PAYOUT amount
   SUM of all PLATFORM_FEE amounts = 200+400+100+200+600   = 1500 ✅ = PLATFORM_EARNING amount
   6000 + 1500                     = 7500 = gross_amount   ✅
+
+---
+
+## 9. Admin-Funded Discounts — Coins & Platform Offers
+
+> **Added July 2026.** Students can reduce their checkout price with **coins**
+> (loyalty redemption) and/or a **platform offer**. Both are funded by the
+> ADMIN, not the faculty: the faculty is paid **as if the student had paid the
+> full price**. The subsidy comes out of the platform's commission.
+
+### The one rule
+
+| Discount type | Who funds it | Effect on faculty payout |
+|---|---|---|
+| Faculty's own course discount | Faculty | Reduces payout (lower price → lower base) |
+| Coin redemption (`coin_redeem_amount`) | **Admin** | **None** — added back to base |
+| Platform offer (`offer_discount_amount`) | **Admin** | **None** — added back to base |
+
+### The formula (the ONLY change to payout math)
+
+```
+admin_subsidy = coin_redeem_amount + offer_discount_amount
+
+singles: base = (amount_paid − gst_amount) + admin_subsidy
+bundles: base =  amount_paid              + admin_subsidy
+
+commission     = round(base × rate%)     ← unchanged
+faculty_share  = base − commission       ← unchanged
+```
+
+Any future admin-funded promotion type = one more column summed into
+`admin_subsidy`. Nothing else in the pipeline changes.
+
+### Course price fields (GST-inclusive pricing model)
+
+> Full pricing reference: `course-gst-pricing.md` (copies in the admin, faculty
+> and server repos). Summary below.
+
+`courses` stores pricing in these fields (RUPEES, not paise):
+
+```
+exclude_price → faculty-entered base WITHOUT GST (source of truth, never derived)
+discount      → faculty's own discount (₹ if discount_type='flat', % if 'percentage')
+discount_mode → INCLUSIVE_GST (default) | EXCLUSIVE_GST — what the discount applies to
+price         → round(exclude_price × (1+gst))       ← sticker, student sees this
+final_price   → student pays (incl. GST), per discount_mode:
+                  EXCLUSIVE_GST: round((exclude_price − discountAmt) × (1+gst))
+                  INCLUSIVE_GST: price − round(discountAmt)
+```
+
+Example (base ₹5,000, flat ₹800, GST 18%): price = 5,900 in both modes;
+final_price = **4,956** (EXCLUSIVE — discount off the base) or **5,100**
+(INCLUSIVE — discount off the sticker). Faculty picks the mode with a toggle
+on the pricing screen.
+
+- The faculty app fetches `platform_settings.gst_percent` live and computes all
+  derived fields before saving.
+- If the GST % changes: just update `platform_settings.gst_percent` — the
+  `trg_gst_percent_recalc_prices` trigger automatically runs
+  `recalculate_gst_inclusive_prices()` (mode-aware), rebuilding price/final_price
+  for every course and bundle from `exclude_price`. Never edit price/final_price
+  directly. (Repeated recalcs never drift — they always start from the base.)
+
+### Checkout (student app / Lambda side)
+
+`final_price` is always GST-inclusive (whatever the discount_mode), so checkout
+works on INCLUSIVE money and extracts GST from the final payable at the end:
+
+```
+payable   = final_price × 100                 (paise; faculty discount already inside)
+          − platform offer (inclusive ₹)       ← admin's cost
+          − coins × coin_value (inclusive ₹)   ← admin's cost
+gst_amount = round(payable × 18 / 118)         ← GST extracted from what is paid
+
+stored on the enrollment (paise):
+  amount_paid           = payable
+  gst_amount            = as above
+  coin_redeem_amount    = TAXABLE portion  = round(coin_incl  × 100/118)
+  offer_discount_amount = TAXABLE portion  = round(offer_incl × 100/118)
+```
+
+⚠️ Subsidies are stored as their **taxable (ex-GST) portion**, NOT the full
+inclusive amount — that is what makes the payout base reconstruct exactly.
+
+### Worked example — EXCLUSIVE_GST course ₹5,000, flat ₹800, 20% commission
+
+```
+final_price = ₹4,956 · student redeems 100 coins (₹300 inclusive)
+
+checkout:
+  payable    = 495600 − 30000        = 465600  (₹4,656)
+  gst_amount = round(465600 × 18/118) =  71024  (₹710.24)
+
+enrollments row:
+  amount_paid           = 465600
+  gst_amount            =  71024
+  coins_used_count      = 100
+  coin_redeem_amount    = round(30000 × 100/118) = 25424  (₹254.24 — taxable part)
+  offer_discount_amount = 0
+
+payout run:
+  base          = (465600 − 71024) + 25424 = 420000  (₹4,200)
+  commission    = round(420000 × 20%)      =  84000  (₹840)
+  faculty_share = 420000 − 84000           = 336000  (₹3,360)
+```
+
+Check: the same sale WITHOUT coins → base = 495600 − 75600 = 420000 → faculty
+gets the identical ₹3,360. Coins and offers are invisible to the faculty. ✅
+The faculty's own ₹800 discount DID cost him: without it he'd earn
+5,000 × 80% = ₹4,000 (EXCLUSIVE mode) — his discount, his cost.
+
+### Redemption cap (MUST enforce at checkout)
+
+Admin's commission is the only pool that can absorb the subsidy. If the total
+subsidy (taxable) exceeds the commission, the platform loses cash on the sale:
+
+```
+taxable_no_subsidy = round(final_price_paise × 100/118)
+max subsidy (incl) = round(taxable_no_subsidy × rate%) × 118/100
+(example above: 420000 × 20% = 84000 taxable → ₹991 inclusive max; ₹300 used → OK)
+```
+
+Cap coin redemption at `max_subsidy − offer` since offers apply first.
+
+### Reporting nuances
+
+- `gross_amount` on COURSE_SALE / BUNDLE_SALE / PLATFORM_FEE rows stores the
+  base INCLUDING the subsidy — so PAYOUT + PLATFORM_EARNING = Σ gross still
+  reconciles, but Σ gross now EXCEEDS cash collected by the total subsidy.
+- Platform commission figures (PLATFORM_EARNING, Total Revenue card) are GROSS
+  commission. Admin's real cash = gross commission − total subsidy. Sum
+  `coin_redeem_amount + offer_discount_amount` over settled enrollments to get
+  the subsidy cost for any period.
+- The GST report's effective rate (`gst / gross`) reads slightly below 18% on
+  subsidised sales because gross includes the subsidy while GST was charged on
+  the discounted price. That is expected.
+
+### Where the formula lives (keep all three in sync)
+
+1. **`process_all_payouts()` Postgres function** — the real payout run
+   (migration `payout_base_includes_admin_funded_discounts`). Both `unpaid`
+   CTEs compute the subsidised base.
+2. **Admin dashboard** — `financial.api.ts` (KPI cards), `dashboard.api.ts`
+   (revenue trend + top performers), `facultyManagement.api.ts` (faculty
+   detail/revenue stats, trends, revenue source).
+3. **Checkout (student app / AWS Lambda)** — must write `coins_used_count`,
+   `coin_redeem_amount` + `offer_discount_amount` (as TAXABLE portions, ×100/118),
+   `offer_id`, the reduced `amount_paid`, and `gst_amount` extracted from the
+   payable (×18/118) — and enforce the redemption cap. Full spec:
+   `course-gst-pricing.md` §6.
+
+NOT changed on purpose: `reports.api.ts` sales/revenue reports and student
+"total spend" keep summing `amount_paid` — they report actual cash collected,
+not payout bases.

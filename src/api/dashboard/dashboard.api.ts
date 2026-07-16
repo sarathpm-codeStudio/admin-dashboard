@@ -554,11 +554,11 @@ export const dashboardManagementFunctions = {
                     { data: defSetting },
                 ] = await Promise.all([
                     supabase.from('enrollments')
-                        .select('id, faculty_id, amount_paid, gst_amount')
+                        .select('id, faculty_id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount')
                         .eq('is_bundle_enrollment', false).eq('payment_status', 'SUCCESS').gt('amount_paid', 0)
                         .gte('enrolled_at', thisMonthStart).lt('enrolled_at', nextMonthStart),
                     supabase.from('bundle_enrollments')
-                        .select('id, faculty_id, amount_paid')
+                        .select('id, faculty_id, amount_paid, coin_redeem_amount, offer_discount_amount')
                         .eq('payment_status', 'SUCCESS').gt('amount_paid', 0)
                         .gte('enrolled_at', thisMonthStart).lt('enrolled_at', nextMonthStart),
                     supabase.from('faculty_transactions')
@@ -581,13 +581,18 @@ export const dashboardManagementFunctions = {
                 const defaultCommission = parseFloat(defSetting?.value ?? '20') || 20
                 const rateOf = (fid: string | null) => (fid ? ratesByFaculty.get(fid) : null) ?? defaultCommission
 
+                // Base adds back admin-funded discounts (coins/offers) — commission
+                // is earned on the full price; the subsidy is admin's cost.
                 let pendingCommission = 0
                 for (const e of unpaidEnr) {
                     const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                        + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
                     pendingCommission += Math.round(base * rateOf(e.faculty_id) / 100)
                 }
                 for (const b of unpaidBun) {
-                    pendingCommission += Math.round((b.amount_paid ?? 0) * rateOf(b.faculty_id) / 100)
+                    const base = (b.amount_paid ?? 0)
+                        + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0)
+                    pendingCommission += Math.round(base * rateOf(b.faculty_id) / 100)
                 }
 
                 const curBucket = bucketByKey.get(`${now.getFullYear()}-${now.getMonth()}`)
@@ -619,8 +624,8 @@ export const dashboardManagementFunctions = {
                 { data: saleTxns, error: saleErr },
                 { data: defSetting },
             ] = await Promise.all([
-                supabase.from('enrollments').select('id, faculty_id, course_id, amount_paid, gst_amount, is_bundle_enrollment, payment_status, student_id'),
-                supabase.from('bundle_enrollments').select('id, faculty_id, amount_paid, payment_status'),
+                supabase.from('enrollments').select('id, faculty_id, course_id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount, is_bundle_enrollment, payment_status, student_id'),
+                supabase.from('bundle_enrollments').select('id, faculty_id, amount_paid, coin_redeem_amount, offer_discount_amount, payment_status'),
                 supabase.from('faculty_transactions').select('faculty_id, amount').eq('type', 'PAYOUT').eq('status', 'SUCCESS'),
                 supabase.from('faculty_transactions').select('type, enrollment_id, bundle_enrollment_id').in('type', ['COURSE_SALE', 'BUNDLE_SALE']),
                 supabase.from('platform_settings').select('value').eq('key', 'default_commission_percent').maybeSingle(),
@@ -659,6 +664,7 @@ export const dashboardManagementFunctions = {
                 if ((e.payment_status ?? 'SUCCESS') !== 'SUCCESS' || (e.amount_paid ?? 0) <= 0) continue
                 if (paidEnrIds.has(e.id)) continue
                 const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                    + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
                 const share = base - Math.round(base * rateOf(e.faculty_id) / 100)
                 revByFaculty.set(e.faculty_id, (revByFaculty.get(e.faculty_id) ?? 0) + share)
             }
@@ -666,7 +672,8 @@ export const dashboardManagementFunctions = {
                 if (!b.faculty_id) continue
                 if ((b.payment_status ?? 'SUCCESS') !== 'SUCCESS' || (b.amount_paid ?? 0) <= 0) continue
                 if (paidBunIds.has(b.id)) continue
-                const base = b.amount_paid ?? 0
+                const base = (b.amount_paid ?? 0)
+                    + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0)
                 const share = base - Math.round(base * rateOf(b.faculty_id) / 100)
                 revByFaculty.set(b.faculty_id, (revByFaculty.get(b.faculty_id) ?? 0) + share)
             }

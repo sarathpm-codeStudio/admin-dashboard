@@ -168,8 +168,8 @@ export const financialManagementFunctions = {
      *    PLUS the admin's commission on still-unpaid enrollments.
      *    The faculty's pending share is NOT part of this.
      *  - Today's Revenue  → platform commission share of today's sales:
-     *    (amount_paid - GST) × faculty's commission rate (profiles.commission_rate,
-     *    fallback platform default), growth vs yesterday.
+     *    (amount_paid - GST + coin/offer subsidy) × faculty's commission rate
+     *    (profiles.commission_rate, fallback platform default), growth vs yesterday.
      *  - Pending Payouts  → unpaid enrollments (no COURSE_SALE / BUNDLE_SALE row
      *    in faculty_transactions yet), after GST and commission deduction.
      *    Commission resolves per faculty: profiles.commission_rate, falling back
@@ -186,10 +186,10 @@ export const financialManagementFunctions = {
             ] = await Promise.all([
                 supabase
                     .from('enrollments')
-                    .select('id, faculty_id, amount_paid, gst_amount, is_bundle_enrollment, enrolled_at, payment_status'),
+                    .select('id, faculty_id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount, is_bundle_enrollment, enrolled_at, payment_status'),
                 supabase
                     .from('bundle_enrollments')
-                    .select('id, faculty_id, amount_paid, enrolled_at, created_at, payment_status'),
+                    .select('id, faculty_id, amount_paid, coin_redeem_amount, offer_discount_amount, enrolled_at, created_at, payment_status'),
                 supabase
                     .from('faculty_transactions')
                     .select('type, enrollment_id, bundle_enrollment_id')
@@ -257,10 +257,18 @@ export const financialManagementFunctions = {
                 return rate ?? defaultCommission
             }
 
+            // Admin-funded discounts (coins + platform offers) are added back to
+            // the base so faculty is paid as if the student paid full price; the
+            // subsidy comes out of the platform's commission.
+            const adminSubsidy = (e: {
+                coin_redeem_amount?: number | null
+                offer_discount_amount?: number | null
+            }): number => (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
+
             // ── Today's Revenue (vs yesterday) ───────────────────────────
             // Admin revenue = commission share of each sale:
-            //   singles → (amount_paid - gst_amount) × rate%
-            //   bundles → amount_paid × rate%   (workflow §4)
+            //   singles → (amount_paid - gst_amount + admin subsidy) × rate%
+            //   bundles → (amount_paid + admin subsidy) × rate%   (workflow §4)
             const todayStart = new Date()
             todayStart.setHours(0, 0, 0, 0)
             const yesterdayStart = new Date(todayStart)
@@ -275,13 +283,13 @@ export const financialManagementFunctions = {
                 const fromSingles = allEnrollments
                     .filter(e => !e.is_bundle_enrollment && inRange(e.enrolled_at))
                     .reduce((sum, e) => {
-                        const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                        const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0) + adminSubsidy(e)
                         return sum + base * (resolveRate(e.faculty_id) / 100)
                     }, 0)
                 const fromBundles = allBundles
                     .filter(b => inRange(b.enrolled_at ?? b.created_at))
                     .reduce((sum, b) =>
-                        sum + (b.amount_paid ?? 0) * (resolveRate(b.faculty_id) / 100), 0)
+                        sum + ((b.amount_paid ?? 0) + adminSubsidy(b)) * (resolveRate(b.faculty_id) / 100), 0)
                 return fromSingles + fromBundles
             }
 
@@ -342,16 +350,18 @@ export const financialManagementFunctions = {
             }
 
             // Each unpaid sale splits into faculty share + admin commission:
-            //   base            = amount_paid - GST
+            //   base            = amount_paid - GST + admin subsidy (coins/offers)
             //   faculty share   = base × (1 - rate%)  → Pending Payouts card
             //   admin commission = base × rate%       → pending part of Total Revenue
+            // The subsidy is paid to faculty out of the commission, so the
+            // commission shown here is gross (before the coin/offer cost).
             let pendingFaculty = 0
             let pendingCommission = 0
             let prevMonthFaculty = 0
             let prevMonthCount = 0
 
             for (const e of unpaidEnrollments) {
-                const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0) + adminSubsidy(e)
                 const rate = resolveRate(e.faculty_id) / 100
                 pendingFaculty += base * (1 - rate)
                 pendingCommission += base * rate
@@ -361,7 +371,7 @@ export const financialManagementFunctions = {
                 }
             }
             for (const b of unpaidBundles) {
-                const base = b.amount_paid ?? 0
+                const base = (b.amount_paid ?? 0) + adminSubsidy(b)
                 const rate = resolveRate(b.faculty_id) / 100
                 pendingFaculty += base * (1 - rate)
                 pendingCommission += base * rate
@@ -762,8 +772,9 @@ export const financialManagementFunctions = {
      * Per faculty the function: resolves commission % (profiles.commission_rate
      * → platform default, §7); creates the PAYOUT row (trigger assigns its
      * transaction_id = the run's payout_id); adds COURSE_SALE/BUNDLE_SALE +
-     * PLATFORM_FEE per sale (base = amount_paid − GST, bundles = full amount,
-     * commission = round(base × rate%)); fills the PAYOUT total; writes one
+     * PLATFORM_FEE per sale (base = amount_paid − GST + admin-funded discounts
+     * [coin_redeem_amount + offer_discount_amount], bundles = full amount + the
+     * same discounts, commission = round(base × rate%)); fills the PAYOUT total; writes one
      * PLATFORM_EARNING row (Σ PLATFORM_FEE); and notifies the faculty.
      *
      * No payment gateway yet — payment_id carries a DEMO reference on the PAYOUT

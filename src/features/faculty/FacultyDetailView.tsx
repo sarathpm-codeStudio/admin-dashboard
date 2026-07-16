@@ -88,7 +88,7 @@ export function FacultyDetailView() {
       <p className="text-sm text-nav">Error loading faculty...</p>
     </div>
   }
-  const { faculty: profile, analytics } = data
+  const { faculty: profile, analytics, lastActive } = data
 
   // const base = getFacultyById(facultyId)
   const faculty: FacultyDetail = {
@@ -111,6 +111,7 @@ export function FacultyDetailView() {
       reviewCount: analytics.avgRating.totalReviews,
     },
     recentActivity: [],
+    recentActive: lastActive?.display ?? 'Never',
     certificates: [],
     qualifications: [],
     status: profile.is_suspended

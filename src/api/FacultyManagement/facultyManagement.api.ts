@@ -145,7 +145,7 @@ export const facultyManagementFunctions = {
 
             const { data: singleEnrollments, error: singleEnrollError } = await supabase
                 .from('enrollments')
-                .select('id, amount_paid, gst_amount')
+                .select('id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount')
                 .eq('faculty_id', facultyId)
                 .eq('is_bundle_enrollment', false);
 
@@ -153,7 +153,7 @@ export const facultyManagementFunctions = {
 
             const { data: bundleEnrollments, error: bundleEnrollError } = await supabase
                 .from('bundle_enrollments')
-                .select('id, amount_paid')
+                .select('id, amount_paid, coin_redeem_amount, offer_discount_amount')
                 .eq('faculty_id', facultyId);
 
             if (bundleEnrollError) throw new Error(bundleEnrollError.message);
@@ -179,10 +179,13 @@ export const facultyManagementFunctions = {
             const paidSingleIds = new Set((paidSingleTxns ?? []).map(t => t.enrollment_id));
             const paidBundleIds = new Set((paidBundleTxns ?? []).map(t => t.bundle_enrollment_id));
 
+            // Base adds back admin-funded discounts (coins/offers): faculty is
+            // paid as if the student paid full price (workflow §3).
             const unpaidSingleAmount = (singleEnrollments ?? [])
                 .filter(e => !paidSingleIds.has(e.id))
                 .reduce((sum, e) => {
-                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0);
+                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                        + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0);
                     const commission = Math.round(base * commissionPercent / 100);
                     return sum + (base - commission);
                 }, 0);
@@ -190,11 +193,44 @@ export const facultyManagementFunctions = {
             const unpaidBundleAmount = (bundleEnrollments ?? [])
                 .filter(b => !paidBundleIds.has(b.id))
                 .reduce((sum, b) => {
-                    const commission = Math.round((b.amount_paid ?? 0) * commissionPercent / 100);
-                    return sum + ((b.amount_paid ?? 0) - commission);
+                    const base = (b.amount_paid ?? 0)
+                        + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0);
+                    const commission = Math.round(base * commissionPercent / 100);
+                    return sum + (base - commission);
                 }, 0);
 
             const pendingPayout = unpaidSingleAmount + unpaidBundleAmount;
+
+            // 7. Recent active — latest usage session written by the faculty
+            //    app (started on app open, ended_at refreshed by heartbeats).
+            const { data: lastSession } = await supabase
+                .from('usage_sessions')
+                .select('started_at, ended_at, platform')
+                .eq('user_id', facultyId)
+                .order('ended_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            const formatLastActive = (dateStr: string | null): string => {
+                if (!dateStr) return 'Never';
+                const date = new Date(dateStr);
+                const now2 = new Date();
+                const isToday = date.toDateString() === now2.toDateString();
+                const yesterday = new Date(now2);
+                yesterday.setDate(now2.getDate() - 1);
+                const isYesterday = date.toDateString() === yesterday.toDateString();
+                const timeStr = date.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+                if (isToday) return `Today ${timeStr}`;
+                if (isYesterday) return `Yesterday ${timeStr}`;
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                }) + `, ${timeStr}`;
+            };
 
             return {
                 // Profile
@@ -213,6 +249,13 @@ export const facultyManagementFunctions = {
                     document: faculty.document_verifications?.[0] ?? null,
                     admin_note: faculty.admin_note,
                     acc_reject_reason: faculty.acc_reject_reason,
+                },
+
+                // Recent activity — latest heartbeat from the faculty app
+                lastActive: {
+                    display: formatLastActive(lastSession?.ended_at ?? lastSession?.started_at ?? null),
+                    raw: lastSession?.ended_at ?? lastSession?.started_at ?? null,
+                    platform: lastSession?.platform ?? null,
                 },
 
                 // Analytics cards
@@ -617,7 +660,7 @@ export const facultyManagementFunctions = {
         // ── 2. All single course enrollments ─────────────────────
         const { data: singleEnrollments, error: e1 } = await supabase
             .from("enrollments")
-            .select("id, amount_paid, gst_amount")
+            .select("id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount")
             .eq("faculty_id", facultyId)
             .eq("is_bundle_enrollment", false);
 
@@ -626,7 +669,7 @@ export const facultyManagementFunctions = {
         // ── 3. All bundle enrollments ─────────────────────────────
         const { data: bundleEnrollments, error: e2 } = await supabase
             .from("bundle_enrollments")
-            .select("id, amount_paid")
+            .select("id, amount_paid, coin_redeem_amount, offer_discount_amount")
             .eq("faculty_id", facultyId);
 
         if (e2) throw e2;
@@ -690,11 +733,13 @@ export const facultyManagementFunctions = {
         const paidSingleIds = new Set(paidSingleTxns.map((t) => t.enrollment_id));
         const paidBundleIds = new Set(paidBundleTxns.map((t) => t.bundle_enrollment_id));
 
-        // Unpaid single enrollments → after GST and commission
+        // Unpaid single enrollments → after GST and commission; admin-funded
+        // discounts (coins/offers) are added back so faculty is paid full price
         const unpaidSingleAmount = singleEnrollments
             .filter((e) => !paidSingleIds.has(e.id))
             .reduce((sum, e) => {
-                const base = e.amount_paid - e.gst_amount;
+                const base = e.amount_paid - e.gst_amount
+                    + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0);
                 const commission = Math.round(base * commissionPercent / 100);
                 return sum + (base - commission);
             }, 0);
@@ -703,8 +748,10 @@ export const facultyManagementFunctions = {
         const unpaidBundleAmount = bundleEnrollments
             .filter((b) => !paidBundleIds.has(b.id))
             .reduce((sum, b) => {
-                const commission = Math.round(b.amount_paid * commissionPercent / 100);
-                return sum + (b.amount_paid - commission);
+                const base = b.amount_paid
+                    + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0);
+                const commission = Math.round(base * commissionPercent / 100);
+                return sum + (base - commission);
             }, 0);
 
         const pendingPayout = unpaidSingleAmount + unpaidBundleAmount;
@@ -782,19 +829,21 @@ export const facultyManagementFunctions = {
             );
 
             // For not-yet-paid enrollments only, estimate at the current rate.
+            // Admin-funded discounts (coins/offers) are added back to the base.
             const commissionPercent = await getCommissionPercentForFaculty(facultyId);
-            const facultyNet = (e: { id?: string; amount_paid?: number; gst_amount?: number }) => {
+            const facultyNet = (e: { id?: string; amount_paid?: number; gst_amount?: number; coin_redeem_amount?: number; offer_discount_amount?: number }) => {
                 if (e.id && settledByEnrollment.has(e.id)) return settledByEnrollment.get(e.id)!;
-                const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
+                const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0)
+                    + Number(e.coin_redeem_amount ?? 0) + Number(e.offer_discount_amount ?? 0);
                 if (base <= 0) return 0;
                 return base - Math.round((base * commissionPercent) / 100);
             };
 
-            let earnings: { id?: string; enrolled_at?: string; amount_paid?: number; gst_amount?: number }[] = [];
+            let earnings: { id?: string; enrolled_at?: string; amount_paid?: number; gst_amount?: number; coin_redeem_amount?: number; offer_discount_amount?: number }[] = [];
             if (courseIds.length > 0) {
                 const { data: enrollments, error } = await db
                     .from('enrollments')
-                    .select('id, enrolled_at, amount_paid, gst_amount')
+                    .select('id, enrolled_at, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount')
                     .in('course_id', courseIds);
 
                 if (error) throw new Error(error.message);
@@ -890,7 +939,7 @@ export const facultyManagementFunctions = {
                 const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
                 const { data: pendEnr } = await db
                     .from('enrollments')
-                    .select('id, amount_paid, gst_amount')
+                    .select('id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount')
                     .eq('faculty_id', facultyId).eq('is_bundle_enrollment', false).eq('payment_status', 'SUCCESS').gt('amount_paid', 0)
                     .gte('enrolled_at', thisMonthStart).lt('enrolled_at', nextMonthStart);
 
@@ -898,7 +947,8 @@ export const facultyManagementFunctions = {
                 let pending = 0;
                 for (const e of pendEnr ?? []) {
                     if (paidIds.has(e.id)) continue;
-                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0);
+                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
+                        + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0);
                     if (base > 0) pending += base - Math.round(base * commissionPercent / 100);
                 }
                 const curKey = `${now.getFullYear()}-${now.getMonth()}`;
@@ -929,12 +979,14 @@ export const facultyManagementFunctions = {
         try {
             const db = supabase;
 
-            // Faculty net revenue = (amount_paid - GST) after the platform commission.
+            // Faculty net revenue = (amount_paid - GST + admin-funded discounts)
+            // after the platform commission.
             // Mirrors getFacultyRevenueTrends / enrollment-payout-workflow.md §3.
             const commissionPercent = await getCommissionPercentForFaculty(facultyId);
             const facultyShareRatio = 1 - commissionPercent / 100;
-            const facultyNet = (e: { amount_paid?: number; gst_amount?: number }) => {
-                const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0);
+            const facultyNet = (e: { amount_paid?: number; gst_amount?: number; coin_redeem_amount?: number; offer_discount_amount?: number }) => {
+                const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0)
+                    + Number(e.coin_redeem_amount ?? 0) + Number(e.offer_discount_amount ?? 0);
                 if (base <= 0) return 0;
                 return base * facultyShareRatio;
             };
@@ -942,7 +994,7 @@ export const facultyManagementFunctions = {
             // Individual (single course) enrollments
             const { data: singleEnrollments, error: singleError } = await db
                 .from('enrollments')
-                .select('amount_paid, gst_amount')
+                .select('amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount')
                 .eq('faculty_id', facultyId)
                 .eq('is_bundle_enrollment', false);
 
@@ -951,7 +1003,7 @@ export const facultyManagementFunctions = {
             // Bundle enrollments (no GST column — gross is the bundle amount)
             const { data: bundleEnrollments, error: bundleError } = await db
                 .from('bundle_enrollments')
-                .select('amount_paid')
+                .select('amount_paid, coin_redeem_amount, offer_discount_amount')
                 .eq('faculty_id', facultyId);
 
             if (bundleError) throw new Error(bundleError.message);
