@@ -443,11 +443,17 @@ export const facultyManagementFunctions = {
             const formatPrice = (amount: number): string =>
                 `₹${amount.toLocaleString('en-IN')}`;
 
-            // `validity` is a month count, or the literal "lifetime"
+            // `validity` is a month count, the literal "lifetime", or days as
+            // '<n>d' for free courses (platform_settings.free_course_validity)
             const formatDuration = (raw: string | null): string => {
                 const value = (raw ?? '').trim();
                 if (!value) return '—';
                 if (value.toLowerCase() === 'lifetime') return 'Lifetime';
+                const daysMatch = /^(\d+)d$/i.exec(value);
+                if (daysMatch) {
+                    const days = Number(daysMatch[1]);
+                    return `${days} ${days === 1 ? 'Day' : 'Days'}`;
+                }
                 const months = Number(value);
                 if (!Number.isFinite(months)) return value;
                 return `${months} ${months === 1 ? 'Month' : 'Months'}`;

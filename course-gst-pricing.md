@@ -1,7 +1,7 @@
 # Course GST Pricing Setup
 
 > **Project:** LMS Platform (Learninough)
-> **Last Updated:** July 2026 (added dual discount models: EXCLUSIVE_GST / INCLUSIVE_GST)
+> **Last Updated:** July 2026 (bundles now on the GST model with both discount modes)
 > **Purpose:** Single reference for how course prices, GST, discounts, coins and
 > platform offers work — shared by the **admin dashboard**, **faculty dashboard**
 > and **server (Lambda)** repos. Keep all three copies identical.
@@ -73,8 +73,8 @@ the value is expressed*.
 trigger `trg_gst_percent_recalc_prices` automatically calls
 `recalculate_gst_inclusive_prices()`, which rebuilds `price` and `final_price`
 for **every course and bundle** from `exclude_price`, respecting each course's
-`discount_mode`. Repeated recalcs never drift because they always start from
-the untouched base.
+and bundle's `discount_mode`. Repeated recalcs never drift because they always
+start from the untouched base.
 
 ---
 
@@ -93,8 +93,13 @@ the untouched base.
   `exclude_price` + `discount` + `discount_mode` + `gst_percent` (in app code
   on save, by the DB trigger on GST change).
 - Free courses: all price fields = 0, `is_free = true`, mode INCLUSIVE_GST (the default).
-- `course_bundle` has `exclude_price` too but ⚠️ the bundle **UI/flow is not yet
-  on the GST model** (still sum-of-courses − %, no discount_mode); see §9.
+- `course_bundle` is on the **same model** (migration
+  `add_discount_mode_to_course_bundle`). The faculty doesn't enter a base;
+  it's derived from the selected courses: `exclude_price` = ex-GST value of
+  the sum of the courses' `final_price` (`sum × 100/(100+gst)`), `price` =
+  that GST-inclusive sum, and `discount` / `discount_type` / `discount_mode` /
+  `final_price` behave exactly like courses (§5 formulas). Bundle amounts keep
+  2-decimal rounding in the DB recalc.
 
 ---
 
@@ -226,9 +231,10 @@ faculty_share  = base − commission
 **Faculty dashboard** (`learning-app-faculty-dashboard`)
 - Pricing screen (base entry, GST preview, discount-mode toggle):
   `src/pages/courses/create/Step3Pricing.tsx`
+- Bundle pricing screen (same model; base derived from selected courses):
+  `src/pages/bundles/Step2Pricing.tsx`, save in `src/services/bundleService.ts`
 - Save + GST rate fetch: `src/services/courseService.ts`
   (`addCoursePricing`, `getGstPercent`), hook `useGstPercent` in `src/hooks/useCourse.ts`
-- ⚠️ TODO: bundle pricing (`src/pages/bundles/Step2Pricing.tsx`) not yet on the GST model.
 
 **Server / Lambda** (`learninough-server`)
 - ⚠️ TODO: checkout must implement §6 (inclusive-money deductions, coin cap,
@@ -240,4 +246,5 @@ faculty_share  = base − commission
 - Price rebuild: `recalculate_gst_inclusive_prices()` (handles both discount
   modes) + trigger `trg_gst_percent_recalc_prices` on `platform_settings`
 - Columns/migrations: `add_admin_funded_discount_columns_to_enrollments`,
-  `add_exclude_price_and_gst_inclusive_pricing`, `add_discount_mode_dual_gst_models`
+  `add_exclude_price_and_gst_inclusive_pricing`, `add_discount_mode_dual_gst_models`,
+  `add_discount_mode_to_course_bundle`

@@ -135,6 +135,12 @@ const formatValidity = (raw: string | null | undefined): string => {
   const value = (raw ?? '').trim()
   if (!value) return '—'
   if (value.toLowerCase() === 'lifetime') return 'Lifetime'
+  // Free courses store DAYS as '<n>d' (platform_settings.free_course_validity)
+  const daysMatch = /^(\d+)d$/i.exec(value)
+  if (daysMatch) {
+    const days = Number(daysMatch[1])
+    return `${days} ${days === 1 ? 'day' : 'days'}`
+  }
   const months = Number(value)
   if (Number.isFinite(months)) return `${months} ${months === 1 ? 'month' : 'months'}`
   return value
