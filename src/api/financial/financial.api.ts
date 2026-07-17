@@ -8,9 +8,20 @@ export type FinancialSummary = {
         amount: number
         /** Commission already received via payout runs (PLATFORM_EARNING). */
         realized: number
-        /** Commission still pending on unpaid enrollments. */
+        /** GROSS commission still pending on unpaid enrollments. */
         pending: number
         pendingDisplay: string
+        /** Pending commission NET of the coin/offer subsidy on those same
+         * unpaid sales — what admin will actually hold after they settle. */
+        pendingNet: number
+        pendingNetDisplay: string
+        /** Admin-funded coin + offer subsidy across all SUCCESS sales (workflow §9).
+         * Commission figures are GROSS — admin's real cash = amount − subsidy. */
+        subsidy: number
+        subsidyDisplay: string
+        /** Net revenue = gross commission − coin/offer subsidy. */
+        net: number
+        netDisplay: string
         growth: number
         display: string
         growthDisplay: string
@@ -44,9 +55,27 @@ export type FinancialTransactionRow = {
     paymentId: string
     student: string
     faculty: string
+    /** Faculty user id — used to resolve the commission rate for estimates. */
+    facultyId: string | null
     course: string
+    /** What the student actually paid (amount_paid, after coins/offers). */
     amount: number
     amountDisplay: string
+    /** Original course price (enrollments.course_price) — null for bundles. */
+    coursePrice: number | null
+    coursePriceDisplay: string
+    /** GST portion inside the paid amount. */
+    gstAmount: number
+    /** Coins redeemed on this purchase (0 = no coins used). */
+    coinsUsed: number
+    /** Taxable (ex-GST) value of the coin redemption (workflow §9). */
+    coinRedeemAmount: number
+    /** Taxable (ex-GST) value of the platform-offer discount. */
+    offerDiscountAmount: number
+    /** Coupon code used at checkout (faculty-created), or null. */
+    couponCode: string | null
+    /** Amount the coupon took off. Faculty-funded — reduces the payout base. */
+    couponDiscountAmount: number
     isBundle: boolean
     status: PaymentStatus
     date: string
@@ -55,6 +84,29 @@ export type FinancialTransactionRow = {
 
 /** faculty_transactions.status values (workflow §1). */
 export type PayoutStatus = 'SUCCESS' | 'PENDING' | 'FAILED'
+
+/** Money split of one transaction for the details modal (workflow §9/§10). */
+export type TransactionSettlement = {
+    /** true = figures come from the recorded payout run; false = estimate at the current rate. */
+    settled: boolean
+    commissionPercent: number
+    /** Payout base = (amount_paid − gst) + coin/offer subsidy. */
+    base: number
+    facultyShare: number
+    /** Gross admin commission (base − facultyShare). */
+    commission: number
+    /** Admin-funded coin + offer subsidy on this sale. */
+    adminSubsidy: number
+    /** Admin's real cash on this sale = commission − adminSubsidy. */
+    adminNet: number
+    /** Payout run reference when settled. */
+    payoutId: string | null
+    /** Enrollment period the run settled, e.g. "June 2026". */
+    period: string | null
+    /** Coupon applied to this enrollment (coupon_redemptions.enrollment_id):
+     * code + how much the student saved. Null when no redemption is recorded. */
+    coupon: { code: string; saveAmount: number } | null
+}
 
 /** One row of the Financial Management → Payouts table (a PAYOUT run, workflow §5/§8). */
 export type FinancialPayoutRow = {
@@ -97,6 +149,13 @@ export type PayoutDetailRow = {
     commissionPercent: number | null
     amount: number
     amountDisplay: string
+    /** Coins the student redeemed on this sale (sale rows only, workflow §9). */
+    coinsUsed: number
+    /** Admin-funded subsidy inside this sale's gross (coin + offer, taxable). */
+    coinRedeemAmount: number
+    offerDiscountAmount: number
+    /** Faculty-funded coupon on this sale (informational). */
+    couponDiscountAmount: number
 }
 
 /** Full breakdown of one payout run (workflow §5/§8). */
@@ -110,9 +169,18 @@ export type PayoutDetail = {
     /** PAYOUT row amount — total transferred to the faculty. */
     payoutTotal: number
     payoutTotalDisplay: string
-    /** PLATFORM_EARNING amount — platform commission for the run. */
+    /** PLATFORM_EARNING amount — platform commission for the run (GROSS). */
     platformEarning: number
     platformEarningDisplay: string
+    /** Admin-funded coin + offer subsidy inside this run's sales (workflow §9). */
+    adminSubsidy: number
+    adminSubsidyDisplay: string
+    /** Faculty-funded coupon discounts inside this run's sales (informational). */
+    couponTotal: number
+    couponTotalDisplay: string
+    /** Admin's real cash for the run = platformEarning − adminSubsidy. */
+    netEarning: number
+    netEarningDisplay: string
     /** Total base (gross after GST) across the run — from the PAYOUT row. */
     grossTotal: number
     grossTotalDisplay: string
@@ -139,7 +207,10 @@ export type ProcessPayoutsResult = {
     failures: { facultyId: string; faculty: string; error: string }[]
 }
 
-/** ₹ formatter — Cr / L for big values, en-IN grouping otherwise. */
+/** Paise precision (2dp) — payouts move online, never round money to rupees. */
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/** ₹ formatter — Cr / L for big values, en-IN grouping (keeps paise) otherwise. */
 const formatRevenue = (amount: number): string => {
     const crore = 10000000;
     const lakh = 100000;
@@ -148,7 +219,7 @@ const formatRevenue = (amount: number): string => {
     } else if (amount >= lakh) {
         return `₹${(amount / lakh).toFixed(1)} L`;
     }
-    return `₹${Math.round(amount).toLocaleString('en-IN')}`;
+    return `₹${round2(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 };
 
 const formatGrowth = (growth: number): string =>
@@ -266,9 +337,10 @@ export const financialManagementFunctions = {
             }): number => (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
 
             // ── Today's Revenue (vs yesterday) ───────────────────────────
-            // Admin revenue = commission share of each sale:
-            //   singles → (amount_paid - gst_amount + admin subsidy) × rate%
-            //   bundles → (amount_paid + admin subsidy) × rate%   (workflow §4)
+            // Admin's REAL money on the day's sales: commission share minus
+            // the coin/offer subsidy admin funded on them (workflow §9):
+            //   singles → (amount_paid - gst_amount + subsidy) × rate% − subsidy
+            //   bundles → (amount_paid + subsidy) × rate% − subsidy
             const todayStart = new Date()
             todayStart.setHours(0, 0, 0, 0)
             const yesterdayStart = new Date(todayStart)
@@ -284,17 +356,18 @@ export const financialManagementFunctions = {
                     .filter(e => !e.is_bundle_enrollment && inRange(e.enrolled_at))
                     .reduce((sum, e) => {
                         const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0) + adminSubsidy(e)
-                        return sum + base * (resolveRate(e.faculty_id) / 100)
+                        return sum + base * (resolveRate(e.faculty_id) / 100) - adminSubsidy(e)
                     }, 0)
                 const fromBundles = allBundles
                     .filter(b => inRange(b.enrolled_at ?? b.created_at))
                     .reduce((sum, b) =>
-                        sum + ((b.amount_paid ?? 0) + adminSubsidy(b)) * (resolveRate(b.faculty_id) / 100), 0)
+                        sum + ((b.amount_paid ?? 0) + adminSubsidy(b)) * (resolveRate(b.faculty_id) / 100)
+                            - adminSubsidy(b), 0)
                 return fromSingles + fromBundles
             }
 
-            const todaysRevenue = Math.round(commissionInRange(todayStart))
-            const yesterdaysRevenue = Math.round(commissionInRange(yesterdayStart, todayStart))
+            const todaysRevenue = round2(commissionInRange(todayStart))
+            const yesterdaysRevenue = round2(commissionInRange(yesterdayStart, todayStart))
             const todaysGrowth = growthPercent(todaysRevenue, yesterdaysRevenue)
 
             // Total revenue growth — platform commission this month vs last month
@@ -357,6 +430,7 @@ export const financialManagementFunctions = {
             // commission shown here is gross (before the coin/offer cost).
             let pendingFaculty = 0
             let pendingCommission = 0
+            let pendingSubsidy = 0
             let prevMonthFaculty = 0
             let prevMonthCount = 0
 
@@ -365,6 +439,7 @@ export const financialManagementFunctions = {
                 const rate = resolveRate(e.faculty_id) / 100
                 pendingFaculty += base * (1 - rate)
                 pendingCommission += base * rate
+                pendingSubsidy += adminSubsidy(e)
                 if (inPrevMonth(e.enrolled_at)) {
                     prevMonthFaculty += base * (1 - rate)
                     prevMonthCount += 1
@@ -375,27 +450,41 @@ export const financialManagementFunctions = {
                 const rate = resolveRate(b.faculty_id) / 100
                 pendingFaculty += base * (1 - rate)
                 pendingCommission += base * rate
+                pendingSubsidy += adminSubsidy(b)
                 if (inPrevMonth(b.enrolled_at ?? b.created_at)) {
                     prevMonthFaculty += base * (1 - rate)
                     prevMonthCount += 1
                 }
             }
 
-            const pendingPayouts = Math.round(pendingFaculty)
-            const previousMonthPending = Math.round(prevMonthFaculty)
+            const pendingPayouts = round2(pendingFaculty)
+            const previousMonthPending = round2(prevMonthFaculty)
             const unpaidCount = unpaidEnrollments.length + unpaidBundles.length
 
             // Total Revenue = admin's money only:
             // realized commission (PLATFORM_EARNING) + commission still pending
             // on unpaid enrollments. Faculty's pending share is NOT included.
-            const totalRevenue = platformEarningsTotal + Math.round(pendingCommission)
+            const totalRevenue = platformEarningsTotal + round2(pendingCommission)
+
+            // Commission figures are GROSS — the admin funds coin/offer
+            // discounts out of them (workflow §9). Net = gross − subsidy.
+            const totalSubsidy =
+                allEnrollments.filter(e => !e.is_bundle_enrollment).reduce((sum, e) => sum + adminSubsidy(e), 0) +
+                allBundles.reduce((sum, b) => sum + adminSubsidy(b), 0)
+            const netRevenue = totalRevenue - round2(totalSubsidy)
 
             return {
                 totalRevenue: {
                     amount: totalRevenue,
                     realized: platformEarningsTotal,
-                    pending: Math.round(pendingCommission),
-                    pendingDisplay: formatRevenue(Math.round(pendingCommission)),
+                    pending: round2(pendingCommission),
+                    pendingDisplay: formatRevenue(round2(pendingCommission)),
+                    pendingNet: round2(pendingCommission - pendingSubsidy),
+                    pendingNetDisplay: formatRevenue(round2(pendingCommission - pendingSubsidy)),
+                    subsidy: round2(totalSubsidy),
+                    subsidyDisplay: formatRevenue(round2(totalSubsidy)),
+                    net: netRevenue,
+                    netDisplay: formatRevenue(netRevenue),
                     growth: revenueGrowth,
                     display: formatRevenue(totalRevenue),
                     growthDisplay: formatGrowth(revenueGrowth),
@@ -440,12 +529,12 @@ export const financialManagementFunctions = {
             ] = await Promise.all([
                 supabase
                     .from('enrollments')
-                    .select('id, payment_id, student_id, faculty_id, course_id, amount_paid, payment_status, created_at')
+                    .select('id, payment_id, student_id, faculty_id, course_id, amount_paid, course_price, gst_amount, coins_used_count, coin_redeem_amount, offer_discount_amount, coupon_id, coupon_discount_amount, payment_status, created_at')
                     .eq('is_bundle_enrollment', false)
                     .order('created_at', { ascending: false }),
                 supabase
                     .from('bundle_enrollments')
-                    .select('id, payment_id, student_id, faculty_id, bundle_id, amount_paid, payment_status, created_at')
+                    .select('id, payment_id, student_id, faculty_id, bundle_id, amount_paid, coins_used_count, coin_redeem_amount, offer_discount_amount, coupon_id, coupon_discount_amount, payment_status, created_at')
                     .order('created_at', { ascending: false }),
             ])
 
@@ -463,11 +552,19 @@ export const financialManagementFunctions = {
             )]
             const courseIds = [...new Set(singleRows.map(e => e.course_id).filter(Boolean))]
             const bundleIds = [...new Set(bundleRows.map(b => b.bundle_id).filter(Boolean))]
+            const couponIds = [...new Set(
+                [...singleRows, ...bundleRows].map(e => e.coupon_id).filter(Boolean),
+            )]
 
             const [
                 { data: profiles, error: profilesError },
                 { data: courses, error: coursesError },
                 { data: bundles, error: bundleTitlesError },
+                { data: coupons, error: couponsError },
+                // Fallback source for coupon usage: checkout logs redemptions in
+                // coupon_redemptions (linked via enrollment_id) even when the
+                // enrollment's own coupon fields were not written.
+                { data: redemptions, error: redemptionsError },
             ] = await Promise.all([
                 profileIds.length > 0
                     ? supabase.from('profiles').select('id, first_name, last_name').in('id', profileIds)
@@ -478,11 +575,20 @@ export const financialManagementFunctions = {
                 bundleIds.length > 0
                     ? supabase.from('course_bundle').select('id, title').in('id', bundleIds)
                     : Promise.resolve({ data: [], error: null }),
+                couponIds.length > 0
+                    ? supabase.from('coupons').select('id, code').in('id', couponIds)
+                    : Promise.resolve({ data: [], error: null }),
+                supabase
+                    .from('coupon_redemptions')
+                    .select('enrollment_id, save_amount, coupons(code)')
+                    .not('enrollment_id', 'is', null),
             ])
 
             if (profilesError) throw new Error(profilesError.message)
             if (coursesError) throw new Error(coursesError.message)
             if (bundleTitlesError) throw new Error(bundleTitlesError.message)
+            if (couponsError) throw new Error(couponsError.message)
+            if (redemptionsError) throw new Error(redemptionsError.message)
 
             const nameById = new Map(
                 (profiles ?? []).map(p => [
@@ -492,6 +598,13 @@ export const financialManagementFunctions = {
             )
             const courseById = new Map((courses ?? []).map(c => [c.id, c.title ?? 'Untitled course']))
             const bundleById = new Map((bundles ?? []).map(b => [b.id, b.title ?? 'Untitled bundle']))
+            const couponCodeById = new Map((coupons ?? []).map(c => [c.id, c.code ?? 'Coupon']))
+            const redemptionByEnrollment = new Map(
+                (redemptions ?? []).map((r: any) => [
+                    r.enrollment_id,
+                    { code: r.coupons?.code ?? 'Coupon', saveAmount: round2(Number(r.save_amount ?? 0)) },
+                ]),
+            )
 
             const formatDate = (iso: string | null): string =>
                 iso
@@ -503,21 +616,41 @@ export const financialManagementFunctions = {
             const toRow = (
                 e: (typeof singleRows)[number] | (typeof bundleRows)[number],
                 isBundle: boolean,
-            ): FinancialTransactionRow => ({
-                id: e.id,
-                paymentId: e.payment_id ?? '—',
-                student: nameById.get(e.student_id) ?? 'Unknown',
-                faculty: nameById.get(e.faculty_id) ?? 'Unknown',
-                course: isBundle
-                    ? bundleById.get((e as (typeof bundleRows)[number]).bundle_id) ?? 'Unknown bundle'
-                    : courseById.get((e as (typeof singleRows)[number]).course_id) ?? 'Unknown course',
-                amount: e.amount_paid ?? 0,
-                amountDisplay: `₹${(e.amount_paid ?? 0).toLocaleString('en-IN')}`,
-                isBundle,
-                status: (e.payment_status ?? 'SUCCESS') as PaymentStatus,
-                date: formatDate(e.created_at),
-                createdAt: e.created_at,
-            })
+            ): FinancialTransactionRow => {
+                const coursePrice = isBundle
+                    ? null
+                    : ((e as (typeof singleRows)[number]).course_price ?? null)
+                return {
+                    id: e.id,
+                    paymentId: e.payment_id ?? '—',
+                    student: nameById.get(e.student_id) ?? 'Unknown',
+                    faculty: nameById.get(e.faculty_id) ?? 'Unknown',
+                    facultyId: e.faculty_id ?? null,
+                    course: isBundle
+                        ? bundleById.get((e as (typeof bundleRows)[number]).bundle_id) ?? 'Unknown bundle'
+                        : courseById.get((e as (typeof singleRows)[number]).course_id) ?? 'Unknown course',
+                    amount: e.amount_paid ?? 0,
+                    amountDisplay: `₹${(e.amount_paid ?? 0).toLocaleString('en-IN')}`,
+                    coursePrice,
+                    coursePriceDisplay: coursePrice != null && coursePrice > 0
+                        ? `₹${coursePrice.toLocaleString('en-IN')}`
+                        : '—',
+                    gstAmount: isBundle ? 0 : ((e as (typeof singleRows)[number]).gst_amount ?? 0),
+                    coinsUsed: e.coins_used_count ?? 0,
+                    coinRedeemAmount: e.coin_redeem_amount ?? 0,
+                    offerDiscountAmount: e.offer_discount_amount ?? 0,
+                    couponCode: e.coupon_id
+                        ? couponCodeById.get(e.coupon_id) ?? 'Coupon'
+                        : redemptionByEnrollment.get(e.id)?.code ?? null,
+                    couponDiscountAmount: (e.coupon_discount_amount ?? 0) > 0
+                        ? e.coupon_discount_amount
+                        : redemptionByEnrollment.get(e.id)?.saveAmount ?? 0,
+                    isBundle,
+                    status: (e.payment_status ?? 'SUCCESS') as PaymentStatus,
+                    date: formatDate(e.created_at),
+                    createdAt: e.created_at,
+                }
+            }
 
             return [
                 ...singleRows.map(e => toRow(e, false)),
@@ -528,6 +661,104 @@ export const financialManagementFunctions = {
                 return bt - at
             })
 
+        } catch (error: any) {
+            throw new Error(error.message)
+        }
+    },
+
+    /**
+     * Money split of one transaction (details modal, workflow §9/§10).
+     *
+     * Settled sale (COURSE_SALE/BUNDLE_SALE row exists): return the ACTUAL
+     * recorded figures — faculty share and rate frozen at payout time.
+     * Unpaid sale: ESTIMATE with the faculty's current rate
+     * (profiles.commission_rate → platform default). The caller must label
+     * estimates as such — the rate can change before the payout run.
+     */
+    getTransactionSettlement: async (t: {
+        id: string
+        isBundle: boolean
+        facultyId: string | null
+        amount: number
+        gstAmount: number
+        coinRedeemAmount: number
+        offerDiscountAmount: number
+    }): Promise<TransactionSettlement> => {
+        try {
+            const adminSubsidy = (t.coinRedeemAmount ?? 0) + (t.offerDiscountAmount ?? 0)
+
+            // Settled? The sale row carries the frozen figures. Coupon usage
+            // comes from coupon_redemptions.enrollment_id (course sales only).
+            const [
+                { data: saleRow, error: saleError },
+                { data: redemption },
+            ] = await Promise.all([
+                supabase
+                    .from('faculty_transactions')
+                    .select('amount, gross_amount, commission_percent, payout_id, payout_time_period')
+                    .eq('type', t.isBundle ? 'BUNDLE_SALE' : 'COURSE_SALE')
+                    .eq(t.isBundle ? 'bundle_enrollment_id' : 'enrollment_id', t.id)
+                    .maybeSingle(),
+                t.isBundle
+                    ? Promise.resolve({ data: null })
+                    : supabase
+                        .from('coupon_redemptions')
+                        .select('save_amount, coupons(code)')
+                        .eq('enrollment_id', t.id)
+                        .maybeSingle(),
+            ])
+
+            if (saleError) throw new Error(saleError.message)
+
+            const coupon = redemption
+                ? {
+                    code: (redemption as any).coupons?.code ?? 'Coupon',
+                    saveAmount: Number((redemption as any).save_amount ?? 0),
+                }
+                : null
+
+            if (saleRow) {
+                const base = saleRow.gross_amount ?? 0
+                const facultyShare = saleRow.amount ?? 0
+                const commission = base - facultyShare
+                return {
+                    settled: true,
+                    commissionPercent: saleRow.commission_percent ?? 0,
+                    base,
+                    facultyShare,
+                    commission,
+                    adminSubsidy,
+                    adminNet: commission - adminSubsidy,
+                    payoutId: saleRow.payout_id ?? null,
+                    period: saleRow.payout_time_period ?? null,
+                    coupon,
+                }
+            }
+
+            // Unpaid — estimate at the CURRENT rate (workflow §7 resolution).
+            const [{ data: profile }, { data: defaultSetting }] = await Promise.all([
+                t.facultyId
+                    ? supabase.from('profiles').select('commission_rate').eq('id', t.facultyId).maybeSingle()
+                    : Promise.resolve({ data: null }),
+                supabase.from('platform_settings').select('value').eq('key', 'default_commission_percent').maybeSingle(),
+            ])
+            const rate = profile?.commission_rate
+                ?? (parseFloat(defaultSetting?.value ?? '20') || 20)
+
+            const base = (t.amount ?? 0) - (t.gstAmount ?? 0) + adminSubsidy
+            const commission = round2(base * rate / 100)
+            return {
+                settled: false,
+                commissionPercent: rate,
+                base,
+                facultyShare: base - commission,
+                commission,
+                adminSubsidy,
+                adminNet: commission - adminSubsidy,
+                payoutId: null,
+                period: null,
+                coupon,
+            }
         } catch (error: any) {
             throw new Error(error.message)
         }
@@ -657,10 +888,10 @@ export const financialManagementFunctions = {
                 { data: faculty, error: facultyError },
             ] = await Promise.all([
                 enrollmentIds.length > 0
-                    ? supabase.from('enrollments').select('id, course_id').in('id', enrollmentIds)
+                    ? supabase.from('enrollments').select('id, course_id, coins_used_count, coin_redeem_amount, offer_discount_amount, coupon_discount_amount').in('id', enrollmentIds)
                     : Promise.resolve({ data: [], error: null }),
                 bundleEnrollmentIds.length > 0
-                    ? supabase.from('bundle_enrollments').select('id, bundle_id').in('id', bundleEnrollmentIds)
+                    ? supabase.from('bundle_enrollments').select('id, bundle_id, coins_used_count, coin_redeem_amount, offer_discount_amount, coupon_discount_amount').in('id', bundleEnrollmentIds)
                     : Promise.resolve({ data: [], error: null }),
                 supabase.from('profiles').select('id, first_name, last_name').eq('id', anchor.faculty_id).maybeSingle(),
             ])
@@ -671,6 +902,31 @@ export const financialManagementFunctions = {
 
             const courseIdByEnrollment = new Map((enrollments ?? []).map(e => [e.id, e.course_id]))
             const bundleIdByEnrollment = new Map((bundleEnrollments ?? []).map(b => [b.id, b.bundle_id]))
+
+            // Subsidy/coupon data per settled enrollment (workflow §9) — shown
+            // on the sale rows so the admin sees what the student did.
+            type SubsidyInfo = {
+                coinsUsed: number
+                coinRedeemAmount: number
+                offerDiscountAmount: number
+                couponDiscountAmount: number
+            }
+            const subsidyOf = (e: {
+                coins_used_count?: number | null
+                coin_redeem_amount?: number | null
+                offer_discount_amount?: number | null
+                coupon_discount_amount?: number | null
+            }): SubsidyInfo => ({
+                coinsUsed: e.coins_used_count ?? 0,
+                coinRedeemAmount: e.coin_redeem_amount ?? 0,
+                offerDiscountAmount: e.offer_discount_amount ?? 0,
+                couponDiscountAmount: e.coupon_discount_amount ?? 0,
+            })
+            const subsidyByEnrollment = new Map((enrollments ?? []).map(e => [e.id, subsidyOf(e)]))
+            const subsidyByBundle = new Map((bundleEnrollments ?? []).map(b => [b.id, subsidyOf(b)]))
+            const NO_SUBSIDY: SubsidyInfo = {
+                coinsUsed: 0, coinRedeemAmount: 0, offerDiscountAmount: 0, couponDiscountAmount: 0,
+            }
             const courseIds = [...new Set([...courseIdByEnrollment.values()].filter(Boolean))]
             const bundleIds = [...new Set([...bundleIdByEnrollment.values()].filter(Boolean))]
 
@@ -709,17 +965,30 @@ export const financialManagementFunctions = {
                 COURSE_SALE: 0, BUNDLE_SALE: 1, PLATFORM_FEE: 2, PLATFORM_EARNING: 3,
             }
             const detailRows: PayoutDetailRow[] = linkedRows
-                .map(r => ({
-                    id: r.id,
-                    transactionId: r.transaction_id ?? '—',
-                    type: r.type as FacultyTransactionType,
-                    item: itemFor(r),
-                    grossAmount: r.gross_amount ?? 0,
-                    gstAmount: r.gst_amount ?? 0,
-                    commissionPercent: r.commission_percent,
-                    amount: r.amount ?? 0,
-                    amountDisplay: `₹${(r.amount ?? 0).toLocaleString('en-IN')}`,
-                }))
+                .map(r => {
+                    // Attach subsidy data to the SALE rows only, so run totals
+                    // don't double-count via the PLATFORM_FEE twins.
+                    const isSale = r.type === 'COURSE_SALE' || r.type === 'BUNDLE_SALE'
+                    const subsidy = !isSale
+                        ? NO_SUBSIDY
+                        : r.enrollment_id
+                            ? subsidyByEnrollment.get(r.enrollment_id) ?? NO_SUBSIDY
+                            : r.bundle_enrollment_id
+                                ? subsidyByBundle.get(r.bundle_enrollment_id) ?? NO_SUBSIDY
+                                : NO_SUBSIDY
+                    return {
+                        id: r.id,
+                        transactionId: r.transaction_id ?? '—',
+                        type: r.type as FacultyTransactionType,
+                        item: itemFor(r),
+                        grossAmount: r.gross_amount ?? 0,
+                        gstAmount: r.gst_amount ?? 0,
+                        commissionPercent: r.commission_percent,
+                        amount: r.amount ?? 0,
+                        amountDisplay: `₹${(r.amount ?? 0).toLocaleString('en-IN')}`,
+                        ...subsidy,
+                    }
+                })
                 .sort((a, b) =>
                     (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9) ||
                     a.transactionId.localeCompare(b.transactionId),
@@ -728,6 +997,16 @@ export const financialManagementFunctions = {
             const platformEarning = detailRows
                 .filter(r => r.type === 'PLATFORM_EARNING')
                 .reduce((sum, r) => sum + r.amount, 0)
+
+            // Run totals (workflow §9): subsidy is admin's cost inside the
+            // gross commission; coupons are the faculty's own cost.
+            const adminSubsidy = detailRows.reduce(
+                (sum, r) => sum + r.coinRedeemAmount + r.offerDiscountAmount, 0,
+            )
+            const couponTotal = detailRows.reduce(
+                (sum, r) => sum + r.couponDiscountAmount, 0,
+            )
+            const netEarning = platformEarning - adminSubsidy
 
             const facultyName =
                 [faculty?.first_name, faculty?.last_name].filter(Boolean).join(' ') || 'Unknown'
@@ -749,6 +1028,12 @@ export const financialManagementFunctions = {
                 payoutTotalDisplay: `₹${(anchor.amount ?? 0).toLocaleString('en-IN')}`,
                 platformEarning,
                 platformEarningDisplay: `₹${platformEarning.toLocaleString('en-IN')}`,
+                adminSubsidy,
+                adminSubsidyDisplay: `₹${adminSubsidy.toLocaleString('en-IN')}`,
+                couponTotal,
+                couponTotalDisplay: `₹${couponTotal.toLocaleString('en-IN')}`,
+                netEarning,
+                netEarningDisplay: `₹${netEarning.toLocaleString('en-IN')}`,
                 grossTotal: anchor.gross_amount ?? 0,
                 grossTotalDisplay: `₹${(anchor.gross_amount ?? 0).toLocaleString('en-IN')}`,
                 gstTotal: anchor.gst_amount ?? 0,

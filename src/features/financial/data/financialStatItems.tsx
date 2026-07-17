@@ -35,7 +35,9 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
       id: 'totalRevenue',
       layout: 'inline',
       label: 'Total Revenue',
-      value: data.totalRevenue.display,
+      // Headline = admin's REAL money (net of coin/offer subsidy). Gross
+      // commission is shown in the badge when a subsidy exists.
+      value: data.totalRevenue.netDisplay,
       icon: Wallet,
       iconTileClassName: 'bg-[#EEF2FF]',
       iconClassName: 'text-[#4338CA]',
@@ -44,9 +46,17 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
       footer: (
         <span className="flex flex-col items-end gap-1.5">
           {growthFooter(data.totalRevenue.growthDisplay)}
-          {data.totalRevenue.pending > 0 ? (
+          {(data.totalRevenue.pendingNet ?? data.totalRevenue.pending) > 0 ? (
             <span className="whitespace-nowrap rounded-full bg-[#FFFBEB] px-3 py-1 text-[11px] font-semibold text-[#D97706]">
-              {data.totalRevenue.pendingDisplay} pending
+              {data.totalRevenue.pendingNetDisplay ?? data.totalRevenue.pendingDisplay} pending
+            </span>
+          ) : null}
+          {data.totalRevenue.subsidy > 0 ? (
+            <span
+              className="whitespace-nowrap rounded-full bg-[#FEF3C7] px-3 py-1 text-[11px] font-semibold text-[#B45309]"
+              title="Gross commission before the coin & offer discounts the platform funded"
+            >
+              {data.totalRevenue.display} gross − {data.totalRevenue.subsidyDisplay} subsidy
             </span>
           ) : null}
         </span>
@@ -55,9 +65,17 @@ export function financialStatItems(data?: FinancialSummary): SummaryStatItem[] {
       valueFooter: (
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           {growthFooter(data.totalRevenue.growthDisplay)}
-          {data.totalRevenue.pending > 0 ? (
+          {(data.totalRevenue.pendingNet ?? data.totalRevenue.pending) > 0 ? (
             <span className="whitespace-nowrap rounded-full bg-[#FFFBEB] px-3 py-1 text-[11px] font-semibold text-[#D97706]">
-              {data.totalRevenue.pendingDisplay} pending
+              {data.totalRevenue.pendingNetDisplay ?? data.totalRevenue.pendingDisplay} pending
+            </span>
+          ) : null}
+          {data.totalRevenue.subsidy > 0 ? (
+            <span
+              className="whitespace-nowrap rounded-full bg-[#FEF3C7] px-3 py-1 text-[11px] font-semibold text-[#B45309]"
+              title="Gross commission before the coin & offer discounts the platform funded"
+            >
+              {data.totalRevenue.display} gross − {data.totalRevenue.subsidyDisplay} subsidy
             </span>
           ) : null}
         </span>

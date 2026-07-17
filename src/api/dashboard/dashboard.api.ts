@@ -187,24 +187,44 @@ export const dashboardManagementFunctions = {
             // 4. Total Revenue (admin commission = PLATFORM_FEE rows in faculty_transactions)
             // The admin's revenue is the platform commission it keeps, NOT the gross
             // amount students paid. Each PLATFORM_FEE row's `amount` holds the admin
-            // commission for a single enrollment / bundle enrollment.
+            // commission for a single enrollment / bundle enrollment — GROSS,
+            // i.e. including the coin/offer subsidy the admin funded (workflow §9).
+            // The card shows realized NET: commission − subsidy per settled sale.
             const { data: platformFeeData, error: platformFeeError } = await supabase
                 .from('faculty_transactions')
-                .select('amount, transacted_at')
+                .select('amount, transacted_at, enrollment_id, bundle_enrollment_id')
                 .eq('type', 'PLATFORM_FEE');
 
             if (platformFeeError) throw new Error(platformFeeError.message);
 
+            const feeEnrIds = [...new Set((platformFeeData ?? []).map(t => t.enrollment_id).filter(Boolean))]
+            const feeBunIds = [...new Set((platformFeeData ?? []).map(t => t.bundle_enrollment_id).filter(Boolean))]
+            const [{ data: feeEnrs }, { data: feeBuns }] = await Promise.all([
+                feeEnrIds.length > 0
+                    ? supabase.from('enrollments').select('id, coin_redeem_amount, offer_discount_amount').in('id', feeEnrIds)
+                    : Promise.resolve({ data: [] as any[] }),
+                feeBunIds.length > 0
+                    ? supabase.from('bundle_enrollments').select('id, coin_redeem_amount, offer_discount_amount').in('id', feeBunIds)
+                    : Promise.resolve({ data: [] as any[] }),
+            ])
+            const settledSubsidy = new Map<string, number>()
+            for (const e of feeEnrs ?? []) settledSubsidy.set(`e:${e.id}`, (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0))
+            for (const b of feeBuns ?? []) settledSubsidy.set(`b:${b.id}`, (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0))
+            const netFeeOf = (t: { amount?: number; enrollment_id?: string | null; bundle_enrollment_id?: string | null }) => {
+                const key = t.enrollment_id ? `e:${t.enrollment_id}` : t.bundle_enrollment_id ? `b:${t.bundle_enrollment_id}` : null
+                return (t.amount ?? 0) - (key ? settledSubsidy.get(key) ?? 0 : 0)
+            }
+
             const totalRevenue = platformFeeData?.reduce(
-                (sum, t) => sum + (t.amount ?? 0), 0
+                (sum, t) => sum + netFeeOf(t), 0
             ) ?? 0;
 
-            // Revenue growth (this month vs last month)
-            const revenueInRange = (data: { amount: number; transacted_at: string }[] | null, start: string, end?: string) =>
+            // Revenue growth (this month vs last month) — same net-of-subsidy basis
+            const revenueInRange = (data: { amount: number; transacted_at: string; enrollment_id?: string | null; bundle_enrollment_id?: string | null }[] | null, start: string, end?: string) =>
                 (data ?? []).filter(t => {
                     const d = new Date(t.transacted_at);
                     return d >= new Date(start) && (!end || d < new Date(end));
-                }).reduce((sum, t) => sum + (t.amount ?? 0), 0);
+                }).reduce((sum, t) => sum + netFeeOf(t), 0);
 
             const revenueThisMonth =
                 revenueInRange(platformFeeData, thisMonthStart);
@@ -449,27 +469,46 @@ export const dashboardManagementFunctions = {
 
             // 1. Fetch admin revenue records (PLATFORM_FEE rows in faculty_transactions).
             // Admin revenue is the platform commission, recorded per enrollment/bundle
-            // at payout time. Each row's `amount` is the admin commission; the run's
-            // payout_time_period is the enrollment month the revenue belongs to.
+            // at payout time. Each row's `amount` is the GROSS commission — the chart
+            // shows NET (commission − coin/offer subsidy the admin funded, workflow §9)
+            // so it matches the Total Revenue card.
             const { data: platformFeeData, error: platformFeeError } = await supabase
                 .from('faculty_transactions')
-                .select('amount, transacted_at, payout_time_period')
+                .select('amount, transacted_at, payout_time_period, enrollment_id, bundle_enrollment_id')
                 .eq('type', 'PLATFORM_FEE');
 
             if (platformFeeError) throw new Error(platformFeeError.message);
 
             const allRevenue = platformFeeData ?? [];
 
+            const trendEnrIds = [...new Set(allRevenue.map(t => t.enrollment_id).filter(Boolean))]
+            const trendBunIds = [...new Set(allRevenue.map(t => t.bundle_enrollment_id).filter(Boolean))]
+            const [{ data: trendEnrs }, { data: trendBuns }] = await Promise.all([
+                trendEnrIds.length > 0
+                    ? supabase.from('enrollments').select('id, coin_redeem_amount, offer_discount_amount').in('id', trendEnrIds)
+                    : Promise.resolve({ data: [] as any[] }),
+                trendBunIds.length > 0
+                    ? supabase.from('bundle_enrollments').select('id, coin_redeem_amount, offer_discount_amount').in('id', trendBunIds)
+                    : Promise.resolve({ data: [] as any[] }),
+            ])
+            const trendSubsidy = new Map<string, number>()
+            for (const e of trendEnrs ?? []) trendSubsidy.set(`e:${e.id}`, (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0))
+            for (const b of trendBuns ?? []) trendSubsidy.set(`b:${b.id}`, (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0))
+            const netOf = (t: { amount?: number; enrollment_id?: string | null; bundle_enrollment_id?: string | null }) => {
+                const key = t.enrollment_id ? `e:${t.enrollment_id}` : t.bundle_enrollment_id ? `b:${t.bundle_enrollment_id}` : null
+                return (t.amount ?? 0) - (key ? trendSubsidy.get(key) ?? 0 : 0)
+            }
+
             const now = new Date();
 
-            // Sum revenue for records with transacted_at within [start, end)
+            // Sum NET revenue for records with transacted_at within [start, end)
             const revenueInRange = (start: Date, end: Date) => {
                 let total = 0;
                 for (const r of allRevenue) {
                     if (!r.transacted_at) continue;
                     const d = new Date(r.transacted_at);
                     if (d >= start && d < end) {
-                        total += r.amount ?? 0;
+                        total += netOf(r);
                     }
                 }
                 return total;
@@ -540,7 +579,7 @@ export const dashboardManagementFunctions = {
                     }
                     if (month === null || year === null) continue
                     const bucket = bucketByKey.get(`${year}-${month}`)
-                    if (bucket) bucket.revenue += r.amount ?? 0
+                    if (bucket) bucket.revenue += netOf(r)
                 }
 
                 // Current month → add pending admin commission (unpaid this-month sales)
@@ -581,18 +620,19 @@ export const dashboardManagementFunctions = {
                 const defaultCommission = parseFloat(defSetting?.value ?? '20') || 20
                 const rateOf = (fid: string | null) => (fid ? ratesByFaculty.get(fid) : null) ?? defaultCommission
 
-                // Base adds back admin-funded discounts (coins/offers) — commission
-                // is earned on the full price; the subsidy is admin's cost.
+                // Base adds back admin-funded discounts (coins/offers) for the
+                // commission, then the subsidy is subtracted again — the chart
+                // shows admin's NET money, matching the Total Revenue card.
                 let pendingCommission = 0
                 for (const e of unpaidEnr) {
-                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
-                        + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
-                    pendingCommission += Math.round(base * rateOf(e.faculty_id) / 100)
+                    const subsidy = (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
+                    const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0) + subsidy
+                    pendingCommission += base * rateOf(e.faculty_id) / 100 - subsidy
                 }
                 for (const b of unpaidBun) {
-                    const base = (b.amount_paid ?? 0)
-                        + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0)
-                    pendingCommission += Math.round(base * rateOf(b.faculty_id) / 100)
+                    const subsidy = (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0)
+                    const base = (b.amount_paid ?? 0) + subsidy
+                    pendingCommission += base * rateOf(b.faculty_id) / 100 - subsidy
                 }
 
                 const curBucket = bucketByKey.get(`${now.getFullYear()}-${now.getMonth()}`)
@@ -665,7 +705,7 @@ export const dashboardManagementFunctions = {
                 if (paidEnrIds.has(e.id)) continue
                 const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
                     + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0)
-                const share = base - Math.round(base * rateOf(e.faculty_id) / 100)
+                const share = base - base * rateOf(e.faculty_id) / 100
                 revByFaculty.set(e.faculty_id, (revByFaculty.get(e.faculty_id) ?? 0) + share)
             }
             for (const b of bundles ?? []) {
@@ -674,7 +714,7 @@ export const dashboardManagementFunctions = {
                 if (paidBunIds.has(b.id)) continue
                 const base = (b.amount_paid ?? 0)
                     + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0)
-                const share = base - Math.round(base * rateOf(b.faculty_id) / 100)
+                const share = base - base * rateOf(b.faculty_id) / 100
                 revByFaculty.set(b.faculty_id, (revByFaculty.get(b.faculty_id) ?? 0) + share)
             }
 
@@ -714,7 +754,7 @@ export const dashboardManagementFunctions = {
                 const crore = 10000000, lakh = 100000
                 if (amount >= crore) return `₹${(amount / crore).toFixed(1)} Cr`
                 if (amount >= lakh) return `₹${(amount / lakh).toFixed(1)} L`
-                return `₹${Math.round(amount).toLocaleString('en-IN')}`
+                return `₹${(Math.round(amount * 100) / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
             }
 
             return {

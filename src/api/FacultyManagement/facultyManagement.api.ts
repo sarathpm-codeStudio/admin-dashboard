@@ -186,7 +186,7 @@ export const facultyManagementFunctions = {
                 .reduce((sum, e) => {
                     const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
                         + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0);
-                    const commission = Math.round(base * commissionPercent / 100);
+                    const commission = base * commissionPercent / 100;
                     return sum + (base - commission);
                 }, 0);
 
@@ -195,7 +195,7 @@ export const facultyManagementFunctions = {
                 .reduce((sum, b) => {
                     const base = (b.amount_paid ?? 0)
                         + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0);
-                    const commission = Math.round(base * commissionPercent / 100);
+                    const commission = base * commissionPercent / 100;
                     return sum + (base - commission);
                 }, 0);
 
@@ -666,7 +666,7 @@ export const facultyManagementFunctions = {
         // ── 2. All single course enrollments ─────────────────────
         const { data: singleEnrollments, error: e1 } = await supabase
             .from("enrollments")
-            .select("id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount")
+            .select("id, amount_paid, gst_amount, coin_redeem_amount, offer_discount_amount, coupon_discount_amount")
             .eq("faculty_id", facultyId)
             .eq("is_bundle_enrollment", false);
 
@@ -675,7 +675,7 @@ export const facultyManagementFunctions = {
         // ── 3. All bundle enrollments ─────────────────────────────
         const { data: bundleEnrollments, error: e2 } = await supabase
             .from("bundle_enrollments")
-            .select("id, amount_paid, coin_redeem_amount, offer_discount_amount")
+            .select("id, amount_paid, coin_redeem_amount, offer_discount_amount, coupon_discount_amount")
             .eq("faculty_id", facultyId);
 
         if (e2) throw e2;
@@ -746,7 +746,7 @@ export const facultyManagementFunctions = {
             .reduce((sum, e) => {
                 const base = e.amount_paid - e.gst_amount
                     + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0);
-                const commission = Math.round(base * commissionPercent / 100);
+                const commission = base * commissionPercent / 100;
                 return sum + (base - commission);
             }, 0);
 
@@ -756,11 +756,23 @@ export const facultyManagementFunctions = {
             .reduce((sum, b) => {
                 const base = b.amount_paid
                     + (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0);
-                const commission = Math.round(base * commissionPercent / 100);
+                const commission = base * commissionPercent / 100;
                 return sum + (base - commission);
             }, 0);
 
         const pendingPayout = unpaidSingleAmount + unpaidBundleAmount;
+
+        // ── 7a. Promotions on this faculty's sales (workflow §9) ──
+        // Admin subsidy (coins + offers) is platform-funded and added back to
+        // the payout base — the faculty is paid as if students paid full price.
+        // Coupon spend is the faculty's own promotion cost.
+        const allFacultySales = [...(singleEnrollments ?? []), ...(bundleEnrollments ?? [])];
+        const adminSubsidyAmount = allFacultySales.reduce(
+            (sum, e) => sum + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0), 0,
+        );
+        const couponSpendAmount = allFacultySales.reduce(
+            (sum, e) => sum + (e.coupon_discount_amount ?? 0), 0,
+        );
 
         const formatRevenue = (amount: number): string => {
             if (amount >= 100000) {
@@ -783,6 +795,14 @@ export const facultyManagementFunctions = {
             pendingPayout: {           // → Pending Payout card (after commission)
                 amount: pendingPayout,
                 display: formatRevenue(pendingPayout),
+            },
+            adminSubsidy: {            // → coin/offer discounts platform-funded on this faculty's sales
+                amount: adminSubsidyAmount,
+                display: formatRevenue(adminSubsidyAmount),
+            },
+            couponSpend: {             // → faculty's own coupon promotion cost
+                amount: couponSpendAmount,
+                display: formatRevenue(couponSpendAmount),
             },
             commissionPercent,
         };
@@ -842,7 +862,7 @@ export const facultyManagementFunctions = {
                 const base = Number(e.amount_paid ?? 0) - Number(e.gst_amount ?? 0)
                     + Number(e.coin_redeem_amount ?? 0) + Number(e.offer_discount_amount ?? 0);
                 if (base <= 0) return 0;
-                return base - Math.round((base * commissionPercent) / 100);
+                return base - (base * commissionPercent) / 100;
             };
 
             let earnings: { id?: string; enrolled_at?: string; amount_paid?: number; gst_amount?: number; coin_redeem_amount?: number; offer_discount_amount?: number }[] = [];
@@ -868,7 +888,7 @@ export const facultyManagementFunctions = {
                         total += facultyNet(e);
                     }
                 }
-                return Math.round(total);
+                return Math.round(total * 100) / 100;
             };
 
             const result: RevenueTrendPoint[] = [];
@@ -955,12 +975,12 @@ export const facultyManagementFunctions = {
                     if (paidIds.has(e.id)) continue;
                     const base = (e.amount_paid ?? 0) - (e.gst_amount ?? 0)
                         + (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0);
-                    if (base > 0) pending += base - Math.round(base * commissionPercent / 100);
+                    if (base > 0) pending += base - base * commissionPercent / 100;
                 }
                 const curKey = `${now.getFullYear()}-${now.getMonth()}`;
                 if (byKey.has(curKey)) byKey.get(curKey)!.revenue += pending;
 
-                result.push(...buckets.map(b => ({ label: b.label, revenue: Math.round(b.revenue) })));
+                result.push(...buckets.map(b => ({ label: b.label, revenue: Math.round(b.revenue * 100) / 100 })));
             }
 
             return result;
@@ -1014,12 +1034,13 @@ export const facultyManagementFunctions = {
 
             if (bundleError) throw new Error(bundleError.message);
 
+            // Paise precision (2dp) — never round money to whole rupees.
             const individualAmount = Math.round(
-                (singleEnrollments ?? []).reduce((sum, e) => sum + facultyNet(e), 0),
-            );
+                (singleEnrollments ?? []).reduce((sum, e) => sum + facultyNet(e), 0) * 100,
+            ) / 100;
             const bundlesAmount = Math.round(
-                (bundleEnrollments ?? []).reduce((sum, b) => sum + facultyNet(b), 0),
-            );
+                (bundleEnrollments ?? []).reduce((sum, b) => sum + facultyNet(b), 0) * 100,
+            ) / 100;
 
             const total = individualAmount + bundlesAmount;
 

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { financialManagementFunctions } from "@/api/financial/financial.api"
-import type { FinancialPayoutRow, FinancialSummary, FinancialTransactionRow, PayoutDetail, ProcessPayoutsResult } from "@/api/financial/financial.api"
+import type { FinancialPayoutRow, FinancialSummary, FinancialTransactionRow, PayoutDetail, ProcessPayoutsResult, TransactionSettlement } from "@/api/financial/financial.api"
 import { gstFunctions } from "@/api/financial/gst.api"
 import type { GstReport } from "@/api/financial/gst.api"
 import { queryClient } from "@/config/queryClient"
@@ -29,6 +29,23 @@ export const useGetFinancialPayouts = () => {
     return useQuery<FinancialPayoutRow[]>({
         queryKey: ['financial-payouts'],
         queryFn: () => financialManagementFunctions.getFinancialPayouts(),
+    })
+}
+
+
+export const useGetTransactionSettlement = (t: FinancialTransactionRow | null) => {
+    return useQuery<TransactionSettlement>({
+        queryKey: ['transaction-settlement', t?.id],
+        queryFn: () => financialManagementFunctions.getTransactionSettlement({
+            id: t!.id,
+            isBundle: t!.isBundle,
+            facultyId: t!.facultyId,
+            amount: t!.amount,
+            gstAmount: t!.gstAmount,
+            coinRedeemAmount: t!.coinRedeemAmount,
+            offerDiscountAmount: t!.offerDiscountAmount,
+        }),
+        enabled: Boolean(t),
     })
 }
 

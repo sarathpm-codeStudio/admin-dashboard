@@ -80,6 +80,22 @@ export function FacultyRevenueView() {
     if (item.id === 'pending-payout' && revenueStats) {
       return { ...item, value: revenueStats.pendingPayout.display }
     }
+    if (item.id === 'promo-support' && revenueStats) {
+      return {
+        ...item,
+        value: revenueStats.adminSubsidy.display,
+        footer:
+          revenueStats.couponSpend.amount > 0 ? (
+            <span className="inline-flex rounded-full bg-[#F5F3FF] px-2.5 py-0.5 text-xs font-semibold text-[#7C3AED]">
+              own coupons {revenueStats.couponSpend.display}
+            </span>
+          ) : (
+            <span className="text-xs font-medium text-[#94A3B8]">
+              coins &amp; offers, platform-funded
+            </span>
+          ),
+      }
+    }
     return item
   })
 
@@ -95,7 +111,7 @@ export function FacultyRevenueView() {
 
       <FacultyRevenuePageHeader />
 
-      <SummaryStatsGrid items={statItems} columns={2} className="gap-6" />
+      <SummaryStatsGrid items={statItems} columns={3} className="gap-6" />
 
       <FacultyRevenueAnalyticsPanel facultyId={facultyId} />
 

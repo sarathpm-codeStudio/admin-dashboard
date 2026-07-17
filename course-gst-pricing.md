@@ -28,8 +28,8 @@ GST inside whatever is finally paid = payable × gst/(100+gst)
 2. Students only ever see **GST-inclusive** prices.
 3. GST is owed only on money actually charged — always extracted from the final
    payable: `gst = payable × gst% / (100 + gst%)`.
-4. Faculty-funded discounts reduce the faculty payout. Admin-funded discounts
-   (coins, platform offers) do **not** — see §7.
+4. Faculty-funded discounts (own discount, coupon codes) reduce the faculty
+   payout. Admin-funded discounts (coins, platform offers) do **not** — see §7.
 
 ---
 
@@ -145,6 +145,10 @@ const COIN_VAL = default_coin_value * 100                      // paise (inclusi
 // 1. start from the course's final_price (already per discount_mode)
 let payable = final_price * 100                                // → paise, incl. GST
 
+// 1b. coupon code (FACULTY's cost — like their course discount)
+const couponIncl = resolveCoupon(couponCode, payable)          // validate + record redemption
+payable -= couponIncl
+
 // 2. platform offer (admin's cost, inclusive money)
 const offerIncl = resolveOffer(offerId, payable)
 
@@ -164,14 +168,16 @@ const gstAmount = Math.round(payable * G / (100 + G))          // GST inside pay
 //    Store subsidies as their TAXABLE (ex-GST) portion so the payout formula
 //    (§7) reconstructs the exact no-subsidy taxable value:
 {
-  amount_paid:           payable,
-  gst_amount:            gstAmount,
-  coins_used_count:      coinsUsed,
-  coin_redeem_amount:    Math.round(coinIncl  * 100 / (100 + G)),
-  offer_discount_amount: Math.round(offerIncl * 100 / (100 + G)),
-  offer_id:              offerId ?? null,
-  course_price:          exclude_price * 100,
-  payment_status:        'SUCCESS',
+  amount_paid:            payable,
+  gst_amount:             gstAmount,
+  coins_used_count:       coinsUsed,
+  coin_redeem_amount:     Math.round(coinIncl  * 100 / (100 + G)),  // added back at payout
+  offer_discount_amount:  Math.round(offerIncl * 100 / (100 + G)),  // added back at payout
+  offer_id:               offerId ?? null,
+  coupon_id:              couponId ?? null,                          // faculty-funded —
+  coupon_discount_amount: couponIncl,                                // NOT added back
+  course_price:           exclude_price * 100,
+  payment_status:         'SUCCESS',
 }
 // deduct coinsUsed from the student's coin balance IN THE SAME transaction
 ```

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { Coins, TicketPercent } from 'lucide-react'
 import type { FinancialTransactionRow, PaymentStatus } from '@/api/financial/financial.api'
 import { Card } from '@/components/ui/Card'
+import { TransactionDetailsModal } from '@/features/financial/components/TransactionDetailsModal'
 import type { DataTableColumn } from '@/components/ui/DataTable'
 import { DataTable } from '@/components/ui/DataTable'
 import { SearchInput } from '@/components/ui/SearchInput'
@@ -38,6 +40,7 @@ export function FinancialTransactionsTable() {
   const [status, setStatus] = useState<StatusFilter>('ALL')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [detailRow, setDetailRow] = useState<FinancialTransactionRow | null>(null)
 
   const { data: transactions, isLoading } = useGetFinancialTransactions()
 
@@ -92,11 +95,33 @@ export function FinancialTransactionsTable() {
         cell: (row) => <span className="text-sm text-[#334155]">{row.course}</span>,
       },
       {
-        id: 'amount',
-        header: 'Amount',
+        id: 'coursePrice',
+        header: 'Course Price',
         width: '8rem',
         cell: (row) => (
-          <span className="text-sm font-semibold text-[#1E1B4B]">{row.amountDisplay}</span>
+          <span className="text-sm text-[#334155]">{row.coursePriceDisplay}</span>
+        ),
+      },
+      {
+        id: 'amount',
+        header: 'Paid Amount',
+        width: '9rem',
+        cell: (row) => (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-[#1E1B4B]">{row.amountDisplay}</span>
+            {row.coinsUsed > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#B45309]">
+                <Coins className="size-3" aria-hidden />
+                {row.coinsUsed} coins used
+              </span>
+            )}
+            {row.couponCode && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#7C3AED]">
+                <TicketPercent className="size-3" aria-hidden />
+                {row.couponCode}
+              </span>
+            )}
+          </div>
         ),
       },
       {
@@ -188,6 +213,7 @@ export function FinancialTransactionsTable() {
         data={rows}
         isLoading={isLoading}
         getRowKey={(row) => row.id}
+        onRowClick={(row) => setDetailRow(row)}
         totalCount={rows.length}
         page={1}
         totalPages={1}
@@ -196,6 +222,12 @@ export function FinancialTransactionsTable() {
         footerLayout="between"
         alwaysShowPagination
         className="rounded-none border-0 shadow-none"
+      />
+
+      <TransactionDetailsModal
+        open={detailRow !== null}
+        onClose={() => setDetailRow(null)}
+        transaction={detailRow}
       />
     </Card>
   )

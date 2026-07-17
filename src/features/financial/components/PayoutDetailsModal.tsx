@@ -68,7 +68,28 @@ export function PayoutDetailsModal({ open, onClose, payoutId }: PayoutDetailsMod
       width: '18rem',
       className: 'align-top',
       cell: (row) => (
-        <span className="text-sm leading-snug text-[#334155]">{row.item}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm leading-snug text-[#334155]">{row.item}</span>
+          {(row.coinsUsed > 0 || row.offerDiscountAmount > 0 || row.couponDiscountAmount > 0) && (
+            <span className="flex flex-wrap gap-1">
+              {row.coinsUsed > 0 && (
+                <span className="rounded-full bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-semibold text-[#B45309]">
+                  🪙 {row.coinsUsed} coins ({money(row.coinRedeemAmount)})
+                </span>
+              )}
+              {row.offerDiscountAmount > 0 && (
+                <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-semibold text-[#2563EB]">
+                  offer {money(row.offerDiscountAmount)}
+                </span>
+              )}
+              {row.couponDiscountAmount > 0 && (
+                <span className="rounded-full bg-[#F5F3FF] px-2 py-0.5 text-[10px] font-semibold text-[#7C3AED]">
+                  coupon {money(row.couponDiscountAmount)}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -161,20 +182,43 @@ export function PayoutDetailsModal({ open, onClose, payoutId }: PayoutDetailsMod
               <SummaryItem label="Total Gross" value={detail.grossTotalDisplay} strong />
               <SummaryItem label="Total GST" value={detail.gstTotalDisplay} strong />
               <SummaryItem label="Paid to Faculty" value={detail.payoutTotalDisplay} accent="green" />
-              {/* Row 2: Payment Ref sits right after Payout ID */}
+              {/* Row 2: commission economics (workflow §9) */}
               <div className="col-span-2 sm:col-span-1 lg:col-span-2">
                 <SummaryItem
-                  label="Platform Earning"
+                  label="Platform Earning (gross)"
                   value={detail.platformEarningDisplay}
                   accent="blue"
                 />
               </div>
+              <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+                <SummaryItem
+                  label="Coin & Offer Subsidy"
+                  value={detail.adminSubsidy > 0 ? `− ${detail.adminSubsidyDisplay}` : detail.adminSubsidyDisplay}
+                  accent={detail.adminSubsidy > 0 ? 'amber' : undefined}
+                />
+              </div>
+              <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+                <SummaryItem
+                  label="Net Platform Earning"
+                  value={detail.netEarningDisplay}
+                  accent="blue"
+                />
+              </div>
+              {/* Row 3: references */}
               <div className="col-span-2 sm:col-span-1 lg:col-span-2">
                 <SummaryItem label="Payout ID" value={detail.payoutId} mono wrap />
               </div>
               <div className="col-span-2 sm:col-span-1 lg:col-span-2">
                 <SummaryItem label="Payment Ref" value={detail.paymentId} mono wrap />
               </div>
+              {detail.couponTotal > 0 && (
+                <div className="col-span-2 sm:col-span-1 lg:col-span-2">
+                  <SummaryItem
+                    label="Faculty Coupons Used"
+                    value={detail.couponTotalDisplay}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <Paragraph variant="muted" className="mt-3">
@@ -224,7 +268,7 @@ function SummaryItem({
   value: string
   mono?: boolean
   strong?: boolean
-  accent?: 'green' | 'blue'
+  accent?: 'green' | 'blue' | 'amber'
   /** Show the full value (wraps) instead of truncating to one line. */
   wrap?: boolean
 }) {
@@ -233,9 +277,11 @@ function SummaryItem({
       ? 'text-[#15803D]'
       : accent === 'blue'
         ? 'text-[#2563EB]'
-        : strong
-          ? 'text-[#1E1B4B]'
-          : 'text-[#334155]'
+        : accent === 'amber'
+          ? 'text-[#B45309]'
+          : strong
+            ? 'text-[#1E1B4B]'
+            : 'text-[#334155]'
   return (
     <div className="min-w-0">
       <p className="text-[11px] font-medium uppercase tracking-wide text-[#94A3B8]">{label}</p>

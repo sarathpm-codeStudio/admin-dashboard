@@ -61,10 +61,15 @@ const rateOf = (base: number, gst: number): number => {
 export const gstFunctions = {
     /**
      * GST report for a date window [fromISO, toISO).
-     * The tax register lists the MONTHLY PAYOUT runs — each PAYOUT row already
-     * carries the run's total taxable base (gross_amount) and GST (gst_amount)
-     * captured at payout time. Rows are bucketed by the payout's enrollment
-     * period (payout_time_period). Permanent — survive enrollment edits/deletes.
+     * The tax register lists the MONTHLY PAYOUT runs — each PAYOUT row carries
+     * the run's payout base (gross_amount) and GST (gst_amount) captured at
+     * payout time. Rows are bucketed by the payout's enrollment period
+     * (payout_time_period). Permanent — survive enrollment edits/deletes.
+     *
+     * IMPORTANT: gross_amount includes the admin-funded coin/offer subsidy
+     * (added back for payout math, workflow §9) — but GST was charged on the
+     * DISCOUNTED money the students actually paid. For tax purposes the
+     * subsidy is subtracted again, so taxable value and rate match invoices.
      */
     getGstReport: async (fromISO: string, toISO: string): Promise<GstReport> => {
         try {
@@ -93,10 +98,49 @@ export const gstFunctions = {
             })
 
             const facultyIds = [...new Set(rowsRaw.map(r => r.faculty_id).filter(Boolean))]
-            const { data: profiles, error: profErr } = facultyIds.length > 0
-                ? await supabase.from('profiles').select('id, first_name, last_name').in('id', facultyIds)
-                : { data: [] as any[], error: null }
+            const payoutIds = rowsRaw.map(r => r.transaction_id).filter(Boolean)
+
+            const [
+                { data: profiles, error: profErr },
+                { data: saleRows, error: salesErr },
+            ] = await Promise.all([
+                facultyIds.length > 0
+                    ? supabase.from('profiles').select('id, first_name, last_name').in('id', facultyIds)
+                    : Promise.resolve({ data: [] as any[], error: null }),
+                payoutIds.length > 0
+                    ? supabase
+                        .from('faculty_transactions')
+                        .select('payout_id, enrollment_id, bundle_enrollment_id')
+                        .in('type', ['COURSE_SALE', 'BUNDLE_SALE'])
+                        .in('payout_id', payoutIds)
+                    : Promise.resolve({ data: [] as any[], error: null }),
+            ])
             if (profErr) throw new Error(profErr.message)
+            if (salesErr) throw new Error(salesErr.message)
+
+            // Admin-funded subsidy per payout run — subtracted from gross to get
+            // the TRUE taxable value (GST was charged on the discounted money).
+            const enrIds = [...new Set((saleRows ?? []).map(s => s.enrollment_id).filter(Boolean))]
+            const bunIds = [...new Set((saleRows ?? []).map(s => s.bundle_enrollment_id).filter(Boolean))]
+            const [{ data: enrs }, { data: buns }] = await Promise.all([
+                enrIds.length > 0
+                    ? supabase.from('enrollments').select('id, coin_redeem_amount, offer_discount_amount').in('id', enrIds)
+                    : Promise.resolve({ data: [] as any[] }),
+                bunIds.length > 0
+                    ? supabase.from('bundle_enrollments').select('id, coin_redeem_amount, offer_discount_amount').in('id', bunIds)
+                    : Promise.resolve({ data: [] as any[] }),
+            ])
+            const subsidyOfSale = new Map<string, number>()
+            for (const e of enrs ?? []) subsidyOfSale.set(`e:${e.id}`, (e.coin_redeem_amount ?? 0) + (e.offer_discount_amount ?? 0))
+            for (const b of buns ?? []) subsidyOfSale.set(`b:${b.id}`, (b.coin_redeem_amount ?? 0) + (b.offer_discount_amount ?? 0))
+
+            const subsidyByPayout = new Map<string, number>()
+            for (const s of saleRows ?? []) {
+                if (!s.payout_id) continue
+                const key = s.enrollment_id ? `e:${s.enrollment_id}` : s.bundle_enrollment_id ? `b:${s.bundle_enrollment_id}` : null
+                if (!key) continue
+                subsidyByPayout.set(s.payout_id, (subsidyByPayout.get(s.payout_id) ?? 0) + (subsidyOfSale.get(key) ?? 0))
+            }
 
             const nameById = new Map(
                 (profiles ?? []).map(p => [
@@ -110,7 +154,9 @@ export const gstFunctions = {
 
             const rows: GstRegisterRow[] = rowsRaw
                 .map(r => {
-                    const taxable = r.gross_amount ?? 0
+                    // True taxable value = payout base minus the admin subsidy
+                    // baked into it — matches what invoices actually charged.
+                    const taxable = (r.gross_amount ?? 0) - (subsidyByPayout.get(r.transaction_id) ?? 0)
                     const gst = r.gst_amount ?? 0
                     const total = taxable + gst
                     const periodLabel = formatPeriod(periodDateOf(r))
