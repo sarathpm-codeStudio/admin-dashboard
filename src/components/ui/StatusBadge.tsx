@@ -57,7 +57,7 @@ export function StatusBadge({
     <span
       className={cn(
         'inline-flex items-center text-xs font-medium',
-        isText ? variantTextStyles[variant] : 'rounded-full px-2.5 py-0.5',
+        isText ? variantTextStyles[variant] : 'rounded-full px-3.5 py-1',
         !isText && variantFilledStyles[variant],
         className,
       )}

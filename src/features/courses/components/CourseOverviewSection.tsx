@@ -1,5 +1,5 @@
 import { Image as ImageIcon, TicketPercent } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { CourseDetail } from '@/api/courseManagement/courseManagement.api'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -43,6 +43,9 @@ export function CourseOverviewSection({ detail, isLoading }: CourseOverviewSecti
 }
 
 function CourseBasicsCard({ detail }: { detail: CourseDetail }) {
+  const [descExpanded, setDescExpanded] = useState(false)
+  const isLongDescription = (detail.description?.length ?? 0) > 140
+
   const contentSummary =
     [
       detail.videoCount ? `${detail.videoCount} video${detail.videoCount > 1 ? 's' : ''}` : null,
@@ -121,13 +124,27 @@ function CourseBasicsCard({ detail }: { detail: CourseDetail }) {
           </div>
 
           {detail.description ? (
-            <Paragraph variant="muted" className="mt-3 line-clamp-2">
-              {detail.description}
-            </Paragraph>
+            <div className="mt-3">
+              <Paragraph
+                variant="muted"
+                className={descExpanded ? undefined : 'line-clamp-2'}
+              >
+                {detail.description}
+              </Paragraph>
+              {isLongDescription ? (
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((prev) => !prev)}
+                  className="mt-1 text-sm font-semibold text-primary hover:underline"
+                >
+                  {descExpanded ? 'Read less' : 'Read more'}
+                </button>
+              ) : null}
+            </div>
           ) : null}
 
-          {/* Meta grid */}
-          <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[#e2e8f0]/60 pt-4 sm:grid-cols-4">
+          {/* Meta grid — 2 cols below lg (avoids ellipsis beside cover); 4 cols on desktop */}
+          <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[#e2e8f0]/60 pt-4 lg:grid-cols-4">
             <MetaItem label="Level" value={detail.level || '—'} />
             <MetaItem label="Validity" value={detail.validityDisplay} />
             <MetaItem
@@ -225,7 +242,10 @@ function MetaItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <p className="text-[10px] font-medium uppercase tracking-wide text-nav">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-ink-heading" title={value}>
+      <p
+        className="mt-1 break-words text-sm font-semibold text-ink-heading lg:truncate"
+        title={value}
+      >
         {value}
       </p>
     </div>

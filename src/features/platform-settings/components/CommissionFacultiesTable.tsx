@@ -42,6 +42,14 @@ function avatarClass(id: string) {
   return avatarPalette[hash]!
 }
 
+function formatAccountStatus(status: string): string {
+  return status
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 export function CommissionFacultiesTable() {
   const toast = useToast()
   const [page, setPage] = useState(1)
@@ -185,7 +193,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'status',
         header: 'Status',
-        width: '8rem',
+        width: '9.5rem',
         align: 'center',
         cell: (faculty) => {
           if (faculty.isSuspended) {
@@ -201,7 +209,11 @@ export function CommissionFacultiesTable() {
             return <StatusBadge label="Rejected" variant="rejected" appearance="filled" />
           }
           return (
-            <StatusBadge label={faculty.accountVerified} variant="info" appearance="filled" />
+            <StatusBadge
+              label={formatAccountStatus(faculty.accountVerified)}
+              variant="info"
+              appearance="filled"
+            />
           )
         },
       },
