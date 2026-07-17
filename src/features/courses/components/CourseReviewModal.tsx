@@ -1,5 +1,5 @@
 import { ClipboardList, FileText, Video } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
@@ -63,25 +63,22 @@ export function CourseReviewModal({
   onTakeAction,
 }: CourseReviewModalProps) {
   const navigate = useNavigate()
-  const [descExpanded, setDescExpanded] = useState(false)
   const { data: detail, isLoading } = useGetCourseDetail(courseId)
-
-  // A description is "long" if it spills past roughly three lines.
-  const isLongDescription = (detail?.description?.length ?? 0) > 180
 
   const introVideoUrl = buildTpStreamsEmbedUrl(detail?.introVideoAssetId)
 
   const handleTakeAction = () => {
     if (!detail) return
     onTakeAction(detail.id)
-    setDescExpanded(false)
     onClose()
   }
 
   const handleView = () => {
     if (!detail) return
     onClose()
-    navigate(`/courses/${detail.id}/course-details`)
+    navigate(`/courses/${detail.id}/course-details`, {
+      state: { reopenReview: true },
+    })
   }
 
   const footer =
@@ -111,10 +108,7 @@ export function CourseReviewModal({
   return (
     <ConfirmModal
       open={courseId !== null}
-      onClose={() => {
-        setDescExpanded(false)
-        onClose()
-      }}
+      onClose={onClose}
       onConfirm={() => { }}
       title="Review Course"
       message=""
@@ -144,13 +138,6 @@ export function CourseReviewModal({
                 <Skeleton className="h-3 w-24 rounded" />
                 <Skeleton className="h-5 w-16 rounded-full" />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Skeleton className="h-3 w-32 rounded" />
-              <Skeleton className="h-4 w-full rounded" />
-              <Skeleton className="h-4 w-full rounded" />
-              <Skeleton className="h-4 w-2/3 rounded" />
             </div>
 
             <div className="space-y-2">
@@ -243,33 +230,6 @@ export function CourseReviewModal({
                 />
               </div>
             </div>
-
-            {/* Description */}
-            {detail.description ? (
-              <div>
-                <Paragraph
-                  variant="small"
-                  className="mb-1.5 font-semibold uppercase tracking-wide text-nav"
-                >
-                  Description Preview
-                </Paragraph>
-                <Paragraph
-                  variant="muted"
-                  className={descExpanded ? undefined : 'line-clamp-3'}
-                >
-                  {detail.description}
-                </Paragraph>
-                {isLongDescription ? (
-                  <button
-                    type="button"
-                    onClick={() => setDescExpanded((prev) => !prev)}
-                    className="mt-1 text-xs font-semibold text-primary hover:underline"
-                  >
-                    {descExpanded ? 'Read less' : 'Read more'}
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
 
             {/* Content breakdown — video / pdf / test counts only */}
             <div>

@@ -70,7 +70,7 @@ export function SettingsGroup({
           {label}
         </Paragraph>
       ) : null}
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">{children}</div>
+      <div className="grid items-stretch gap-x-6 gap-y-5 sm:grid-cols-2">{children}</div>
     </div>
   )
 }
@@ -87,6 +87,9 @@ type SettingFieldProps = {
   action?: ReactNode
 } & Omit<InputProps, 'value' | 'placeholder' | 'id'>
 
+/** Shared height so idle value chips and edit inputs line up across a row. */
+const settingValueBoxClass = 'h-11 w-full rounded-card px-4 text-sm'
+
 /** One setting: reads as a value when idle, becomes an input when editing. */
 export function SettingField({
   id,
@@ -101,7 +104,7 @@ export function SettingField({
   ...inputProps
 }: SettingFieldProps) {
   return (
-    <div className="space-y-1.5">
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={id} className="block text-sm font-medium text-ink-heading">
           {label}
@@ -109,17 +112,19 @@ export function SettingField({
         {action ?? null}
       </div>
       {description ? (
-        <Paragraph variant="caption" className="text-[12px] leading-snug">
+        <Paragraph variant="caption" className="mt-1.5 flex-1 text-[12px] leading-snug">
           {description}
         </Paragraph>
-      ) : null}
+      ) : (
+        <div className="mt-1.5 flex-1" aria-hidden />
+      )}
       {isEditing ? (
-        <div className="relative">
+        <div className="relative mt-1.5">
           <Input
             id={id}
             value={value}
             placeholder={placeholder}
-            className={cn(unit ? 'pr-14' : undefined, className)}
+            className={cn(settingValueBoxClass, 'py-0', unit ? 'pr-14' : undefined, className)}
             {...inputProps}
           />
           {unit ? (
@@ -129,8 +134,13 @@ export function SettingField({
           ) : null}
         </div>
       ) : (
-        <div className="flex items-baseline gap-1.5 rounded-card border border-[#e2e8f0]/70 bg-surface-input/40 px-4 py-2.5">
-          <span className="text-sm font-semibold text-ink-heading">
+        <div
+          className={cn(
+            settingValueBoxClass,
+            'mt-1.5 flex items-center gap-1.5 border border-[#e2e8f0]/70 bg-surface-input/40',
+          )}
+        >
+          <span className="font-semibold text-ink-heading">
             {value.trim() || placeholder || '—'}
           </span>
           {unit ? <span className="text-xs font-medium text-nav">{unit}</span> : null}

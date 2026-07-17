@@ -1,6 +1,6 @@
 import type { SummaryStatItem } from '@/components/ui/SummaryStatsGrid'
 import type { FacultyRevenueSummary } from '@/features/financial/data/mockFacultyRevenue'
-import { MdOutlineAccountBalanceWallet, MdPendingActions } from 'react-icons/md'
+import { MdOutlineAccountBalanceWallet, MdOutlineLocalOffer, MdPendingActions } from 'react-icons/md'
 
 const growthBadgeClass =
   'inline-flex rounded-full bg-[#A8EDFF] px-2.5 py-0.5 text-xs font-semibold text-[#00A6BF]'
@@ -37,6 +37,22 @@ export function getFacultyRevenueStatItems(
           aria-hidden
         >
           <MdPendingActions className="size-5" />
+        </div>
+      ),
+    },
+    {
+      // Coin/offer discounts the PLATFORM funded on this faculty's sales.
+      // Added back to the payout base, so the faculty is paid as if students
+      // paid full price (workflow §9) — value overridden from live stats.
+      id: 'promo-support',
+      label: 'Platform Promo Support',
+      value: '—',
+      headerAdornment: (
+        <div
+          className="mb-3 flex size-10 items-center justify-center rounded-lg bg-[#FEF3C7] text-[#B45309]"
+          aria-hidden
+        >
+          <MdOutlineLocalOffer className="size-5" />
         </div>
       ),
     },

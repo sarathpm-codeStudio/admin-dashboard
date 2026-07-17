@@ -42,6 +42,14 @@ function avatarClass(id: string) {
   return avatarPalette[hash]!
 }
 
+function formatAccountStatus(status: string): string {
+  return status
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 export function CommissionFacultiesTable() {
   const toast = useToast()
   const [page, setPage] = useState(1)
@@ -93,7 +101,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'name',
         header: 'Faculty information',
-        width: '24%',
+        width: '15rem',
         cell: (faculty) => (
           <div className="flex min-w-0 items-center gap-3">
             {faculty.avatarUrl ? (
@@ -130,7 +138,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'phone',
         header: 'Mobile',
-        width: '14%',
+        width: '9rem',
         cell: (faculty) => (
           <Paragraph className="text-sm text-[#64748B]">{faculty.phone ?? '—'}</Paragraph>
         ),
@@ -138,7 +146,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'commission',
         header: 'Commission rate',
-        width: '14%',
+        width: '10rem',
         align: 'center',
         cell: (faculty) => (
           <div className="flex flex-col items-center gap-1">
@@ -168,7 +176,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'courses',
         header: 'Courses',
-        width: '10%',
+        width: '6rem',
         align: 'center',
         cell: (faculty) => (
           <Paragraph className="text-sm text-[#64748B]">{faculty.coursesCount}</Paragraph>
@@ -177,7 +185,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'joined',
         header: 'Joined',
-        width: '14%',
+        width: '8rem',
         cell: (faculty) => (
           <Paragraph className="text-sm text-[#64748B]">{faculty.joinedDate}</Paragraph>
         ),
@@ -185,7 +193,7 @@ export function CommissionFacultiesTable() {
       {
         id: 'status',
         header: 'Status',
-        width: '12%',
+        width: '9.5rem',
         align: 'center',
         cell: (faculty) => {
           if (faculty.isSuspended) {
@@ -201,7 +209,11 @@ export function CommissionFacultiesTable() {
             return <StatusBadge label="Rejected" variant="rejected" appearance="filled" />
           }
           return (
-            <StatusBadge label={faculty.accountVerified} variant="info" appearance="filled" />
+            <StatusBadge
+              label={formatAccountStatus(faculty.accountVerified)}
+              variant="info"
+              appearance="filled"
+            />
           )
         },
       },

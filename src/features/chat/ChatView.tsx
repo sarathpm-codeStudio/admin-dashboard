@@ -1433,7 +1433,7 @@ export function ChatView() {
                         type="button"
                         onClick={() => setAttachOpen((o) => !o)}
                         title="Attach (image or PDF, max 5 MB)"
-                        className={`transition-colors ${attachOpen ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
+                        className={`translate-y-1 transition-colors ${attachOpen ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
                       >
                         <Paperclip size={18} />
                       </button>

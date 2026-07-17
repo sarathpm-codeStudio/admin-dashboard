@@ -56,7 +56,7 @@ export function PlatformSettingsView() {
   }
 
   return (
-    <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto pb-8">
+    <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden pb-8">
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

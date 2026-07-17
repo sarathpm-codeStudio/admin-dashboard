@@ -1,4 +1,4 @@
-import { Mail, MessageSquare, Phone, UserCheck } from 'lucide-react'
+import { Clock, Mail, MessageSquare, Phone, UserCheck } from 'lucide-react'
 import { useState } from 'react'
 import { FaUser } from 'react-icons/fa'
 import verifiedBadgeImage from '@/asset/image/Background.png'
@@ -359,6 +359,15 @@ export function FacultyProfileHeader({
                   <Phone className="size-4 shrink-0" aria-hidden />
                   {faculty.phone}
                 </Paragraph>
+                {faculty.recentActive ? (
+                  <Paragraph
+                    variant="small"
+                    className="inline-flex items-center gap-2 text-nav"
+                  >
+                    <Clock className="size-4 shrink-0" aria-hidden />
+                    Recent active : {faculty.recentActive}
+                  </Paragraph>
+                ) : null}
               </div>
             </div>
           </div>

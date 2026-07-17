@@ -37,6 +37,7 @@ export type FacultyDetail = {
     reviewCount: number
   }
   recentActivity: ActivityListItemData[]
+  recentActive?: string
   documentType?: string
   documentUrl?: string
 }
